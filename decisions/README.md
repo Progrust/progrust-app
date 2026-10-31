@@ -74,3 +74,9 @@
 | [0036](0036-keep-generated-on-history-reset.md) | 学習履歴をすべてリセットしても、生成した問題は残す | 採用 | `screens.md` |
 | [0037](0037-bundle-content-and-auto-update.md) | 教材をアプリに同梱し、GitHub Releases と Tauri の自動更新でアプリごと配布する | 採用 | `non-functional.md` |
 | [0038](0038-no-os-code-signing-for-now.md) | OS のコード署名を当面行わない | 採用 | `non-functional.md` |
+| [0039](0039-ui-visual-direction-chapter-colors.md) | 画面のビジュアルデザインを、開いている章の色をアクセントにする方向性で進める | 採用 | `screens.md` |
+| [0040](0040-twelve-chapter-colors.md) | 章カラーを 12 色とし、白い文字で 4.5:1 以上の明るさにそろえ、13 章目からは循環させる | 採用 | `screens.md` |
+| [0041](0041-success-in-chapter-color.md) | 正解・完了を章カラーで表し、成功専用の色を持たない | 採用 | `screens.md` |
+| [0042](0042-ink-accent-outside-chapters.md) | 章に属さない画面のアクセントを墨色にする | 採用 | `screens.md` |
+| [0043](0043-lucide-icons.md) | アイコンに Lucide を使う | 採用 | `screens.md` |
+| [0044](0044-design-system-as-source-of-visuals.md) | 画面の見た目の値はデザインシステムを唯一の定義とし、仕様書には書かない | 採用 | `screens.md` |
