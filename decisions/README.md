@@ -80,3 +80,5 @@
 | [0042](0042-ink-accent-outside-chapters.md) | 章に属さない画面のアクセントを墨色にする | 採用 | `screens.md` |
 | [0043](0043-lucide-icons.md) | アイコンに Lucide を使う | 採用 | `screens.md` |
 | [0044](0044-design-system-as-source-of-visuals.md) | 画面の見た目の値はデザインシステムを唯一の定義とし、仕様書には書かない | 採用 | `screens.md` |
+| [0045](0045-judge-result-above-problem-collapsed.md) | 判定結果をコンソールから分けて問題文の上に表示し、不正解の詳細は既定で畳む | 採用 | `screens.md`, `exercise-runner.md` |
+| [0046](0046-explanation-in-pass-modal.md) | 正解したら、解説・質疑応答・次へ進むボタンをまとめたモーダルを開く | 採用 | `screens.md`, `lesson-flow.md`, `qa-chat.md` |
