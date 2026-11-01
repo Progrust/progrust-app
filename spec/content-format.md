@@ -118,21 +118,24 @@ content/
 
 ```html
 <section class="slide" data-layout="two-column">
-  <h1>所有権のムーブ</h1>
+  <h1>ムーブした値は、もう使えない</h1>
   <div class="col">
-    <pre><code class="language-rust" data-highlight-lines="2">let s1 = String::from("hi");
-let s2 = s1;</code></pre>
+    <pre data-label="src/main.rs"><code class="language-rust">fn main() {
+    let s1 = String::from("hi");
+    let s2 = <span class="mark">s1</span>;
+    println!("{<span class="error">s1</span>}");
+}</code></pre>
   </div>
   <div class="col">
-    <div class="callout warn">s1 はもう使えない</div>
-    <figure class="diagram"><svg viewBox="0 0 400 200">...</svg></figure>
+    <div class="callout ng">4 行目で s1 を使うと、ムーブ済みの値を使ったエラー（E0382）になります。</div>
+    <figure class="diagram"><svg viewBox="0 0 544 240" role="img" aria-label="s1 の所有権が s2 に移る図">...</svg></figure>
   </div>
   <aside class="ai-note">学習者には表示しない、AI への補足説明</aside>
 </section>
 ```
 
 - スライドは 16:9 の固定比率で表示する。作者は 1280×720 の基準サイズで内容を作り、アプリが表示領域に合わせて拡大・縮小する。
-- 見た目（フォント・色・余白）はアプリ共通のテーマ CSS で決まる。スライド側では見た目を指定しない。
+- 見た目（書体・色・余白など）は、スライドのデザインシステム（`screens.md` §10.1）に従うアプリ共通のテーマ CSS で決まる。スライド側では見た目を指定しない。
 
 ### 5.2 レイアウト（`data-layout`）
 
@@ -142,8 +145,9 @@ let s2 = s1;</code></pre>
 | `content` | 文章・箇条書き中心（既定値） | 自由 |
 | `two-column` | 左右 2 列 | `h1` と `.col` 2 つ |
 | `code` | コード中心 | `h1`、`pre` 1 つ、`p` / `.callout` |
-| `diagram` | 図中心 | `h1`、`figure.diagram` 1 つ、`p` / `.callout` |
+| `diagram` | 図中心 | `h1`、`figure.diagram` 1 つ、`p` / `.callout`。`pre` は置かない（図とコードを並べるときは `two-column` を使う） |
 | `summary` | まとめ | `h1`、`ul` |
+| `statement` | 要点を 1 文で大きく見せる | `h1`、`p` |
 
 ### 5.3 使用できる要素
 
@@ -152,42 +156,78 @@ let s2 = s1;</code></pre>
 | `h1` | スライドのタイトル。各スライドに 1 つ必須 |
 | `h2`、`p`、`ul`、`ol`、`li`、`strong`、`em`、`br` | 文章 |
 | `code` | インラインコード |
-| `pre > code.language-rust` | Rust のコードブロック。`data-highlight-lines`（例: `"2,4-5"`）で行を強調できる |
-| `pre > code.language-text` | コンパイラの出力など |
+| `pre > code.language-rust` | Rust のコードブロック（§5.4） |
+| `pre > code.language-{言語名}` | Rust 以外の言語のコードブロック（例: `language-python`、`language-toml`）。シンタックスハイライトはしない |
+| `pre > code.language-plaintext` | ターミナルの出力ではないテキスト（入力ファイルの中身など） |
+| `pre > code.language-text` | ターミナルの出力（コンパイラ・cargo の出力、プログラムの実行結果、標準入力とのやりとり）。行番号を表示しない |
+| `pre[data-label]` | コードブロックのラベル（ファイル名・言語名） |
 | `table`、`thead`、`tbody`、`tr`、`th`、`td` | 表 |
 | `div.col` | `two-column` の列 |
-| `div.callout` | 強調ボックス。種類を `info` / `tip` / `warn` / `ng` / `ok` のクラスで指定する |
-| `span.mark` | 文中の強調（マーカー） |
-| `figure.diagram > svg` | 図。色は §5.4 のクラスで指定する |
+| `div.callout` | 強調ボックス。種類を `info`（補足の情報）/ `tip`（ヒント）/ `warn`（注意）/ `ng`（誤り）/ `ok`（正しい）のクラスで指定する |
+| `div.points` | ポイント欄。`h2` と `ul` を入れる |
+| `span.mark` | 強調（マーカー）。文中でもコードブロックの中でも使う |
+| `span.error` | コードブロックの中のエラーの箇所 |
+| `figure.diagram > svg` | 図。色は §5.5 のクラスで指定する |
+| `figcaption` | 図の説明。`figure.diagram` の中に置く |
 | `img` | 画像。`src` は `assets/` または `../../assets/` 内のファイルに限る |
 | `aside.ai-note` | 画面に表示しない補足。質疑応答で AI に渡す |
 
-### 5.4 色の指定
+- 図（`svg`）の中で使える要素は `rect`、`path`、`text`、`tspan` とする。属性は `viewBox`、`role`、`aria-label`、`class`、`x`、`y`、`width`、`height`、`rx`、`d`、`text-anchor`、`dominant-baseline`、`font-size`、`font-weight`、`stroke-width`、`stroke-dasharray`、`fill`、`stroke` とする。`fill` と `stroke` の値は `none` か `currentColor` に限る（§5.6）。
+- 図には `role="img"` と、図の要点を表す `aria-label` を付ける。`img` には `alt` を付ける。
 
-スライドの HTML・SVG では色を直接指定せず、以下のクラスを使う。各クラスの実際の色はテーマ CSS がライト・ダークモードそれぞれで定める。
+### 5.4 コードブロック
 
-| クラス | 意味 |
+- `language-text` 以外のコードブロックには、アプリが左に行番号を表示する。行番号はファイルの行番号である。
+- コードブロックの `code` には次の属性を書ける。
+
+| 属性 | 内容 |
 |---|---|
-| `c-primary` | 主役（注目させたいもの） |
-| `c-accent` | 補助的な強調 |
-| `c-ok` | 正しい・成功 |
-| `c-ng` | 誤り・エラー |
-| `c-muted` | 背景的な情報・無効になったもの |
+| `data-start-line` | 載せた 1 行目の、ファイルでの行番号（1 以上の整数。例: `"118"`）。省略時は 1。`data-diff` と併用するときは、変更後のファイルで最初の行の番号を書く |
+| `data-diff` | Diff として表示する。各行の先頭の 1 文字に `+`（追加）・`-`（削除）・半角空白（変わらない行）を書き、その後ろにコードを書く。空の行は変わらない行として扱う。削除行には行番号を表示せず、行番号は変更後のファイルの行番号になる |
+| `data-scopes` | 変数が生きている範囲を枠で示す。`ラベル:開始行-終了行` を半角空白で区切って並べる（例: `"r:2-7 x:4-6"`）。ラベルには空白と `:` を使えない |
 
-SVG では `fill-*` / `stroke-*` の接頭辞を付けて使う（例: `class="fill-primary stroke-muted"`）。
+- 作者が属性に書く行番号（`data-start-line`・`data-scopes`）は、表示される行番号で書く。
+- `data-scopes` の範囲は 1 つのコードブロックに 3 つまで、入れ子は 2 段までとする。範囲の一部だけが重なる指定はできない。範囲は表示される行番号の中に収める。
+- `data-diff` と `data-scopes` は、同じコードブロックで使わない。
+- コードブロックの中の `span.mark` と `span.error` は、1 行の中に収める。`language-text` の中では使わない。
+- 表示する最後の行番号は 999 以下とする。
 
-### 5.5 禁止事項
+### 5.5 色の指定
+
+スライドの HTML・SVG では色を直接指定せず、以下のクラスを使う。各クラスの実際の色は、テーマ CSS がライト・ダークモードそれぞれで定める。
+
+| クラス | 意味 | 色 |
+|---|---|---|
+| `c-primary` | 主役（注目させたいもの） | 開いている章の章カラー |
+| `c-accent` | 補助的な強調 | 開いている章の章カラー（淡い段） |
+| `c-ok` | 正しい・成功 | 章によらない固定の色 |
+| `c-ng` | 誤り・エラー | 章によらない固定の色 |
+| `c-muted` | 背景的な情報・無効になったもの | 章によらない固定の色 |
+
+- HTML では、文中の `strong` に付ける（例: `<strong class="c-ng">できない</strong>`）。
+- SVG では `fill-*` / `stroke-*` の接頭辞を付けて使う（例: `class="fill-primary stroke-muted"`）。
+- SVG では、さらに次のクラスを使える。
+  - `fill-on` / `stroke-on`: 主役などの塗りの上に置く文字・線
+  - `fill-surface`: スライドの地の色で塗る
+  - `code`（`text` / `tspan` に付ける）: 変数名・型名・値などを等幅の書体で書く
+- `callout` の 5 種類と `span.mark` の色も、章によらない固定の色とする。
+- 章カラーを使うときの実際の色と、章に属さずに表示するときの色は、スライドのデザインシステム（`screens.md` §10.1）に従う。
+
+### 5.6 禁止事項
 
 以下を含むスライドは教材チェックツール（`content-guidelines.md` §6）でエラーとする。
 
-- §5.3 にない要素
+- §5.3・§5.4 にない要素・属性
 - `style` 属性、`<style>` 要素、`<script>` 要素、`on*` 属性
-- SVG の `fill` / `stroke` / `color` 属性での色の直接指定（`none` と `currentColor` を除く）
+- SVG の `fill` / `stroke` 属性での色の直接指定（`none` と `currentColor` を除く）
 - 外部 URL の参照
+- §5.4 の制約に違反するコードブロック（`data-start-line` が 1 以上の整数でない、`data-diff` の行の先頭が `+`・`-`・半角空白のどれでもない、`data-scopes` の範囲の重なり・入れ子・個数の違反、表示される行番号の外の範囲、複数行にまたがる `span.mark` / `span.error`、`language-text` の中の `span.mark` / `span.error`、999 を超える行番号）
 
-### 5.6 表示時の処理
+### 5.7 表示時の処理
 
-アプリはスライドを表示する前に、§5.3 にない要素と属性をサニタイズで除去する。
+- アプリはスライドを表示する前に、§5.3・§5.4 にない要素と属性をサニタイズで除去する。
+- サニタイズのあと、アプリはスライドのデザインシステムの README「アプリが行う描画処理」に従って HTML を整える。整えるのは、章カラーとテーマの指定、柱（レッスン名・章名）、コードの字句と行の分割（`span.mark` / `span.error` は残す）、行番号、Diff の行の印、生きている範囲の枠、rustc の出力の色付けである。
+- サニタイズのあとにアプリが加える属性（範囲の枠の位置を渡す `style` 属性など）は、§5.6 の禁止事項の対象外とする。
 
 ## 6. 演習
 
@@ -264,7 +304,12 @@ fn empty_input() {
 - どのレッスンの `primary_elements` にも含まれない要素（`deprecated` を除く）は、教材チェックツールでエラーになる。
 - `style` 属性や `<script>` を含むスライドはチェックでエラーになり、アプリで表示しても除去される。
 - ダークモードに切り替えたとき、スライド内の文字・図の色がすべてテーマに合わせて変わる。
+- 第4章のスライドでは `c-primary` が第4章の章カラーで表示され、第2章に移すと第2章の章カラーで表示される。`c-ok`・`c-ng`・`callout`・`span.mark` は、どの章でも同じ色で表示される。
+- `data-start-line="118"` のコードブロックは、行番号が 118 から表示される。
+- `data-diff` のコードブロックでは、削除行に行番号が表示されず、ほかの行は変更後のファイルの行番号で表示される。
+- `language-text` のコードブロックには行番号が表示されない。
+- 範囲の一部だけが重なる `data-scopes` を書いたスライドは、教材チェックツールでエラーになる。
 
 ## 8. 未決事項
 
-- スライドの色クラス（§5.4）の色を、開いている章の章カラー（`screens.md` §10.1）に合わせるかどうか。
+- 同じファイルの離れた複数の箇所を、1 つのコードブロックで省略を挟んで載せる書き方（今はコードブロックを分け、それぞれに `data-start-line` を書く）。

@@ -82,3 +82,16 @@
 | [0044](0044-design-system-as-source-of-visuals.md) | 画面の見た目の値はデザインシステムを唯一の定義とし、仕様書には書かない | 採用 | `screens.md` |
 | [0045](0045-judge-result-above-problem-collapsed.md) | 判定結果をコンソールから分けて問題文の上に表示し、不正解の詳細は既定で畳む | 採用 | `screens.md`, `exercise-runner.md` |
 | [0046](0046-explanation-in-pass-modal.md) | 正解したら、解説・質疑応答・次へ進むボタンをまとめたモーダルを開く | 採用 | `screens.md`, `lesson-flow.md`, `qa-chat.md` |
+| [0047](0047-separate-slide-design-system.md) | スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める | 採用 | `screens.md`, `content-format.md` |
+| [0048](0048-slide-colors-follow-chapter-color.md) | スライドの主役・補助の色を、開いている章の章カラーに合わせる | 採用 | `content-format.md` |
+| [0049](0049-slide-accent-light-chapter-color.md) | スライドの補助の色を、同じ章カラーの淡い段にする | 採用 | `content-format.md` |
+| [0050](0050-semantic-colors-fixed-in-slides.md) | スライドでは、意味と色が結びついた要素を章によらない固定の色にする | 採用 | `content-format.md` |
+| [0051](0051-slides-outside-chapter-use-chapter-4-color.md) | 章に属さずに表示するスライドの主役の色を、第4章の章カラーにする | 採用 | `content-format.md`, `screens.md` |
+| [0052](0052-chapter-8-sky-blue-no-gray.md) | 第8章の章カラーを鉄灰から空色に変え、章カラーに灰色を使わない | 採用 | `screens.md` |
+| [0053](0053-mark-and-wavy-error-in-code.md) | コードの強調とエラーの箇所を、行全体ではなく字句単位で示す | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0054](0054-diff-with-line-prefix-and-fixed-colors.md) | コードの Diff を、行の先頭の記号で書き、章によらない固定の色で示す | 採用 | `content-format.md` |
+| [0055](0055-mark-fixed-yellow.md) | マーカー（span.mark）を、章によらない固定の黄にする | 採用 | `content-format.md` |
+| [0056](0056-show-line-numbers-in-code-blocks.md) | コードブロックに行番号を表示し、文で行番号を指してよいことにする | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0057](0057-scopes-on-code-and-no-code-in-diagrams.md) | 変数が生きている範囲はコードに重ねた枠で示し、図の中にコードを書かない | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0058](0058-do-not-explain-errors-by-code-only.md) | エラーをエラーコードだけで説明しない | 採用 | `content-guidelines.md` |
+| [0059](0059-plain-style-in-slide-headings.md) | スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す | 採用 | `content-guidelines.md` |

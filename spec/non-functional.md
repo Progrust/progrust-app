@@ -36,7 +36,7 @@
 
 ### 4.2 アプリ自体
 
-- スライドの HTML はサニタイズしてから表示する（`content-format.md` §5.6）。
+- スライドの HTML はサニタイズしてから表示する（`content-format.md` §5.7）。
 - フロントエンドに許可する Tauri の権限は最小限にする（`architecture.md` §6）。
 - AI にはツールを使わせない（`claude-integration.md` §3）。
 
