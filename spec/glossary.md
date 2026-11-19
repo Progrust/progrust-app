@@ -8,9 +8,19 @@
 |---|---|---|
 | 教材 | content | アプリに同梱する章・レッスン・要素マスタの総称。形式は `content-format.md` |
 | 章 | chapter | レッスンをまとめる単位。ID は `ch{NN}`（例: `ch04`） |
-| レッスン | lesson | 「スライド数枚 + 演習 1 問」の学習単位。ID は `ch{NN}-{NN}`（例: `ch04-03`） |
+| レッスン | lesson | 「動画 1 本 + 演習 1 問」の学習単位。ID は `ch{NN}-{NN}`（例: `ch04-03`） |
 | 章末復習レッスン | chapter review | 各章の最後に置く、演習のみのレッスン。ID は `ch{NN}-review` |
-| スライド | slide | レッスンの知識をインプットするための 16:9 固定の 1 枚の画面 |
+| 動画 | video | レッスンの知識をインプットするための、ナレーションつきの 16:9 の教材。動画ファイルではなく、アプリの中で描画する（`content-format.md` §5） |
+| シーン | scene | 動画を構成する場面の単位（表紙、まとめ など） |
+| 台本 | script | 動画のナレーションを文ごとに並べたデータ（`script.json`。`content-format.md` §5.2） |
+| 文 | sentence | 台本の 1 件。ID を持ち、音声 1 ファイルに対応する |
+| ナレーション | narration | 台本を読み上げた音声 |
+| 合図 | cue | 絵を動かす位置の指定。「文の開始 + 秒」で表す（`content-format.md` §5.4） |
+| 声の設定 | voice settings | 音声を作るときの VOICEPEAK のナレーターと設定値。全レッスン共通（`content/voice.json`。`content-format.md` §5.3） |
+| 読みの対応表 | readings | 読み間違えやすい語と、`say` に書く読みの対応。全レッスン共通（`content/readings.json`。`content-format.md` §5.3） |
+| 再生中の文 | current sentence | 再生位置にあたる文（決め方は `screens.md` §5） |
+| 文の頭 | sentence start | 文の開始位置（`screens.md` §5） |
+| 検索ワード | tags | レッスン検索の対象にする語（`lesson.json` の `tags`） |
 | 演習 | exercise | コードを書いて提出し、正誤判定を受ける問題。レッスンの演習と生成問題がある |
 | 生成問題 | generated exercise | AI が生成した演習。ID は `gen-{生成 ID}` |
 | 要素 | element | Rust の文法・概念の単位（例: 所有権のムーブ）。要素 ID（例: `ownership.move`）で参照する |
@@ -54,13 +64,15 @@
 | 分析ファイル | analysis file | 学習者全体の傾向を表す、常に最新に保たれる Markdown ファイル |
 | 習熟レベル | level | 要素ごとの理解度（0〜4） |
 | ジョブ | job | バックグラウンドで実行する AI 処理の単位（記録・分析・再構築・問題生成） |
-| 質疑応答 | chat | スライドや解説について AI に質問する機能 |
+| 質疑応答 | chat | 動画や解説について AI に質問する機能 |
 
 ## 画面
 
 | 用語 | 英語表記（コード上の名前） | 定義 |
 |---|---|---|
 | デザインシステム | design system | 画面の見た目（配色・書体・余白・角丸・アイコン・部品）の定義と使い方をまとめたもの（`screens.md` §10.1） |
-| スライドのデザインシステム | slide design system | スライドの中身（`content-format.md` §5）の見た目の定義と使い方をまとめたもの。画面のデザインシステムとは別に持つ（`screens.md` §10.1） |
-| 章カラー | chapter color | 章ごとに割り当てた色。開いている章の画面のアクセントと、スライドの主役の色になる（`screens.md` §10.1、`content-format.md` §5.5） |
+| 動画のデザインシステム | video design system | 動画の中身（`content-format.md` §5）の見た目の定義と使い方をまとめたもの「Progrust Video」。画面のデザインシステムとは別に持つ（`screens.md` §10.1） |
+| 字幕 | captions | 再生中の文を、動画の枠の外に文字で表示する機能（`screens.md` §5） |
+| レッスン検索 | lesson search | 検索ワードとレッスンのタイトルから、レッスンを探す機能（`screens.md` §9） |
+| 章カラー | chapter color | 章ごとに割り当てた色。開いている章の画面のアクセントになる。動画では、再生するときに指定された章の章カラーが主役の色になる（`screens.md` §10.1、`content-format.md` §5.7） |
 | 墨色 | ink | 本文の文字色。章に属さない画面ではアクセントにもなる（`screens.md` §10.1） |

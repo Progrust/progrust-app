@@ -2,7 +2,7 @@
 
 - 状態: 採用
 - 日付: 2026-11-01
-- 関連仕様: `content-guidelines.md`「文章」
+- 関連仕様: `content-guidelines.md`「画面の文章」
 - 置き換え: なし
 
 ## 背景

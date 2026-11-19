@@ -1,8 +1,8 @@
 # 0005. スライドを、使える部品を決めた HTML で書く
 
-- 状態: 採用
+- 状態: 置き換え済み（→ 0062）
 - 日付: 2026-10-31
-- 関連仕様: `content-format.md`「スライド（slides.html）」、`content-guidelines.md`「教材チェックツール」
+- 関連仕様: `content-format.md`「動画（video/）」、`content-guidelines.md`「教材チェックツール」
 - 置き換え: なし
 
 ## 背景

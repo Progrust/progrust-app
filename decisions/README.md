@@ -40,7 +40,7 @@
 | [0002](0002-target-experienced-programmers.md) | 想定する学習者を他のプログラミング言語の経験者とする | 採用 | `content-guidelines.md` |
 | [0003](0003-react-typescript-frontend.md) | フロントエンドに React と TypeScript を使う | 採用 | `architecture.md` |
 | [0004](0004-monaco-without-completion.md) | コードエディタに Monaco Editor を使い、補完・LSP 連携は行わない | 採用 | `architecture.md` |
-| [0005](0005-slides-in-restricted-html.md) | スライドを、使える部品を決めた HTML で書く | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0005](0005-slides-in-restricted-html.md) | スライドを、使える部品を決めた HTML で書く | 置き換え済み（→ 0062） | `content-format.md`, `content-guidelines.md` |
 | [0006](0006-element-ids-are-permanent.md) | 要素 ID を全データで共通にし、公開後は変更・削除しない | 採用 | `content-format.md`, `learning-record-and-analysis.md` |
 | [0007](0007-derive-introduced-lesson.md) | 要素の導入レッスンを、要素マスタに持たせず学習順から求める | 採用 | `content-format.md` |
 | [0008](0008-judge-mode-per-lesson.md) | 演習の判定方式を、標準出力の比較と隠しテストからレッスンごとに選ぶ | 採用 | `content-format.md`, `exercise-runner.md` |
@@ -82,7 +82,7 @@
 | [0044](0044-design-system-as-source-of-visuals.md) | 画面の見た目の値はデザインシステムを唯一の定義とし、仕様書には書かない | 採用 | `screens.md` |
 | [0045](0045-judge-result-above-problem-collapsed.md) | 判定結果をコンソールから分けて問題文の上に表示し、不正解の詳細は既定で畳む | 採用 | `screens.md`, `exercise-runner.md` |
 | [0046](0046-explanation-in-pass-modal.md) | 正解したら、解説・質疑応答・次へ進むボタンをまとめたモーダルを開く | 採用 | `screens.md`, `lesson-flow.md`, `qa-chat.md` |
-| [0047](0047-separate-slide-design-system.md) | スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める | 採用 | `screens.md`, `content-format.md` |
+| [0047](0047-separate-slide-design-system.md) | スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める | 置き換え済み（→ 0075） | `screens.md`, `content-format.md` |
 | [0048](0048-slide-colors-follow-chapter-color.md) | スライドの主役・補助の色を、開いている章の章カラーに合わせる | 採用 | `content-format.md` |
 | [0049](0049-slide-accent-light-chapter-color.md) | スライドの補助の色を、同じ章カラーの淡い段にする | 採用 | `content-format.md` |
 | [0050](0050-semantic-colors-fixed-in-slides.md) | スライドでは、意味と色が結びついた要素を章によらない固定の色にする | 採用 | `content-format.md` |
@@ -95,3 +95,20 @@
 | [0057](0057-scopes-on-code-and-no-code-in-diagrams.md) | 変数が生きている範囲はコードに重ねた枠で示し、図の中にコードを書かない | 採用 | `content-format.md`, `content-guidelines.md` |
 | [0058](0058-do-not-explain-errors-by-code-only.md) | エラーをエラーコードだけで説明しない | 採用 | `content-guidelines.md` |
 | [0059](0059-plain-style-in-slide-headings.md) | スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す | 採用 | `content-guidelines.md` |
+| [0060](0060-switch-lessons-from-slides-to-videos.md) | レッスンの教材を、スライドからナレーションつきの動画に切り替える | 採用 | `overview.md`, `content-format.md` |
+| [0061](0061-render-videos-with-remotion-player.md) | 動画を、書き出したファイルにせず、アプリの中で Remotion の Player で描画する | 採用 | `content-format.md`, `architecture.md` |
+| [0062](0062-write-video-scenes-in-unrestricted-tsx.md) | 動画のシーンを、制限のない React（TSX）で書く | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0063](0063-generate-narration-with-voicepeak-and-bundle.md) | ナレーションの音声を教材の作者の環境で VOICEPEAK から作り、圧縮してアプリに同梱する | 採用 | `content-format.md` |
+| [0064](0064-narrator-natsuki-karin-with-shared-voice-settings.md) | ナレーターを夏色花梨とし、声の設定を 1 か所に持って後から変えられるようにする | 採用 | `content-format.md` |
+| [0065](0065-separate-text-and-say-in-script.md) | 台本で、もとの文（text）と読ませる文（say）を分ける | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0066](0066-trim-comma-pauses-to-0-2-seconds.md) | 「、」の間を、音声を作ったあとに 0.2 秒へ切り詰める | 採用 | `content-format.md` |
+| [0067](0067-captions-as-app-feature.md) | 字幕を動画の中に置かず、アプリの機能として表示できるようにする | 採用 | `screens.md` |
+| [0068](0068-compose-at-1280x720-and-zoom-per-scene.md) | 動画を基準サイズ 1280×720 で組み、場面ごとに内容のある範囲へ寄せて見せる | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0069](0069-video-and-sentence-length-as-guidelines.md) | 動画の長さと 1 文の長さを目安とし、超えてよいことにする | 採用 | `content-guidelines.md` |
+| [0070](0070-video-controls-sentence-jump-and-5s-skip.md) | 動画の再生操作に、文ごとの移動と 5 秒のスキップを持たせる | 採用 | `screens.md` |
+| [0071](0071-save-playback-position-by-sentence.md) | 動画の再生位置を文の単位で保存し、開き直したら続きから見られるようにする | 採用 | `lesson-flow.md` |
+| [0072](0072-do-not-pause-video-on-question.md) | 質問を送信しても、動画を一時停止しない | 採用 | `qa-chat.md` |
+| [0073](0073-search-lessons-by-tags-and-title.md) | 検索の対象を、レッスンに設定した検索ワード（タグ）とタイトルにする | 採用 | `screens.md`, `content-format.md` |
+| [0074](0074-do-not-log-video-viewing.md) | 動画の視聴を試行ログに記録しない | 採用 | `learning-record-and-analysis.md` |
+| [0075](0075-video-design-system-progrust-video.md) | 動画の見た目を、スライドのデザインシステムを改めた「Progrust Video」に定める | 採用 | `screens.md`, `content-format.md` |
+| [0076](0076-carry-over-slide-visual-and-writing-decisions.md) | スライドで決めた見た目と書き方の判断を、動画でも引き継ぐ | 採用 | `content-format.md`, `content-guidelines.md` |

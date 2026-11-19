@@ -13,7 +13,7 @@
 
 - AI にはファイルの編集・コマンドの実行などのツールを使わせない。結果は標準出力で返させ、アプリが検証してから保存する。
 - AI に数値・日時・回数を計算させない（`learning-record-and-analysis.md` §1.1）。
-- AI 機能が使えなくても、学習（スライド・演習・完了）は続けられるようにする。
+- AI 機能が使えなくても、学習（動画・演習・完了）は続けられるようにする。
 
 ## 2. 検出と、使えない場合の動作
 
@@ -58,7 +58,7 @@
 | `prompts/record.md` | 記録セッション |
 | `prompts/analysis.md` | 分析セッション |
 | `prompts/generate.md` | 問題生成 |
-| `prompts/chat-slide.md` | スライドについての質疑応答 |
+| `prompts/chat-video.md` | 動画についての質疑応答 |
 | `prompts/chat-explanation.md` | 解説表示後の質疑応答 |
 
 ## 5. ジョブキュー（jobs.json）

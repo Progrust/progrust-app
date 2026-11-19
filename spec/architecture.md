@@ -9,19 +9,21 @@
 | アプリ基盤 | Tauri 2 |
 | フロントエンド | React + TypeScript（ビルドは Vite） |
 | コードエディタ | Monaco Editor（シンタックスハイライトと基本的な編集機能のみ。補完・LSP 連携は行わない） |
+| 動画の再生 | Remotion（`@remotion/player`）。動画はファイルに書き出さず、フロントエンドで描画する（`content-format.md` §5） |
 | バックエンド | Rust（Tauri のコマンドとして実装） |
 | 演習のビルド・実行 | 学習者の環境にインストールされた Rust ツールチェーン（`cargo`） |
 | AI 連携 | 学習者の環境にインストールされた Claude Code（`claude -p`） |
+| ナレーションの音声の作成（教材の作成時のみ） | VOICEPEAK（教材の作者の環境で使う。アプリには含めない。`content-format.md` §5.3） |
 
 ```
-┌────────────────────── Tauri アプリ ──────────────────────┐
+┌─────────────────────── Tauri アプリ ──────────────────────┐
 │  フロントエンド (React)                                   │
-│   画面・状態管理・エディタ・スライド描画                  │
+│   画面・状態管理・エディタ・動画の描画                    │
 │        │ invoke（コマンド）        ▲ event（通知）        │
 │        ▼                           │                      │
 │  バックエンド (Rust)                                      │
 │   ファイル入出力・集計・検証・ジョブキュー・プロセス管理  │
-└───────┬──────────────────────────────┬───────────────────┘
+└───────┬───────────────────────────────┬───────────────────┘
         │ 子プロセス                    │ 子プロセス
         ▼                               ▼
      cargo / 学習者のプログラム       claude -p
@@ -30,6 +32,8 @@
 ## 2. 役割分担
 
 - フロントエンドはファイルシステムや子プロセスに直接アクセスしない。すべてバックエンドのコマンドを経由する。
+- 動画のコードと音声（`content/lessons/{lesson_id}/video/` のうち `script.json` 以外のファイル。`content-format.md` §5.1）と、動画が読み込む画像（`assets/`）は、フロントエンドのビルドに含める。レッスンごとに分け、そのレッスンの動画を表示するときに読み込む（遅延読み込み）。フロントエンドは、これらをビルド済みのアセットとして読む。ビルド済みのアセットを読むことは、ファイルシステムへの直接のアクセスに当たらない。
+- 台本（`script.json`）とレッスン定義（`lesson.json`）は、バックエンドがアプリ同梱データ（§4.2）から読む。フロントエンドは、レッスン定義と台本を `get_lesson` で受け取る。バックエンドは台本を質疑応答（`qa-chat.md` §3.1）に、レッスン定義をレッスン検索（`screens.md` §9）に使う。
 - 集計・検証・ファイルの書き込みはバックエンドで行う。フロントエンドは表示と入力の受け付けに専念する。
 - 時間のかかる処理（ビルド・実行・AI 呼び出し・ジョブ）は非同期とし、途中経過や完了はイベントでフロントエンドに通知する。
 
@@ -42,8 +46,8 @@
 | 分類 | コマンド | 担当仕様 |
 |---|---|---|
 | 環境 | `get_environment_status`（cargo・claude の検出結果、初回準備の状態）、`redetect_tools` | 本書 §3 |
-| 教材 | `list_chapters`、`get_lesson`、`get_slides`、`search_slides` | `content-format.md`、`screens.md` |
-| 進捗 | `get_progress`、`open_lesson`、`save_draft`、`reset_draft`、`get_passed_code` | `lesson-flow.md` |
+| 教材 | `list_chapters`、`get_lesson`（台本を含む）、`search_lessons` | `content-format.md`、`screens.md` |
+| 進捗 | `get_progress`、`open_lesson`、`save_draft`、`reset_draft`、`get_passed_code`、`save_video_position` | `lesson-flow.md` |
 | 実行 | `run_code`、`send_stdin`、`close_stdin`、`stop_run`、`submit_code` | `exercise-runner.md` |
 | 質疑応答 | `send_chat`、`cancel_chat` | `qa-chat.md` |
 | 問題生成 | `list_generated`、`request_generation`、`delete_generated` | `exercise-generation.md` |
@@ -79,7 +83,7 @@
 
 | ツール | 動作 |
 |---|---|
-| `cargo` | 実行・提出ボタンを無効にし、演習画面とトップページに rustup の導入手順を案内する。スライドの閲覧などは利用できる |
+| `cargo` | 実行・提出ボタンを無効にし、演習画面とトップページに rustup の導入手順を案内する。動画の視聴などは利用できる |
 | `claude` | AI 機能（質疑応答・問題生成）を無効にし、Claude Code の導入手順を案内する。学習記録・分析のジョブは登録だけ行い、`claude` が使えるようになってから実行する（`claude-integration.md` §2） |
 
 アプリから Rust や Claude Code を自動でインストールすることはしない。
@@ -121,7 +125,7 @@
 
 ```
 {app_resources}/
-├── content/                        # 教材（原本: リポジトリの content/。形式は content-format.md）
+├── content/                        # 教材（原本: リポジトリの content/。動画のコードと音声、動画が読み込む画像を除く（§2）。形式は content-format.md）
 ├── templates/                      # 学習記録・分析のテンプレート（原本: spec/templates/）
 │   ├── record.md
 │   └── analysis.md
@@ -142,11 +146,12 @@
 ```
 progrust-app/
 ├── spec/                # 仕様書
-├── content/             # 教材の原本
+├── content/             # 教材の原本（動画のコードと音声を含む。形式は content-format.md）
 ├── prompts/             # AI への指示文の原本
 ├── runner/              # 許可クレートの定義
-├── tools/               # 教材チェックツールなどの開発用ツール（content-guidelines.md §6）
+├── tools/               # 教材チェックツール、音声を作るツールなどの開発用ツール（content-guidelines.md §6、content-format.md §5.3）
 ├── src/                 # フロントエンド
+│   └── video/           # 動画の共通部品（プレーヤー・タイムライン・教材用の部品。content-format.md §5.5）
 └── src-tauri/           # バックエンド
 ```
 
@@ -159,7 +164,7 @@ progrust-app/
 
 - フロントエンドのコードに、ファイルシステムや子プロセスを直接扱う処理がない。
 - macOS で Finder から起動した場合でも、`~/.cargo/bin` にある `cargo` と `~/.local/bin` にある `claude` を検出できる。
-- `cargo` が見つからない状態でも起動でき、スライドを閲覧できる。
+- `cargo` が見つからない状態でも起動でき、動画を視聴できる。
 - `claude` が見つからない状態でもレッスンを完了でき、完了時に記録ジョブが登録される。
 - 書き込み中にプロセスを強制終了しても、`progress.json` などが壊れたファイルにならない。
 

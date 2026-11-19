@@ -2,7 +2,7 @@
 
 - 状態: 採用
 - 日付: 2026-11-01
-- 関連仕様: `content-format.md`「使用できる要素」「コードブロック」、`content-guidelines.md`「コード」「エラー」
+- 関連仕様: `content-format.md`「コードの表示」、`content-guidelines.md`「コード」「エラー」
 - 置き換え: なし
 
 ## 背景

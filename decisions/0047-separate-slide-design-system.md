@@ -1,8 +1,8 @@
 # 0047. スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める
 
-- 状態: 採用
+- 状態: 置き換え済み（→ 0075）
 - 日付: 2026-11-01
-- 関連仕様: `screens.md`「デザインシステム」、`content-format.md`「スライド（slides.html）」
+- 関連仕様: `screens.md`「デザインシステム」、`content-format.md`「動画（video/）」
 - 置き換え: なし
 
 ## 背景
