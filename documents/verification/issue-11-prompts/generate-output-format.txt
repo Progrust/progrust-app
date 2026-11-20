@@ -1,0 +1,44 @@
+次の形の JSON オブジェクトを出力する。
+
+```json
+{
+  "title": "在庫リストの集計",
+  "summary": "所有権を意識しながらベクタを集計する",
+  "primary_elements": ["ownership.move"],
+  "secondary_elements": ["vec.basic"],
+  "layout": "single",
+  "judge": { "mode": "stdout", "target": "src/main.rs" },
+  "dependencies": [],
+  "readonly_files": [],
+  "case_labels": {},
+  "problem_md": "## 問題\n...",
+  "explanation_md": "## 考え方\n...",
+  "starter_files": { "src/main.rs": "..." },
+  "solution_files": { "src/main.rs": "..." },
+  "cases": [ { "name": "...", "stdin": "...", "expected_stdout": "..." } ],
+  "judge_tests_rs": null
+}
+```
+
+| フィールド | 説明 |
+|---|---|
+| `title` / `summary` | 表示名と、1 行の説明 |
+| `primary_elements` | 主要素の ID（1〜2 件） |
+| `secondary_elements` | 副要素の ID |
+| `layout` | `single`（`src/main.rs` の 1 ファイルのみ）/ `multi`（複数ファイル） |
+| `judge.mode` | `stdout`（標準入力を与えて標準出力を比べる）/ `test`（隠しテストを `cargo test` で実行する） |
+| `judge.target` | `test` 方式で隠しテストを組み込むファイル（`src/main.rs` または `src/lib.rs`）。`stdout` 方式では `src/main.rs` 固定 |
+| `dependencies` | 使用する許可クレートの名前 |
+| `readonly_files` | 学習者が編集できないファイルのパス（`multi` のみ） |
+| `case_labels` | `test` 方式でテスト関数名に付ける表示名（例: `{"empty_input": "空の入力"}`） |
+| `problem_md` | 問題文（Markdown）。見出し `## 問題`・`## 入力`（`stdout` 方式で入力がある場合）・`## 出力`・`## 例`・`## 制約`（任意）を持つ |
+| `explanation_md` | 解説（Markdown）。見出し `## 考え方`・`## 模範解答`（`solution_files` と同じコード）・`## ポイント`・`## よくある間違い` を持つ |
+| `starter_files` / `solution_files` | 初期コードと模範解答。キーは cargo パッケージのルートからの相対パス（`src/` 以下の `.rs` のみ。`..` や絶対パスは不可）。`src/main.rs` を必ず含める。`Cargo.toml` は含めない（パッケージ名 `progrust_exercise`、edition 2024 でアプリが作る）。2 つのファイル構成は同じにする |
+| `cases` | `stdout` 方式のテストケース（3 件以上）。`name` は表示名、`stdin` は標準入力、`expected_stdout` は期待する標準出力。`test` 方式では `[]` |
+| `judge_tests_rs` | `test` 方式の隠しテスト（3 件以上の `#[test]` 関数）。`stdout` 方式では `null` |
+
+判定の仕組み:
+
+- `stdout` 方式: テストケースごとにプログラムを起動して `stdin` を与え、標準出力を `expected_stdout` と比べる。比べる前に、改行コードをそろえ、各行の末尾の空白と末尾の空行を取り除く。1 ケースの制限時間は 5 秒。
+- `test` 方式: `judge_tests_rs` は `judge.target` のファイルの子モジュールとして組み込まれ（`#[cfg(test)] #[path = "../progrust_judge_tests.rs"] mod progrust_judge;` がアプリによって target の末尾に追加される）、`use super::*;` で学習者のコードを参照する。テスト関数名は snake_case の英語。`progrust_judge::` で始まるテストだけが判定に使われる。全体の制限時間は 10 秒。
+- 模範解答がすべてのテストケースに通り、初期コードが正解にならないことを、アプリが実際にビルドして確かめる。
