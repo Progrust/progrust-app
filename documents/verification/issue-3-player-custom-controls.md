@@ -34,7 +34,7 @@ Issue #1 と同じ試作（Tauri の最小アプリに Remotion の `Player` を
 
 - release ビルドの .app を環境変数（`PROGRUST_BENCH=controls`）付きで起動する。ページ（`tauri://localhost`）が自分で操作と確認を行い、結果を Tauri のコマンドで JSON に書き出して自分で終了する。
 - 確認は 21 項目。`@remotion/media` の Audio と Html5Audio のそれぞれで 1 回ずつ実行した。
-- キー操作は、`window` に合成した `KeyboardEvent`（`new KeyboardEvent('keydown', { key: ' ' })` など）を dispatch して確かめた。本物のキー入力は使っていない（人の操作か、アクセシビリティの許可が要るため）。
+- キー操作は、`document.body`（入力欄の確認では入力欄）に合成した `KeyboardEvent`（`new KeyboardEvent("keydown", { code, key, shiftKey, bubbles: true, cancelable: true })`）を dispatch して確かめた。本物のキー入力は使っていない（人の操作か、アクセシビリティの許可が要るため）。
 
 ## 結果
 
