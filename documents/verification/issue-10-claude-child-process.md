@@ -6,7 +6,7 @@ description: "claude -p を子プロセスとして扱えるかを Issue #10 で
 
 - 日付: 2026-11-20
 - Issue: [#10](https://github.com/Progrust/progrust-app/issues/10)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）。Windows は確かめていない（当面 macOS に集中する方針のため）
+- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [claude -p の呼び出し](../spec/claude-integration/invocation.md)、[ジョブの実行](../spec/claude-integration/job-queue.md)、[外部ツールの検出](../spec/architecture/external-tools.md)、[ADR 0017](../decisions/0017-search-default-tool-locations.md)、[ADR 0021](../decisions/0021-isolated-claude-invocation.md)、[ADR 0024](../decisions/0024-run-jobs-serially.md)
 
 ## 環境
@@ -107,12 +107,11 @@ __CFBundleIdentifier=<バンドル ID>
 
 ## 判定
 
-**合格（macOS、ネイティブインストーラーで導入した `claude`）**。macOS で確かめられる項目（長い指示文の標準入力、同時の呼び出し、プロセスグループでの停止、Finder から起動したときの検出と認証）はすべて仕様どおりに動いた。Windows の項目（`.cmd` を経由した kill、Git Bash の無い環境）は確かめていない。
+**合格（ネイティブインストーラーで導入した `claude`）**。確かめる項目（長い指示文の標準入力、同時の呼び出し、プロセスグループでの停止、Finder から起動したときの検出と認証）はすべて仕様どおりに動いた。
 
 ## 残った事項
 
 確かめられなかった項目:
-- Windows の項目（長い指示文の標準入力、npm でインストールした場合の `.cmd` を経由した kill、Git Bash の無い環境）。
 - npm・Homebrew で入れた `claude` の検出と認証。
 - 2 本より多い同時実行、長いジョブとの重なり。
 - Tauri の shell プラグインの kill を使う場合に、プロセスグループ全体を止められるか（試作は `std::process`）。

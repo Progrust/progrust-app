@@ -6,7 +6,7 @@ description: "claude -p の json 出力から回答の本文を取り出せる�
 
 - 日付: 2026-11-20
 - Issue: [#9](https://github.com/Progrust/progrust-app/issues/9)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）。Windows は確かめていない（当面 macOS に集中する方針のため）
+- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [claude -p の呼び出し](../spec/claude-integration/invocation.md)、[Claude Code 連携のエラー](../spec/claude-integration/errors.md)、[質疑応答の画面](../spec/qa-chat/screen.md)
 
 ## 環境
@@ -108,7 +108,6 @@ description: "claude -p の json 出力から回答の本文を取り出せる�
 
 確かめられなかった項目:
 - 利用上限に達したときの終了コードと出力（`rate_limit`・`billing_error` のどちらになるか、`rate_limit_event` の `status` がどう変わるか）。
-- Windows。
 - text 形式での標準エラー出力の警告が、形式とフラグのどちらによるか。
 
 ユーザーの判断が要る点:

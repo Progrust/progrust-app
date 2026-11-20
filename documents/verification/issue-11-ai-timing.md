@@ -6,7 +6,7 @@ description: "記録・分析・問題生成・質疑応答の claude -p 呼び�
 
 - 日付: 2026-11-21
 - Issue: [#11](https://github.com/Progrust/progrust-app/issues/11)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）だけ。Windows は確かめていない（当面 macOS に集中する方針のため）
+- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [claude -p の呼び出し](../spec/claude-integration/invocation.md)、[指示文](../spec/claude-integration/prompts.md)、[モデルの選択](../spec/claude-integration/model-selection.md)、[Claude Code 連携のエラー](../spec/claude-integration/errors.md)、[ジョブの待ち行列](../spec/claude-integration/job-queue.md)、[AI のジョブ](../spec/learning-record-and-analysis/ai-jobs.md)、[学習記録ファイル](../spec/learning-record-and-analysis/record-file.md)、[分析ファイル](../spec/learning-record-and-analysis/analysis-file.md)、[演習生成の AI への入力](../spec/exercise-generation/ai-input.md)、[生成問題の出力と検証](../spec/exercise-generation/output-and-validation.md)、[質疑応答の AI への入力](../spec/qa-chat/ai-input.md)、[質疑応答の回答の方針](../spec/qa-chat/answer-policy.md)、[演習の形式](../spec/content-format/exercise.md)、[提出](../spec/exercise-runner/submit.md)、[ADR 0020](../decisions/0020-ai-returns-output-app-writes.md)、[ADR 0021](../decisions/0021-isolated-claude-invocation.md)、[ADR 0023](../decisions/0023-model-per-purpose.md)、[ADR 0026](../decisions/0026-separate-facts-from-interpretation.md)、[ADR 0028](../decisions/0028-separate-record-and-analysis-sessions.md)、[ADR 0030](../decisions/0030-incremental-analysis-update.md)、[ADR 0034](../decisions/0034-validate-generated-exercises.md)
 
 ## 環境
@@ -194,7 +194,6 @@ p.kill()'
 
 確かめられなかった項目:
 
-- Windows は確かめていない。
 - 利用上限のエラーは出なかった。[Issue #9](issue-9-claude-output-and-errors.md) の利用上限の未確認の項目は残る。
 - 分析の再構築（10 件の記録をまとめて渡す）の所要時間は試していない。入力は長くなるが、出力の長さは同じと見込む。
 - 合成した履歴には章末復習の記録が無く（要素の合成で、章末復習の行を読み落とした）、`base_level` 4 の扱いは確かめていない。時間と形式の測定には影響しない。

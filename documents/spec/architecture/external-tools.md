@@ -10,8 +10,8 @@ description: "cargo と claude の検出方法と必要条件、見つからな�
 
 | ツール | 探索順 | 必要条件 |
 |---|---|---|
-| `cargo` / `rustc` | 設定で指定したパス → `PATH` → `~/.cargo/bin`（Windows: `%USERPROFILE%\.cargo\bin`） | `rustc --version` が 1.85 以上（edition 2024 が使えること） |
-| `claude` | 設定で指定したパス → `PATH` → `~/.local/bin` → `~/.claude/local` → npm のグローバルインストール先（Windows は各対応パス） | `claude --version` が成功すること |
+| `cargo` / `rustc` | 設定で指定したパス → `PATH` → `~/.cargo/bin` | `rustc --version` が 1.85 以上（edition 2024 が使えること） |
+| `claude` | 設定で指定したパス → `PATH` → `~/.local/bin` → `~/.claude/local` → npm のグローバルインストール先 | `claude --version` が成功すること |
 
 - `PATH` に見つかった場合も見つからなかった場合も、表の既定のインストール先を探索する（macOS で Finder から起動した場合を含む）。
 - 検出結果（パス・バージョン）はメモリに保持し、`get_environment_status` で返す。

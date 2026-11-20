@@ -6,7 +6,7 @@ description: "問題生成の検証と学習者の実行が互いを待たせず
 
 - 日付: 2026-11-20
 - Issue: [#13](https://github.com/Progrust/progrust-app/issues/13)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、APFS）。Windows は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple Silicon、APFS）
 - 関連仕様: [実行基盤の概要](../spec/exercise-runner/overview.md)、[許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)、[出力と検証](../spec/exercise-generation/output-and-validation.md)、[ADR 0012](../decisions/0012-separate-build-dir-without-crates.md)、[ADR 0034](../decisions/0034-validate-generated-exercises.md)
 
 ## 環境
@@ -167,13 +167,11 @@ time cp -cRp $W/target $W/target-validate   # 0.1 秒ほど。依存は Fresh �
 - さらに、パッケージ名が同じなので、相手の実行ファイルで実行・判定してしまう誤りが起きる（重大）。実行ファイルの置き場所が同じなので、依存の組み合わせに関係なく、`target-std/` でも起きる。
 - validate 用のビルド先を APFS のクローンで分けると、待たずに正しく動き、依存も再利用できる（複製 0.13 s、追加の容量はほぼ 0）。
 - std だけの演習も、初回準備のダウンロード中は、パッケージキャッシュのロックで待たされる（測定では 1 秒未満）。ビルド先を分けるだけでは避けられない。
-- Windows は確かめていない。
 
 ## 残った事項
 
 確かめられなかった項目:
 
-- Windows は確かめていない（当面 macOS に集中する方針のため）。Windows（ReFS 以外）にはクローンがなく、普通のコピーでは容量が 2 倍になる。ハードリンクは試したが、その場で書き換えられるファイルがあるため、安全とは言えない。
 - 遅い回線での、初回準備中のパッケージキャッシュのロックの待ちは再現していない。
 - ハードリンクでの複製後に、学習者と検証を同時に走らせる並行の測定はしていない。
 - `--artifact-dir` と sccache は試していない。
@@ -181,7 +179,7 @@ time cp -cRp $W/target $W/target-validate   # 0.1 秒ほど。依存は Fresh �
 ユーザーの判断が要る点（Issue は開いたままにする）:
 
 1. 検証用のビルド先を、学習者のものと分けるかどうか。分けるなら、次のどれを使うか。
-   - 初回準備の後に `target/` を `target-validate/` に複製する（APFS のクローン。Windows ではクローンが使えず、普通のコピーで容量が 2 倍）。
+   - 初回準備の後に `target/` を `target-validate/` に複製する（APFS のクローン）。
    - 検証専用に、もう一度依存をビルドする（初回準備が 2 倍になる）。
    - 分けずに、検証と学習者の実行を直列にする（待ちを受け入れる。その場合も、パッケージ名は分ける必要がある）。
 2. 同じビルド先で、小さな検証と重なったときの +0.05〜0.1 s を「待たされない」とみなすか。

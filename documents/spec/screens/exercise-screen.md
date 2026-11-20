@@ -57,10 +57,10 @@ description: "演習画面の配置（問題文、エディタ、コンソール
 
 **キーボードショートカット**
 
-| 操作 | macOS | Windows |
-|---|---|---|
-| 実行 | Cmd+Enter | Ctrl+Enter |
-| 提出 | Cmd+Shift+Enter | Ctrl+Shift+Enter |
-| 停止 | Cmd+. | Ctrl+. |
+| 操作 | キー |
+|---|---|
+| 実行 | Cmd+Enter |
+| 提出 | Cmd+Shift+Enter |
+| 停止 | Cmd+. |
 
 エディタの文字サイズは設定画面で変更できる（既定 14px）。

@@ -6,7 +6,7 @@ description: "Remotion Player が Tauri の WKWebView で動き、再生開始 3
 
 - 日付: 2026-11-21
 - Issue: [#1](https://github.com/Progrust/progrust-app/issues/1)
-- 確かめた OS: macOS 27.2.1（Apple M1）だけ。macOS 13 の実機は確かめていない（AudioDecoder を消して macOS 13 の状態をまねた計測だけ）。Windows（WebView2）は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple M1）
 - 関連仕様: [動画を構成するファイル](../spec/content-format/video/structure.md)、[性能の目安](../spec/non-functional/performance.md)、[対応環境](../spec/non-functional/environments.md)、[ADR 0061](../decisions/0061-render-videos-with-remotion-player.md)、[ADR 0062](../decisions/0062-write-video-scenes-in-unrestricted-tsx.md)
 
 ## 環境
@@ -133,9 +133,8 @@ Cannot decode /voice/xx.m4a, falling back to <Html5Audio>
 | 再生開始まで 300ms 以内 | 満たした（最大 132ms） |
 | シークから絵の表示まで 200ms 以内 | 満たした（最大 74ms） |
 | 通しの再生でコマ落ちが目立たない | 1 倍は全フレームを表示した。2 倍は 5〜26% が 1 つ飛ばしになる。目立つかは人が見て決める必要があり、確かめていない |
-| 両 OS で確かめる | macOS だけ。macOS 13 の実機と Windows は未確認 |
 
-Issue は開いたままにする。数値の基準は macOS で満たした。
+Issue は開いたままにする。数値の基準は満たした。
 
 ## 残った事項
 
@@ -147,9 +146,6 @@ Issue は開いたままにする。数値の基準は macOS で満たした。
 確かめられなかった項目
 
 - 1 倍の通しの再生のコマ落ちが目立たないかの見た目の判断。
-- macOS 13 の実機での動作と性能（AudioDecoder を消したまねだけ）。
-- Windows の WebView2 での動作と性能。
-- Intel Mac での性能。
 
 検証中に見つけた別の問題（事実のみ）
 

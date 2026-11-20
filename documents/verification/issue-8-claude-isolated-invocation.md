@@ -6,7 +6,7 @@ description: "claude -p を、ユーザー設定を読み込まず、ツール�
 
 - 日付: 2026-11-20
 - Issue: [#8](https://github.com/Progrust/progrust-app/issues/8)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）。Windows は確かめていない（当面 macOS に集中する方針のため）
+- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [claude -p の呼び出し](../spec/claude-integration/invocation.md)、[Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[ADR 0020](../decisions/0020-ai-returns-output-app-writes.md)、[ADR 0021](../decisions/0021-isolated-claude-invocation.md)
 
 ## 環境
@@ -169,7 +169,6 @@ for l in sys.stdin:
 確かめられなかった項目:
 - ユーザーレベルの `~/.claude/CLAUDE.md` とユーザーのメモリーが、ログインした状態で読まれないか。ユーザーの実際の設定を変える必要があるため確かめていない（検証した環境には `~/.claude/CLAUDE.md` が無い）。`CLAUDE_CONFIG_DIR` を変える方法も、`HOME` を一時ディレクトリにする方法も未ログインになり、応答で確かめられない。init の `memory_paths` が無いことと、デバッグログの `project memory is off` までは確かめた。プロジェクトの CLAUDE.md とメモリーは、認証した状態で読まれないことを確かめた。
 - 管理者の設定（macOS では `/Library/Application Support/ClaudeCode/managed-settings.json`）と管理プラグイン。ヘルプとログのとおり、どのフラグでも適用される。検証した Mac には無いので未確認。
-- Windows。
 - 空の `CLAUDE_CONFIG_DIR`・`HOME` を使った (b) の判定は、init とフック・MCP の副作用による。応答の内容では確かめていない。
 
 ユーザーの判断が要る点:

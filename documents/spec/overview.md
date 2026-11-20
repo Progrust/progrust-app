@@ -18,10 +18,10 @@ description: "Progrust の目的、想定する学習者、技術構成の概要
 
 ## 技術構成の概要
 
-- Tauri を利用したネイティブアプリケーションとし、macOS と Windows を対象とする。
+- Tauri を利用したネイティブアプリケーションとし、macOS を対象とする。
 - 演習のコードは学習者の環境の Rust ツールチェーンでビルド・実行する。
 - Claude Code とは `claude -p` で連携する。
-- 詳細は [アーキテクチャ](architecture/index.md)、対応環境・配布などは [非機能要件](non-functional/index.md)。
+- 詳細は [アーキテクチャ](architecture/index.md)、対応環境・公開範囲などは [非機能要件](non-functional/index.md)。
 
 ## 機能
 

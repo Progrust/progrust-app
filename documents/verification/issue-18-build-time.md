@@ -6,7 +6,7 @@ description: "実行のたびに project/ を作り直すときのアプリ側�
 
 - 日付: 2026-11-21
 - Issue: [#18](https://github.com/Progrust/progrust-app/issues/18)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、APFS）。Windows と macOS 13 は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple Silicon、APFS）
 - 関連仕様: [プロジェクトの組み立て](../spec/exercise-runner/project-assembly.md)、[許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)、[性能](../spec/non-functional/performance.md)、[ADR 0011](../decisions/0011-prepare-crates-on-first-launch.md)
 
 ## 環境
@@ -143,7 +143,6 @@ warmup（空の CARGO_HOME・空の target から `cargo build` → `cargo test 
 - cargo の gc の期間（src 1 か月、`.crate` 3 か月）の個別の検証（120 日で両方が消えることだけ確認した）。
 - release プロファイルのビルドの大きさ・時間。
 - アプリ側の他の処理（cargo の起動、JSON の解析、イベント通知）を含めた実測。
-- macOS 13。Windows（当面 macOS に集中する方針のため、確かめていない）。
 
 仕様の変更案:
 

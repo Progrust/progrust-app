@@ -2,10 +2,12 @@
 type: Decision
 title: "ADR 0037"
 description: "教材をアプリに同梱し、GitHub Releases と Tauri の自動更新でアプリごと配布する"
+status: deprecated
+superseded_by: /decisions/0091-no-distribution-or-auto-update-until-publication.md
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [配布と更新](../spec/non-functional/distribution.md)、[データの保存場所](../spec/architecture/data-locations.md)「アプリ同梱データ（`{app_resources}`）」
+- 関連仕様: [公開範囲と配布](../spec/non-functional/distribution.md)、[データの保存場所](../spec/architecture/data-locations.md)「アプリ同梱データ（`{app_resources}`）」
 - 置き換え: なし
 
 ## 背景

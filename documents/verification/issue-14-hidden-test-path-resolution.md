@@ -6,7 +6,7 @@ description: "隠しテストを読み込む `#[path]` が `judge.target` の場
 
 - 日付: 2026-11-21
 - Issue: [#14](https://github.com/Progrust/progrust-app/issues/14)
-- 確かめた OS: macOS 27.2.1（Darwin 27.2.0、Apple Silicon）。Windows は確かめていない
+- 確かめた OS: macOS 27.2.1（Darwin 27.2.0、Apple Silicon）
 - 関連仕様: [提出と判定](../spec/exercise-runner/submit.md)、[ADR 0009](../decisions/0009-embed-hidden-tests-as-module.md)
 
 ## 環境
@@ -59,7 +59,6 @@ NG のときのエラーは `couldn't find file src/a/../progrust_judge_tests.rs
 
 - コンパイルエラーなどに表示されるパスが絶対パスになる（相対パスでは `src/../progrust_judge_tests.rs`）。表示用に置き換える処理が要るかもしれない。
 - プロジェクトのコピー先が変わるたびに書き換えが要る。相対パスならプロジェクトを移動しても動く。
-- Windows のバックスラッシュと `\\?\` の接頭辞は確かめていない。
 
 ### 仕様との食い違い
 
@@ -75,5 +74,5 @@ NG のときのエラーは `couldn't find file src/a/../progrust_judge_tests.rs
 - ユーザーの判断: `#[path]` の値を、深さに応じた相対パスにするか、絶対パスにするか。推奨は相対パス（エラー表示が `src/../progrust_judge_tests.rs` になり、プロジェクトを移動しても動く）。
 - 仕様の変更案: 提出と判定の「test 方式」2 で、`#[path]` の値を固定の `../progrust_judge_tests.rs` にせず、`../` の数（`judge.target` の `src/` からのディレクトリの要素数 + 1）で決めると書く。`mod.rs` かどうかは関係しない。ADR 0009 は方式を変えないので置き換えなくてよいが、値の決め方の補足を ADR か仕様に追記する。
 - 仕様の変更案: 同じ「test 方式」5 で、テスト名は `{モジュールの経路}::progrust_judge::{関数名}` になりうると書く。
-- 確かめられなかった項目: Windows（当面 macOS に集中する方針のため）。Windows での `#[path]` のパス表現（バックスラッシュ、`\\?\`）。`#[cfg(test)]` を付けた `mod progrust_judge;` を追加した後の、隠しテスト側のコンパイルエラーの行番号の表示（仕様の「エラーを併せて表示」）。
+- 確かめられなかった項目: `#[cfg(test)]` を付けた `mod progrust_judge;` を追加した後の、隠しテスト側のコンパイルエラーの行番号の表示（仕様の「エラーを併せて表示」）。
 - Issue は、上の判断が決まるまで開いたままにする。

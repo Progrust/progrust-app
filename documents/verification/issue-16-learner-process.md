@@ -6,7 +6,7 @@ description: "学習者のプログラムを子プロセスとして扱えるか
 
 - 日付: 2026-11-21
 - Issue: [#16](https://github.com/Progrust/progrust-app/issues/16)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）。Windows は確かめていない（当面 macOS に集中する方針のため。Job Object は未確認）
+- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [コードの実行（run）](../spec/exercise-runner/run.md)、[実行・判定の制限値](../spec/exercise-runner/limits.md)、[フロントエンドとバックエンドの役割分担](../spec/architecture/responsibilities.md)、[演習画面](../spec/screens/exercise-screen.md)、[ADR 0013](../decisions/0013-interactive-stdin.md)、[ADR 0014](../decisions/0014-run-learner-code-without-sandbox.md)、[ADR 0045](../decisions/0045-judge-result-above-problem-collapsed.md)
 
 ## 環境
@@ -199,7 +199,7 @@ const flushTailSpan = () => {
 
 ## 判定
 
-基準は「両 OS で、実行・提出の仕様と制限値のとおりに動き、画面が固まらない」。macOS では条件付きで満たした。
+基準は「実行・提出の仕様と制限値のとおりに動き、画面が固まらない」。条件付きで満たした。
 
 | 確かめること | 判定 |
 |---|---|
@@ -209,13 +209,12 @@ const flushTailSpan = () => {
 | 1MB を一気に出力しても画面が固まらないか | 条件付き OK（一定時間ごとにまとめて送り、表示量に上限を付ければ固まらない。1 行ごとのイベントは NG） |
 | 制限値（60 秒、1MB、結果の状態） | OK |
 
-子プロセスの扱いの方式（プロセスグループ + killpg、パイプ + 読み取りスレッド、標準入力の専用スレッド）は変えずに実装できる。Issue の「うまくいかなかった場合」にある出力の送り方の見直し（まとめて送る）は必要になった。Windows は確かめていない。
+子プロセスの扱いの方式（プロセスグループ + killpg、パイプ + 読み取りスレッド、標準入力の専用スレッド）は変えずに実装できる。Issue の「うまくいかなかった場合」にある出力の送り方の見直し（まとめて送る）は必要になった。
 
 ## 残った事項
 
 確かめられなかったこと。
 
-- Windows（Job Object による停止、パイプの扱い）。
 - macOS で二重 fork した孫を止める方法（`PR_SET_CHILD_SUBREAPER` に当たる仕組みの有無はドキュメントの範囲でしか調べていない）。
 - 上限より前の出力を仮想スクロールで全部見せる場合の表示の費用。
 - 改行のない 1MB の描画が、DOM の組み立て方で 0 秒〜12 秒と大きく違った原因。

@@ -6,8 +6,8 @@ description: "音声・フォント・フロントエンド JS・Tauri の実行
 
 - 日付: 2026-11-21
 - Issue: [#20](https://github.com/Progrust/progrust-app/issues/20)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、aarch64）。Windows は確かめていない
-- 関連仕様: [配布と更新](../spec/non-functional/distribution.md)、[ナレーション音声](../spec/content-format/video/voice.md)、[画面の未決事項](../spec/screens/open-questions.md)、[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md)、[ADR 0063](../decisions/0063-generate-narration-with-voicepeak-and-bundle.md)、[ADR 0004](../decisions/0004-monaco-without-completion.md)
+- 確かめた OS: macOS 27.2.1（Apple Silicon、aarch64）
+- 関連仕様: [公開範囲と配布](../spec/non-functional/distribution.md)、[ナレーション音声](../spec/content-format/video/voice.md)、[画面の未決事項](../spec/screens/open-questions.md)、[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md)、[ADR 0063](../decisions/0063-generate-narration-with-voicepeak-and-bundle.md)、[ADR 0004](../decisions/0004-monaco-without-completion.md)
 
 ## 環境
 
@@ -158,6 +158,8 @@ Finished 2 bundles at:
 
 ## 判定
 
+この検証の後、アプリの完成までは配布と更新の仕組みを作らないことにした（[ADR 0091](../decisions/0091-no-distribution-or-auto-update-until-publication.md)）。下の判定と残った事項は、一般公開をする場合に、配布と更新の方法を決めるときの材料になる。
+
 基準は「インストーラーと更新のサイズが許せる範囲に収まる（範囲は検証時に決める）」。許せる範囲を決めるのはユーザーなので、OK / NG は付けない。事実として言えることは次のとおり。
 
 - 仕様どおり（AAC 64kbps）だと、インストーラーも更新も約 220MB になる。教材を 1 文字直すだけでも 220MB をダウンロードする（差分更新が無い）。
@@ -190,21 +192,18 @@ Finished 2 bundles at:
 2. 音声の形式（AAC-LC 64k のままか、48k / 32k、HE-AAC v1 か）。音質は人が聞いて決める必要がある。
 3. HE-AAC の `.m4a` が WKWebView で再生できることは、再生を確かめる別の Issue で確かめる。再生できないときは、AAC-LC 32k が次の候補になる。
 4. 音声のエンコーダー。ffmpeg の標準 `aac` は ffmpeg だけで作れる。HE-AAC は macOS の afconvert でしか作れなかったので、音声を作る環境が macOS であることが前提になる。
-5. ユニバーサルバイナリ（Intel Mac 対応）にするか。差は約 +1.9MB で、音声に比べて小さい。
 
 ### 確かめられなかった項目
 
 - 聞いた音質。
-- WKWebView での HE-AAC の再生（macOS 13 を含む）。ffmpeg が 2 チャンネルとして扱う件で、WebView 側でチャンネル数・長さ・タイミングがずれないかも、再生の検証で見る。
-- ユニバーサルバイナリの実測（x86_64 のターゲットを入れていない）。
+- WKWebView での HE-AAC の再生。ffmpeg が 2 チャンネルとして扱う件で、WebView 側でチャンネル数・長さ・タイミングがずれないかも、再生の検証で見る。
 - 実際のアプリの実行ファイルの増加（プラグインと自前のコード）。
 - 教材のテキスト・動画の TSX の合計サイズ。
 - 教材が使う字によるフォントのサブセット化、フォントのライセンスの確認。
-- Windows。当面 macOS に集中する方針のため、確かめていない。
 
 ### 仕様の変更案
 
 - [ナレーション音声](../spec/content-format/video/voice.md) は「AAC、モノラル、64kbps」とだけ書き、エンコーダーと、1 文 1 ファイルのオーバーヘッドを書いていない。afconvert の出力は 1 ファイル 4KB のオーバーヘッドがあり、6,248 ファイルで約 25MB になる。ffmpeg の標準 AAC なら 1.6KB。エンコーダーと、詰め直しの有無を書くとよい。
 - [ADR 0063](../decisions/0063-generate-narration-with-voicepeak-and-bundle.md) の「64kbps に圧縮すると約 0.8MB」は、1 分 44 秒の動画全体に対する概算で、音声だけの 85.9 秒では 0.73MB（ffmpeg 64k）。1 本 3 分の見積もりにはほぼ影響しない。「WAV は 7.9MB」は、実測の 8,248,986 B（7.87MiB）と合っている。
 - [画面の未決事項](../spec/screens/open-questions.md) の「書体の同梱方法」「日本語の書体を同梱したときのファイルの大きさ」は、Murecho の可変フォントの woff2 が約 0.62MB、Red Hat Mono が約 0.03MB、サブセット化の効果は約 0.1MB と分かった。決まったら ADR を追加する。
-- [配布と更新](../spec/non-functional/distribution.md) に更新サイズの見込みの記述は無い。「教材はアプリに同梱し、アプリの更新とともに更新する」ので、更新のサイズがインストーラーのサイズとほぼ同じになることを書く余地がある。ただし、音声の形式の決定しだいで、[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md) と [ADR 0063](../decisions/0063-generate-narration-with-voicepeak-and-bundle.md) を見直す可能性がある。
+- 検証した時点の仕様（配布と更新）には、更新サイズの見込みの記述が無かった。一般公開をする場合に、Tauri の自動更新でアプリごと更新する方法（[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md) で採っていた方法）を選ぶなら、更新のサイズがインストーラーのサイズとほぼ同じになることを踏まえる。音声の形式の決定しだいで、[ADR 0063](../decisions/0063-generate-narration-with-voicepeak-and-bundle.md) を見直す可能性がある。

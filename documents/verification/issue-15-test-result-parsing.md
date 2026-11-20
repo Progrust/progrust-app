@@ -6,7 +6,7 @@ description: "test 方式の libtest の出力からテストごとの結果と 
 
 - 日付: 2026-11-21
 - Issue: [#15](https://github.com/Progrust/progrust-app/issues/15)
-- 確かめた OS: macOS 27.2.1（Darwin 27.2.0、Apple Silicon）。Windows は確かめていない
+- 確かめた OS: macOS 27.2.1（Darwin 27.2.0、Apple Silicon）
 - 関連仕様: [提出と判定](../spec/exercise-runner/submit.md)、[実行時の制限](../spec/exercise-runner/limits.md)、[ADR 0015](../decisions/0015-show-failed-case-details.md)
 
 ## 環境
@@ -117,5 +117,5 @@ progrust_judge::c11_hang: timeout
 - 仕様の変更案（[実行時の制限](../spec/exercise-runner/limits.md)「テスト全体の実行時間」）: `--list` で得た名前のうち、結果が出ていないものを `timeout` にする。
 - 別の問題: 仕様どおり 1 回の起動で読む方式では、`std::process::exit(0)` が呼ばれると、終了コード 0 のまま結果行が欠け、全テストが成功したように見えうる。この方式を採るなら、`--list` の件数と結果行の件数が一致することを必ず確かめる。per-test 方式なら起きない。
 - 注意: `RUSTC_BOOTSTRAP` は値が何でも `--format json` を有効にする（`0` でも）。使わない前提だが、アプリが子プロセスに環境を引き継ぐ場合、学習者側の環境変数で意図せず有効にならないかに注意する（結果の読み取りには影響しない）。
-- 確かめられなかった項目: Windows（当面 macOS に集中する方針のため）。`#[test]` が 1 件もないときの `--list` の挙動（0 件のときは `compile_error` ではなく専用のエラーにしたほうがよいと考えられるが、未検証）。
+- 確かめられなかった項目: `#[test]` が 1 件もないときの `--list` の挙動（0 件のときは `compile_error` ではなく専用のエラーにしたほうがよいと考えられるが、未検証）。
 - Issue は、上の判断が決まるまで開いたままにする。

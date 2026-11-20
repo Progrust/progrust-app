@@ -1,13 +1,13 @@
 ---
 type: Specification
 title: "対応環境"
-description: "対応する OS（macOS、Windows）のバージョンとアーキテクチャ、学習者の環境に必要なものを定める。"
+description: "対応環境を作者の Mac（macOS、Apple Silicon）だけとすること、macOS の他のバージョンと他の OS を開発で考慮しないこと、学習者の環境に必要なものを定める。"
 ---
 
 | OS | 対応バージョン | アーキテクチャ |
 |---|---|---|
-| macOS | 13 以降 | Apple Silicon・Intel（ユニバーサルバイナリ） |
-| Windows | 10（22H2）以降、11 | x64 |
+| macOS | 作者の Mac に入っているバージョン（現在は 27.2.1） | Apple Silicon |
 
-- Windows のインストーラーには WebView2 ランタイムの導入処理を含める。
+- 対応環境は、アプリの作者が使っている Mac（作者の Mac）だけとする。アプリは、この Mac で動けばよい。
+- macOS の他のバージョン、Intel の Mac、Windows などの他の OS は、開発で考慮しない。
 - 学習者の環境に必要なもの: Rust ツールチェーン（rustc 1.85 以上）、Claude Code（AI 機能を使う場合）。検出方法は [外部ツール（cargo・claude）への依存](../architecture/external-tools.md)。

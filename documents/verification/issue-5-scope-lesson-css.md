@@ -6,7 +6,7 @@ description: "レッスン専用の CSS をそのレッスンの動画の中に�
 
 - 日付: 2026-11-21
 - Issue: [#5](https://github.com/Progrust/progrust-app/issues/5)
-- 確かめた OS: macOS 27.2.1（Apple M1）だけ。macOS 13 は実機がなく、互換表で調べた範囲だけを書く。Windows（WebView2）は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple M1）
 - 関連仕様: [教材データ形式の未決事項](../spec/content-format/open-questions.md)、[動画のシーン](../spec/content-format/video/scenes.md)、[動画のコードの構成](../spec/content-format/video/structure.md)
 
 ## 環境
@@ -132,19 +132,17 @@ css = `@scope (${sel}) {\n${css}\n}`;
 
 ## 判定
 
-基準「方法が 1 つに決まり、両 OS の WebView で動く」は、満たしていない。
+基準「方法が 1 つに決まり、WebView で動く」は、満たしていない。
 
 - 方法の決定はユーザーの判断である。
-- macOS ではどの候補も動いた（macOS 13 の `@scope` を除く）。
-- macOS 13 は互換表だけで、実機は確かめていない。Windows も確かめていない。
+- どの候補も動いた。
 
 ## 残った事項
 
-- Windows（WebView2）と macOS 13 の実機は確かめていない。
 - ユーザーの判断が要る点: 閉じ込めの方法。推奨は候補 3（ビルド時の接頭辞 `[data-lesson="{id}"]`）。決まったら、[教材データ形式の未決事項](../spec/content-format/open-questions.md)を解消する ADR を追加する。
-  - 候補 3 の理由: 閉じ込めが確実（要素のセレクタも閉じる）。作者は普通の CSS を書けばよい。出力は普通の子孫セレクタなので、macOS 13 の最も古い WebKit でも動く。[Issue #6 の検証結果](issue-6-switch-theme-during-playback.md)の CSS 変数の継承もそのまま使える。
+  - 候補 3 の理由: 閉じ込めが確実（要素のセレクタも閉じる）。作者は普通の CSS を書けばよい。[Issue #6 の検証結果](issue-6-switch-theme-during-playback.md)の CSS 変数の継承もそのまま使える。
   - 候補 3 の弱い点: アプリのグローバルな CSS は動画の中に効く（逆向きの漏れ）。アプリ側の CSS を要素のセレクタで書かない、などの決まりが要る。
-  - 候補 2（`@scope`）は、macOS 13 で Safari を 17.4 以上に更新していないと、レッスンの CSS が効かない。対応環境の下限を上げない限り勧めない。
+  - 候補 2（`@scope`）も、候補 3 と同じ範囲に閉じ込められた。違いは、`@scope` の中の `:root` が無効になることと、Safari 17.4 より前の WebKit では使えないこと。対応環境（macOS 27.2.1）の WebKit では使える。
   - 候補 4（Shadow DOM）は最も強く閉じ込められるが、CSS を文字列で集める仕組み、デザインシステムの CSS の `:root` → `:host`、テーマ・章を Shadow の中に渡すこと、CSS の二重持ちが要る。
   - 候補 1（CSS Modules）は、要素のセレクタが漏れる。lint で禁じる前提になる。
 - 合わせて決める必要がある点（候補 3 を選ぶ場合）
@@ -153,4 +151,3 @@ css = `@scope (${sel}) {\n${css}\n}`;
 - 仕様の変更案
   - Shadow DOM を選ぶ場合は、[動画のコードの構成](../spec/content-format/video/structure.md)の「アプリは、動画のデザインシステムの CSS を動画に適用する」に従い、デザインシステムの CSS（tokens.css）の `:root` を `:host` でも効くように書く必要がある（デザインシステム側の変更）。
 - 一度表示したレッスンの CSS（Vite の動的 import の CSS）は、レッスンを閉じても文書から外れない。閉じ込めない CSS は、その後に開くすべての画面に効き続ける。
-- Vite 8 の既定のビルドの対象は `safari16.4`（CSS の lightningcss も同じ）。macOS 13.0〜13.2 の Safari 16.1〜16.3 はこれより古い。macOS 13 を対応環境に含めるなら `build.target` を決める必要がある。

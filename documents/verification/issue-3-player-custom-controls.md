@@ -6,7 +6,7 @@ description: "Remotion Player の外に動画画面の操作（再生位置の�
 
 - 日付: 2026-11-21
 - Issue: [#3](https://github.com/Progrust/progrust-app/issues/3)
-- 確かめた OS: macOS 27.2.1（Apple M1）だけ。Windows（WebView2）は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple M1）
 - 関連仕様: [動画画面](../spec/screens/video-screen.md)、[ADR 0061](../decisions/0061-render-videos-with-remotion-player.md)、[ADR 0067](../decisions/0067-captions-as-app-feature.md)、[ADR 0070](../decisions/0070-video-controls-sentence-jump-and-5s-skip.md)、[ADR 0071](../decisions/0071-save-playback-position-by-sentence.md)
 
 ## 環境
@@ -75,7 +75,7 @@ Issue #1 と同じ試作（Tauri の最小アプリに Remotion の `Player` を
 |---|---|
 | 動画画面の仕様のプレーヤーの操作とキーボードショートカットを、すべて実装できる見込みが立つ | 満たした。macOS で、すべて実装できた。キーは合成イベントでの確認 |
 
-Issue は閉じる。Windows は確かめていない（当面 macOS に集中する方針による）。
+Issue は閉じる。
 
 ## 残った事項
 
@@ -87,7 +87,6 @@ Issue は閉じる。Windows は確かめていない（当面 macOS に集中�
 確かめられなかった項目
 
 - 本物のキー入力での確認（合成したイベントだけで確かめた）。標準の操作を出したときの二重の切り替えも、本物のキーでは確かめていない。
-- Windows の WebView2 での動作。
 
 別に確かめた結果（関連する事実）
 

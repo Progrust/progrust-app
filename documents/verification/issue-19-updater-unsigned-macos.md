@@ -6,8 +6,8 @@ description: "署名なしの macOS アプリで Tauri の自動更新が動く�
 
 - 日付: 2026-11-21（検証は 2026-11-20 から 2026-11-21）
 - Issue: [#19](https://github.com/Progrust/progrust-app/issues/19)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）。macOS 13 の実機と Windows の実機は確かめていない（Windows はビルドとインストーラーの中身の確認だけで、インストールと更新は確かめていない）
-- 関連仕様: [配布と更新](../spec/non-functional/distribution.md)、[動作環境](../spec/non-functional/environments.md)、[非機能要件の未決事項](../spec/non-functional/open-questions.md)、[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md)、[ADR 0038](../decisions/0038-no-os-code-signing-for-now.md)
+- 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）。対応環境ではない Windows は、GitHub Actions でのビルドとインストーラーの中身の確認だけを行った
+- 関連仕様: [公開範囲と配布](../spec/non-functional/distribution.md)、[対応環境](../spec/non-functional/environments.md)、[非機能要件の未決事項](../spec/non-functional/open-questions.md)、[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md)、[ADR 0038](../decisions/0038-no-os-code-signing-for-now.md)
 
 ## 環境
 
@@ -300,16 +300,16 @@ main.wxs:209:                <![CDATA[NOT(REMOVE OR INSTALLED_WEBVIEW2_VERSION)]
 
 ## 判定
 
-Issue の基準: 両 OS で、古い版から新しい版へ「更新して再起動」で更新できる。
+この検証の後、アプリの完成までは配布と更新の仕組みを作らないことにした（[ADR 0091](../decisions/0091-no-distribution-or-auto-update-until-publication.md)）。下の判定と残った事項は、一般公開をする場合に、配布と更新の方法を決めるときの材料になる。
+
+Issue の基準: 古い版から新しい版へ「更新して再起動」で更新できる。
 
 | 対象 | 判定 | 根拠 |
 |---|---|---|
 | macOS（更新そのもの） | 条件付きで合格 | Actions のユニバーサルビルド（署名の設定なし、ad-hoc 署名の両方）で、0.1.0 から 0.1.1、0.2.0 から 0.2.1、0.1.0 から 0.2.1 の更新と `relaunch()` による再起動ができた。更新後のアプリには quarantine 属性が付かず、再起動で Gatekeeper に止められない。条件は、quarantine 属性が無いか、`01c1`（公証済みアプリの承認済みの値）であること。App Translocation された状態（`0083`・`00c3`）では、置き場所にかかわらず更新が失敗した |
 | macOS（ブラウザーで落とした場合の一連の流れ） | 未確認（人の操作が要る） | quarantine 属性付き（未承認）の初回起動は Gatekeeper のダイアログで止まる。どのダイアログが出るか、「このまま開く」で通せるか、通した後に App Translocation されずに更新できる状態になるかは、画面と Finder の操作が要るので確かめていない |
-| macOS 13 | 実機未確認 | 最低 OS は 10.13（arm64 は 11.0）で範囲内。updater の仕組みに macOS 13 固有の制約は、文書とソースで分かる範囲では見当たらない |
-| Windows | ビルドと公開は合格、更新は未確認 | NSIS・MSI と `.sig`、latest.json の Windows の項目ができ、WebView2 の導入処理がインストーラーに入っている。インストールと更新は確かめていない |
 
-Issue の基準は満たしていない（macOS で確かめられることがすべて合格ではなく、Windows は未確認）。[ADR 0037](../decisions/0037-bundle-content-and-auto-update.md)（自動更新で配布する）と [ADR 0038](../decisions/0038-no-os-code-signing-for-now.md)（OS のコード署名を当面行わない）は、updater の仕組みが署名なしでも動いたので、今のところ覆す結果ではない。ただし、ブラウザーで落とした学習者が更新できる状態になれるかは未確認で、App Translocation を避ける手順が無いと分かった場合は、手順（`xattr -cr` を案内するなど）か ADR 0038 を見直す必要がある。
+Issue の基準は満たしていない（ブラウザーで落とした場合の一連の流れが未確認）。検証した時点で採用していた [ADR 0037](../decisions/0037-bundle-content-and-auto-update.md)（自動更新で配布する）と [ADR 0038](../decisions/0038-no-os-code-signing-for-now.md)（OS のコード署名を当面行わない）は、updater の仕組みが署名なしでも動いたので、覆す結果ではなかった。ただし、ブラウザーで落とした学習者が更新できる状態になれるかは未確認で、App Translocation を避ける手順が無いと分かった場合は、手順（`xattr -cr` を案内するなど）か、署名なしで配布する方法を見直す必要がある。
 
 ## 残った事項
 
@@ -317,9 +317,6 @@ Issue の基準は満たしていない（macOS で確かめられることが�
 
 - ad-hoc 署名のビルドを Safari で dmg として落とし、/Applications にドラッグして開いたときに、どのダイアログが出るか、「プライバシーとセキュリティ」の「このまま開く」で通せるか、その後に更新が動くか（人の操作が要る）。
 - Finder でドラッグして /Applications に入れたときの quarantine 属性の値。
-- macOS 13 の実機での更新。
-- Windows でのインストール、更新、再起動、MSI の WebView2 の処理（`ICE03` の警告の影響）。Windows は当面確かめない方針である。
-- macOS と Windows のジョブが同時に終わったときの latest.json の競合。
 
 ### ユーザーの判断が要る点
 
@@ -328,7 +325,7 @@ Issue の基準は満たしていない（macOS で確かめられることが�
    - 配布専用の public リポジトリを作り、Releases をそこに置く（tauri-action の `owner` / `repo` 入力と、そのリポジトリに書ける token を使う。ソースは private のまま）。
    - GitHub 以外の静的ホスティング（GitHub Pages、Cloudflare R2、S3 など）に置く。latest.json の `url` は自分で組み立てる（tauri-action の `uploadUpdaterJson` は使えない）。
    - 参考: updater に認証ヘッダーを付けて private の API から取る方法もあるが、token をアプリに埋め込むことになるので配布には向かない。
-2. macOS の ad-hoc 署名（`bundle.macOS.signingIdentity: "-"`）をするか。費用はかからず、Developer ID 署名・公証とは別物。既定のユニバーサルビルドは x86_64 のスライスが無署名で、`codesign --verify` が通らない。ad-hoc 署名にすると通り、Gatekeeper のダイアログの種類も変わる（`Prompt shown (8, 0)` から `(6, 0)`）。どちらでも更新は動いた。仕様の「OS のコード署名は行わない」に ad-hoc 署名が含まれるかを決める必要がある。
+2. macOS の ad-hoc 署名（`bundle.macOS.signingIdentity: "-"`）をするか。費用はかからず、Developer ID 署名・公証とは別物。既定のユニバーサルビルドは x86_64 のスライスが無署名で、`codesign --verify` が通らない。ad-hoc 署名にすると通り、Gatekeeper のダイアログの種類も変わる（`Prompt shown (8, 0)` から `(6, 0)`）。どちらでも更新は動いた。「OS のコード署名は行わない」と定める場合に、ad-hoc 署名が含まれるかを決める必要がある。
 3. App Translocation への対処。案は次のとおり。
    - 配布ページに「dmg からアプリを『アプリケーション』フォルダーにドラッグしてから開く」と書く。Finder で移動すると App Translocation されない、と一般に言われるが、今回は置き場所が /Applications でも quarantine の値によっては起きたので、人の確認が要る。
    - アプリが起動時に自分のパスが `/AppTranslocation/` の下（または読み取り専用のボリューム）かを調べ、更新の前に「アプリケーションフォルダーに移してください」と案内する。
@@ -336,12 +333,14 @@ Issue の基準は満たしていない（macOS で確かめられることが�
    - 配布ページで、ターミナルで `xattr -cr /Applications/Progrust.app` を実行する手順を案内する（quarantine 属性を外すと、今回の観測ではダイアログも App Translocation も起きない。ただし学習者にターミナルの操作を求める）。
 4. pre-release の扱い。`releases/latest/download/latest.json` は pre-release を指さない。本番で pre-release を使うなら、エンドポイントの決め方が要る。
 
-### 仕様の変更が要りそうな点
+### 配布と更新の方法を決めるときに踏まえる点
 
-- [配布と更新](../spec/non-functional/distribution.md)の「OS のコード署名は行わない」: Apple Silicon では実行ファイルに少なくとも ad-hoc 署名が要る（リンカが arm64 のスライスに自動で付ける）。ad-hoc 署名を付けるかどうかでダイアログの種類も変わる。「Developer ID 署名・公証、Windows のコード署名証明書は使わない（macOS は ad-hoc 署名だけ行う）」のように、何をしないかを明確にする案がある（判断 2 しだい）。
-- 同「初回起動時の OS の警告を回避する手順を配布ページに記載する」: 手順は、警告を回避するだけでなく、App Translocation されない状態にするものでなければならない（App Translocation された状態では自動更新が必ず失敗する）。どの手順でそうなるかは、判断 3 と未確認の項目しだい。
-- 同「配布物は GitHub Releases に置く」: リポジトリが private のままだと学習者が取れない（判断 1）。
-- [非機能要件の未決事項](../spec/non-functional/open-questions.md)の「署名なしの macOS アプリで Tauri の自動更新が問題なく動作するか」: 「App Translocation されていなければ動く。初回起動の操作は人の確認が残る」と分かった。
+検証した時点の仕様（配布と更新）は、配布物を GitHub Releases に置くこと、OS のコード署名を行わないこと、初回起動時の OS の警告を回避する手順を配布ページに記載することを定めていた。
+
+- 「OS のコード署名は行わない」: Apple Silicon では実行ファイルに少なくとも ad-hoc 署名が要る（リンカが arm64 のスライスに自動で付ける）。ad-hoc 署名を付けるかどうかでダイアログの種類も変わる。「Developer ID 署名・公証、Windows のコード署名証明書は使わない（macOS は ad-hoc 署名だけ行う）」のように、何をしないかを明確にする案がある（判断 2 しだい）。
+- 「初回起動時の OS の警告を回避する手順を配布ページに記載する」: 手順は、警告を回避するだけでなく、App Translocation されない状態にするものでなければならない（App Translocation された状態では自動更新が必ず失敗する）。どの手順でそうなるかは、判断 3 と未確認の項目しだい。
+- 「配布物は GitHub Releases に置く」: リポジトリが private のままだと学習者が取れない（判断 1）。
+- 検証した時点の未決事項「署名なしの macOS アプリで Tauri の自動更新が問題なく動作するか」: 「App Translocation されていなければ動く。初回起動の操作は人の確認が残る」と分かった。
 - 仕様にするか判断が要る実装上の注意: 更新が失敗しても元のアプリは壊れない。updater は `Accept: application/octet-stream` で GitHub API の資産の URL から取る。
 
 ### 検証中に見つけた別の問題

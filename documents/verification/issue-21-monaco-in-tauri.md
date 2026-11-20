@@ -6,7 +6,7 @@ description: "Monaco Editor を Tauri の WKWebView で、CDN なしの同梱、
 
 - 日付: 2026-11-21
 - Issue: [#21](https://github.com/Progrust/progrust-app/issues/21)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、WKWebView）。Windows（WebView2）と macOS 13 は確かめていない。日本語入力（IME）と実キーでのショートカットは、人の操作が要るので確かめていない
+- 確かめた OS: macOS 27.2.1（Apple Silicon、WKWebView）。日本語入力（IME）と実キーでのショートカットは、人の操作が要るので確かめていない
 - 関連仕様: [演習画面](../spec/screens/exercise-screen.md)、[技術スタック](../spec/architecture/tech-stack.md)、[セキュリティとプライバシー](../spec/non-functional/security-privacy.md)、[ADR 0004](../decisions/0004-monaco-without-completion.md)
 
 ## 環境
@@ -121,19 +121,17 @@ Tauri の macOS の既定メニュー（`NSApp.mainMenu` の実測、46 項目�
 
 ## 判定
 
-基準「両 OS で、オフラインで動き、日本語を入力でき、演習画面のショートカットが効く」に対して、macOS の範囲では一部だけ確かめた。
+基準「オフラインで動き、日本語を入力でき、演習画面のショートカットが効く」に対して、一部だけ確かめた。
 
 - オフライン: 満たした。Worker 込みで、厳しめの CSP と両立し、外部読み込みは無かった。
 - 日本語入力: 未確認。既知の WebKit の問題は調べた。
 - ショートカット: Monaco 側は満たした（既定との衝突は上書きできる）。Tauri の既定メニューとも衝突しない。実キーが WKWebView を通ってページに届くか（特に Cmd+.）は未確認。
-- Windows（WebView2）: 未確認。
 
 ## 残った事項
 
 - 人が確かめる項目（試作の .app を起動して行う。CSP は `style-src 'unsafe-inline'` ありの版を使う）:
   - 日本語入力: (1) コメント行に「こんにちは」を変換して確定する、(2) 変換中に矢印・Enter を押す、(3) 変換候補がカーソルの近くに出るか見る、(4) 変換中に Cmd+Enter を押す。
   - 実キー: エディタにフォーカスして Cmd+Enter・Cmd+Shift+Enter・Cmd+. を押し、画面の表示（ページの keydown に届いたか）を見る。
-- Windows（WebView2）と macOS 13 は確かめていない。
 - ユーザーの判断が要る点: CSP を仕様に定めるか。現状、仕様に CSP の記述は無い。定めるなら `style-src 'unsafe-inline'` を含める必要がある。
 - 仕様の変更案（仕様は直していない。食い違いは無く、ADR 0004 の方針のまま使える）:
   - 技術スタックかセキュリティとプライバシーに「Monaco は CDN を使わず同梱する（loader にローカルの monaco-editor を渡す）。Worker は同梱し `worker-src 'self'`。CSP は `style-src 'unsafe-inline'` が必要」と書く。

@@ -111,8 +111,8 @@
 # 非機能要件
 
 * [ADR 0014](0014-run-learner-code-without-sandbox.md) - 学習者のコードをサンドボックスに入れずに実行する
-* [ADR 0037](0037-bundle-content-and-auto-update.md) - 教材をアプリに同梱し、GitHub Releases と Tauri の自動更新でアプリごと配布する
-* [ADR 0038](0038-no-os-code-signing-for-now.md) - OS のコード署名を当面行わない
+* [ADR 0090](0090-support-only-authors-mac-until-completion.md) - アプリの完成までは、対応環境を作者の Mac だけとし、一般公開しない前提で開発する
+* [ADR 0091](0091-no-distribution-or-auto-update-until-publication.md) - アプリの完成までは配布と更新の仕組みを作らず、作者の Mac でビルドして使い、教材はアプリに同梱する
 
 # ドキュメントの運用ルール
 
@@ -130,4 +130,6 @@
 # 置き換え済み・廃止
 
 * [ADR 0005](0005-slides-in-restricted-html.md) - スライドを、使える部品を決めた HTML で書く
+* [ADR 0037](0037-bundle-content-and-auto-update.md) - 教材をアプリに同梱し、GitHub Releases と Tauri の自動更新でアプリごと配布する
+* [ADR 0038](0038-no-os-code-signing-for-now.md) - OS のコード署名を当面行わない
 * [ADR 0047](0047-separate-slide-design-system.md) - スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める

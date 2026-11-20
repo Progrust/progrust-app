@@ -6,7 +6,7 @@ description: "教材チェックツールの動画の描画チェックと禁止
 
 - 日付: 2026-11-21
 - Issue: [#7](https://github.com/Progrust/progrust-app/issues/7)
-- 確かめた OS: macOS 27.2.1（Apple Silicon）。Windows は確かめていない（当面 macOS に集中する方針のため）。GitHub Actions（ubuntu-latest）での実行も確かめていない
+- 確かめた OS: macOS 27.2.1（Apple Silicon）。GitHub Actions（ubuntu-latest）での実行は確かめていない
 - 関連仕様: [教材チェックツール](../spec/content-guidelines/check-tool.md)、[動画で使えないコード](../spec/content-format/video/prohibited-code.md)、[シーン](../spec/content-format/video/scenes.md)、[ADR 0061](../decisions/0061-render-videos-with-remotion-player.md)、[ADR 0062](../decisions/0062-write-video-scenes-in-unrestricted-tsx.md)
 
 ## 環境
@@ -196,7 +196,6 @@ Issue の基準「CI で、描画のエラー（台本にない文を指す合�
 確かめられなかったこと。
 
 - GitHub Actions（ubuntu-latest）での実行。依存ライブラリ（apt）、フォント、root で実行するときのオプションは、公式ドキュメントを調べただけである。Linux の runner での所要時間も測っていない。
-- Windows。macOS 13 も確かめていない。
 - WKWebView での Player の再生（別の Issue）。
 - `CodeBlock` の制約違反の検出と、`LessonTitle` の個数の検査の実装。同じ仕組みでできると思われるが、作っていない。
 - 実際の約 3 分の教材での所要時間。合成した 8 シーン・40 文のレッスンで代用した。実際の教材のほうが描画が重い可能性がある。

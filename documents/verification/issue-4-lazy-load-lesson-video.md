@@ -6,7 +6,7 @@ description: "レッスンごとに動画のコード・音声・画像を遅延
 
 - 日付: 2026-11-21
 - Issue: [#4](https://github.com/Progrust/progrust-app/issues/4)
-- 確かめた OS: macOS 27.2.1（Apple M1）だけ。macOS 13 の実機と Windows（WebView2）は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple M1）
 - 関連仕様: [責務の分担](../spec/architecture/responsibilities.md)、[動画のコードの構成](../spec/content-format/video/structure.md)、[動画のシーン](../spec/content-format/video/scenes.md)、[教材のディレクトリ構成](../spec/content-format/directory-structure.md)、[データの置き場所](../spec/architecture/data-locations.md)、[ADR 0061](../decisions/0061-render-videos-with-remotion-player.md)、[ADR 0062](../decisions/0062-write-video-scenes-in-unrestricted-tsx.md)
 
 ## 環境
@@ -146,11 +146,10 @@ ch04 の文 h1（52,755 バイト）を 2.5 秒再生した。
 
 ## 判定
 
-基準「本番ビルドで、開いたレッスンの塊だけが読み込まれ、動画が再生できる」は、macOS で満たした。Windows は確かめていない。
+基準「本番ビルドで、開いたレッスンの塊だけが読み込まれ、動画が再生できる」は、満たした。
 
 ## 残った事項
 
-- Windows（WebView2）は確かめていない。macOS 13 の実機も確かめていない。
 - tauri:// は Range リクエストに 200 で全体を返す。`Html5Audio` では、読み込みとシークのときに同じ音声を何十回も全体で配信した（約 3 秒で 81 回、52KB × 81 ≒ 4.3MB）。Issue #2 の結果（1 文 30〜50KB のファイルでは問題は出なかった）には、配信の回数の観点がなかった。
 - ユーザーの判断が要る点: 音声の置き方。仕様どおり Vite のアセット（tauri://）にするか、Tauri のリソース + `convertFileSrc`（asset://）にするか。asset:// は 206 で答えるが、仕様の役割分担（音声はフロントエンドのビルドに含める）とアセットのスコープの設定が変わる。
 - 仕様の変更案
@@ -158,4 +157,3 @@ ch04 の文 h1（52,755 バイト）を 2.5 秒再生した。
   - 試作の timeline.ts はレッスンごとに間（LEAD・TAIL・GAP）を持つ。仕様の `useCues()` はアプリが合図を計算する前提で、この検証ではレッスンごとの timeline のままにしたので、未確認。
   - [データの置き場所](../spec/architecture/data-locations.md): リソースに `content/` を入れるとき、動画のコードと音声を除く設定が要る。
 - この WKWebView の `performance.getEntriesByType('resource')` は tauri:// のファイルを記録しない。アプリの性能の計測や遅延読み込みの確認で、Resource Timing に頼れない。
-- Vite 8 の既定のビルドの対象は `safari16.4`（CSS の lightningcss も同じ）。macOS 13.0〜13.2 の Safari 16.1〜16.3 はこれより古い。macOS 13 を対応環境に含めるなら `build.target` を決める必要がある（Issue #1〜#3 の試作も既定のまま）。

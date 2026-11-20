@@ -6,7 +6,7 @@ description: "アプリのテーマと章カラーを Player の中の動画ま�
 
 - 日付: 2026-11-21
 - Issue: [#6](https://github.com/Progrust/progrust-app/issues/6)
-- 確かめた OS: macOS 27.2.1（Apple M1）だけ。Windows（WebView2）は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple M1）
 - 関連仕様: [外観（テーマ）](../spec/screens/appearance.md)、[動画の色](../spec/content-format/video/colors.md)、[ADR 0061](../decisions/0061-render-videos-with-remotion-player.md)
 
 ## 環境
@@ -103,7 +103,6 @@ light DOM なら、どの渡し方でも届いた。Player は iframe ではな�
 
 ## 残った事項
 
-- Windows（WebView2）は確かめていない。macOS 13 の実機も確かめていない。
 - 人の目での確認（途切れが目立たないか、色の切り替わりが自然か）は未確認。
 - ユーザーの判断が要る点: テーマ・章の渡し方。CSS 変数の継承（Player の外の属性）と inputProps のどちらにするか。どちらも基準を満たした。
   - [Issue #5 の検証結果](issue-5-scope-lesson-css.md)で Shadow DOM を選ぶ場合は、章カラーを inputProps で渡す必要がある。

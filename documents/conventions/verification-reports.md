@@ -22,7 +22,7 @@ description: "技術検証の結果を `verification/` に1つの Issue につ�
 
 - 本文の先頭に「日付」「Issue」「確かめた OS」「関連仕様」の4行を書く。
   - 「Issue」は、Issue へのリンク（`[#12](https://github.com/Progrust/progrust-app/issues/12)`）で書く。
-  - 「確かめた OS」には、実際に確かめた OS と版を書く。確かめていない OS（例: Windows）があれば、そのことも書く。
+  - 「確かめた OS」には、実際に確かめた OS と版を書く。対応環境（[対応環境](../spec/non-functional/environments.md)）と違う環境で確かめたときは、そのことも書く。
   - 「関連仕様」には、検証の対象になった仕様と ADR へのリンクを、「、」で区切って書く。
 - 続けて、次の見出しを書く。
   - 「環境」: OS と、使ったツール・ライブラリの版

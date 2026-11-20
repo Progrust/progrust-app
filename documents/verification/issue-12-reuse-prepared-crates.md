@@ -6,7 +6,7 @@ description: "初回準備でビルドした許可クレートを、各演習が
 
 - 日付: 2026-11-20
 - Issue: [#12](https://github.com/Progrust/progrust-app/issues/12)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、APFS）。Windows は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple Silicon、APFS）
 - 関連仕様: [許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)、[project/ の組み立て](../spec/exercise-runner/project-assembly.md)、[ADR 0010](../decisions/0010-allow-listed-crates.md)、[ADR 0011](../decisions/0011-prepare-crates-on-first-launch.md)、[ADR 0012](../decisions/0012-separate-build-dir-without-crates.md)
 
 ## 環境
@@ -209,7 +209,6 @@ asm $W/project progrust_exercise rand 'fn main() { println!("LEARNER"); }'
 - 想定の一覧では、仕様どおりの組み立てだと満たさない。feature の組み合わせごとの初回だけ、1〜8 秒の作り直しが起きる。オフラインでも失敗はしない。
 - 案 b（全許可クレートに依存する空のライブラリへの path 依存を足す）なら満たす。全組み合わせで、build と test の両方の作り直しが 0 だった。
 - `Cargo.lock` の不一致はエラーにならない。
-- Windows は確かめていない。
 
 ADR 0011 の「ビルド結果を全演習で共有する」は、一覧が 2 つ以上になると、仕様どおりの組み立てでは組み合わせごとの初回を除いて成り立つ。
 
@@ -217,7 +216,6 @@ ADR 0011 の「ビルド結果を全演習で共有する」は、一覧が 2 �
 
 確かめられなかった項目:
 
-- Windows は確かめていない（当面 macOS に集中する方針のため）。
 - 案 b で、同梱の `Cargo.lock` のルートの名前とライブラリの名前が違う場合の動作は確かめていない。
 - 案 e（レッスンの組み合わせごとに warmup でもビルドする）は試していない。
 - 学習者が `rustup update` した後は、`crates_hash` が `allowed-crates.toml` と `Cargo.lock` だけのハッシュで rustc のバージョンを含まないため、初回準備がやり直されないと考えられる。rustc のバージョンはビルド単位のハッシュに入るので、`target/` の依存は全部作り直しになり、最初の実行が長くかかる。ソースは `CARGO_HOME` にあるので、オフラインでも失敗しない。この Mac に別の toolchain を入れられないので未確認（cargo の仕組みからの推定）。`crates_hash` に `rustc -vV` を含めるかどうかを検討する余地がある。

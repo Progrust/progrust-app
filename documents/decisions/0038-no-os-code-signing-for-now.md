@@ -2,10 +2,12 @@
 type: Decision
 title: "ADR 0038"
 description: "OS のコード署名を当面行わない"
+status: deprecated
+superseded_by: /decisions/0091-no-distribution-or-auto-update-until-publication.md
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [配布と更新](../spec/non-functional/distribution.md)
+- 関連仕様: [公開範囲と配布](../spec/non-functional/distribution.md)
 - 置き換え: なし
 
 ## 背景

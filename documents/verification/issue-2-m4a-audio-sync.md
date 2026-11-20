@@ -6,7 +6,7 @@ description: "1 文 1 ファイルの .m4a を Player の中で同期して再�
 
 - 日付: 2026-11-21
 - Issue: [#2](https://github.com/Progrust/progrust-app/issues/2)
-- 確かめた OS: macOS 27.2.1（Apple M1）だけ。macOS 13 の実機は確かめていない（AudioDecoder を消してまねた計測だけ）。Windows（WebView2）は確かめていない
+- 確かめた OS: macOS 27.2.1（Apple M1）
 - 関連仕様: [動画の音声](../spec/content-format/video/voice.md)、[動画のタイムラインと合図](../spec/content-format/video/timeline-and-cues.md)、[教材データ形式の未決事項](../spec/content-format/open-questions.md)、[ADR 0063](../decisions/0063-generate-narration-with-voicepeak-and-bundle.md)、[ADR 0066](../decisions/0066-trim-comma-pauses-to-0-2-seconds.md)
 
 ## 環境
@@ -124,7 +124,7 @@ afconvert -f m4af -d aac -b 64000 -c 1 x.wav x.m4a   # 比較用
 
 | 基準 | 結果 |
 |---|---|
-| 両 OS で .m4a を再生できる | macOS は満たした。Windows は未確認 |
+| .m4a を再生できる | 満たした |
 | シークの直後と文の切れ目でずれが目立たない | 許せる量が未決のため判定できない。`@remotion/media` はおおむね ±50ms 以内、Html5Audio は約 100ms（速度を変えると最大 210ms）音が遅れる。聞いた判断は未確認 |
 | すべての再生速度で声の高さが変わらない | 代わりの指標では、`@remotion/media` は `preservePitch={true}` を付けたときだけ保たれ、Html5Audio は既定で保たれる。聞いた判断は未確認 |
 
@@ -135,7 +135,7 @@ Issue は開いたままにする。
 ユーザーの判断が要る点
 
 1. 音声と絵のずれの許容量。参考の BT.1359（音が先 45ms・音が後 125ms）なら、`@remotion/media` は収まり、Html5Audio は速度を変えたときに超えることがある。
-2. Audio 部品の選択。macOS 13 ではどちらを選んでも結果は Html5Audio になる。
+2. Audio 部品の選択。
    - `@remotion/media` の Audio: ずれが小さい。ピッチの保持に Player の `preservePitch={true}` が要り、ピッチシフトの音質は聞いて確かめる必要がある。
    - 最初から Html5Audio: WebKit の `preservesPitch` で声の高さが保たれる。約 100ms の遅れが残る。
 
@@ -143,13 +143,12 @@ Issue は開いたままにする。
 
 - 実際に聞いて、声の高さが保たれているか、ピッチシフトの音質（`@remotion/media` の pitch shift の劣化）。
 - 実際に見て聞いて、ずれが目立つか。
-- macOS 13 の実機（AudioDecoder を消したまねだけ）。Windows の WebView2。
 
 仕様の変更案（documents/ は変更していない）
 
 - 動画の音声の仕様の「切り詰めたあとの音声を `.m4a` に変換し、変換後のファイルの長さを `seconds` に書く」は、エンコーダーと長さの測り方で値が変わる。エンコーダーを ffmpeg の `aac` に決め、長さは ffprobe（または afinfo の valid frames）で測ると書く案。
 - `@remotion/media` を使うなら、Player に `preservePitch` を付ける必要がある（既定 false）。実装の決まりにする案（ADR 0061 の周辺）。
-- 教材データ形式の未決事項「AAC の .m4a を WebView で再生できることの確認」は、macOS の最新の WebKit では再生できた。macOS 13 は実機未確認。
+- 教材データ形式の未決事項「AAC の .m4a を WebView で再生できることの確認」は、macOS 27.2.1 の WebKit では再生できた。
 
 検証中に見つけた別の問題（事実のみ）
 
