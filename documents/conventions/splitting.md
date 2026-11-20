@@ -40,6 +40,7 @@ description: "1つの concept に1つのトピックを書くこと、約200行�
 - `Open Questions` だけは「〈機能名〉の仕様でまだ決まっていない事項（項目の要約）を記す。」の形にする。
 - エージェントはこの1文を読んで、ファイルを開くかどうかを決める。中に何が書いてあるかが分かるよう、具体的な語（ファイル名、画面名、項目名）を入れる。
 - ADR の description は [ADR の運用ルール](decision-records.md) に従う。
+- 技術検証の結果の title と description は [技術検証の結果の書き方](verification-reports.md) に従う。
 - title と description は平易な日本語で書く。体言止めや記号の多用を避ける。
 
 例:

@@ -36,6 +36,7 @@ TYPES = (
     "Glossary",
     "Decision",
     "Convention",
+    "Verification Report",
 )
 STATUSES = ("draft", "stable", "deprecated")
 FORBIDDEN_NAMES = ("readme.md", "log.md")
@@ -60,7 +61,7 @@ LINK_RE = re.compile(
 )
 BUNDLE_PATH_RE = re.compile(
     r"(?<![A-Za-z0-9/._-])"
-    r"((?:spec|decisions|conventions)/[^\s`'\"()\[\]]*?\.md)"
+    r"((?:spec|decisions|conventions|verification)/[^\s`'\"()\[\]]*?\.md)"
     r"(?!\.?[A-Za-z0-9_/-])"
 )
 BUNDLE_PATH_SKIP = ("*", "{", "<", "…")

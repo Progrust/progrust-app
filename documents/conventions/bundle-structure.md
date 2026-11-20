@@ -1,17 +1,18 @@
 ---
 type: Convention
 title: "ドキュメントの置き場所と構成"
-description: "ドキュメントを `documents/` に集約すること、`spec/`・`decisions/`・`conventions/` の役割、asset（`.md` 以外のファイル）の扱い、`log.md`・`README.md` を置かないこと、一時作業用ディレクトリを参照しないことを定める。"
+description: "ドキュメントを `documents/` に集約すること、`spec/`・`decisions/`・`conventions/`・`verification/` の役割、asset（`.md` 以外のファイル）の扱い、`log.md`・`README.md` を置かないこと、一時作業用ディレクトリを参照しないことを定める。"
 ---
 
 - 仕様、設計判断記録（ADR）、ドキュメントと Issue の起票の運用ルールは、すべて `documents/` に置く。`documents/` は OKF（Open Knowledge Format）v0.3 のバンドルで、`documents/` がバンドルのルートになる。
-- バンドルのルートには `index.md` と、次の3つのディレクトリを置く。
+- バンドルのルートには `index.md` と、次の4つのディレクトリを置く。
 
 | ディレクトリ | 入る文書 |
 | --- | --- |
 | `spec/` | 仕様。現時点の事実を書く。書き方は [仕様の書き方](spec-writing.md) |
 | `decisions/` | 設計判断記録（ADR）。仕様の「なぜ」を書く。書き方は [ADR の運用ルール](decision-records.md) |
 | `conventions/` | ドキュメント自体の書き方と運用ルールと、AI エージェントの Issue の起票の決まり |
+| `verification/` | 技術検証の結果。検証した時点の事実を書く。書き方は [技術検証の結果の書き方](verification-reports.md) |
 
 ```
 documents/
@@ -30,6 +31,9 @@ documents/
   conventions/
     index.md
     ...
+  verification/
+    index.md
+    issue-12-....md       ← 1つの技術検証の Issue に1文書
 ```
 
 ## 置いてよいファイル

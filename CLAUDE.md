@@ -10,11 +10,12 @@ AIは各演習ごとに学習者の特徴を分析・記録する。記録した
 
 ## ドキュメント
 
-仕様、設計判断記録（ADR）、ドキュメントと Issue の起票の運用ルールは、すべて `./documents` に置く。`documents/` は OKF（Open Knowledge Format）v0.3 のバンドルで、AI エージェントが作成・保守する。
+仕様、設計判断記録（ADR）、技術検証の結果、ドキュメントと Issue の起票の運用ルールは、すべて `./documents` に置く。`documents/` は OKF（Open Knowledge Format）v0.3 のバンドルで、AI エージェントが作成・保守する。
 
 - 入口は `documents/index.md`。`index.md` をたどり、必要な文書だけを開く。
 - `documents/spec/`: 仕様。現時点の事実を書く。いかなる仕様であれ変更可能とすることを前提とする。
 - `documents/decisions/`: 設計判断記録（ADR）。仕様の「なぜ」（その仕様にした理由・変更した理由）を書く。
+- `documents/verification/`: 技術検証の結果。検証した時点の事実を書く。
 - `documents/conventions/`: ドキュメントの書き方と運用ルールと、Issue の起票の決まり。文書を追加・変更する前に、該当するものを読む。
 
 ### 必ず守ること

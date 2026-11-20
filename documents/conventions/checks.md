@@ -38,7 +38,7 @@ python3 tools/check-documents.py
 | `index-missing` | 配下に `.md` を持つディレクトリ（ルートを含む）に `index.md` があること |
 | `frontmatter-syntax` | frontmatter が `---` で閉じていること。各行が `キー: 値` の1行で、コロンの後に空白がちょうど1つあること。空行・コメント・字下げ・行末の空白・リスト・入れ子・複数行の値・重複したキーが無いこと |
 | `frontmatter-keys` | concept のキーが `type`・`title`・`description`・`status`・`superseded_by` だけで、この順に並ぶこと。`type`・`title`・`description` があること |
-| `type-value` | `type` が6つの語彙のどれかで、引用符で囲んでいないこと |
+| `type-value` | `type` が7つの語彙のどれかで、引用符で囲んでいないこと |
 | `string-value` | `title`・`description` が二重引用符で囲んだ JSON の文字列で、空でなく、改行やタブなどの制御文字を含まないこと |
 | `status-value` | `status` が `type: Decision` の concept にだけあり、値が `draft`・`stable`・`deprecated` のどれかで、引用符で囲んでいないこと |
 | `superseded-by` | `superseded_by` が `type: Decision` で `status: deprecated` の concept にだけあり、引用符なしの `/` 始まりのパスで、自分以外の実在する concept を指すこと |
@@ -49,7 +49,7 @@ python3 tools/check-documents.py
 | `index-coverage` | `index.md` に、同じディレクトリの concept と、配下に `.md` を持つ1段下のディレクトリがすべて1回ずつ載り、実在しないものが載っていないこと |
 | `index-entry-text` | concept の項目の名前と説明が、その concept の `title`・`description` と一致すること |
 | `link-target` | 本文のリンク先がバンドルの中に実在すること。外部へのリンクは `http:`・`https:`・`mailto:` だけであること |
-| `bundle-path` | コードブロックの中とインラインコードの中（`title`・`description` のインラインコードを含む）に書いた `spec/`・`decisions/`・`conventions/` で始まる `.md` のパスが、バンドルのルートから見て実在すること。`*`・`{`・`<`・`…` を含むパスは調べない |
+| `bundle-path` | コードブロックの中とインラインコードの中（`title`・`description` のインラインコードを含む）に書いた `spec/`・`decisions/`・`conventions/`・`verification/` で始まる `.md` のパスが、バンドルのルートから見て実在すること。`*`・`{`・`<`・`…` を含むパスは調べない |
 | `section-sign` | 節番号の記号（`§`）が、本文・`title`・`description`・コードブロックの中に無いこと。インラインコードの中は調べない |
 | `footnote` | 脚注の記法（`[^1]` など）が無いこと |
 | `work-reference` | 一時作業用ディレクトリを `./` から始まる相対パスで書いた参照が無いこと（それ以外の書き方は検出しない） |
