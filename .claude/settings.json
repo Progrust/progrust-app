@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -c 'import json,sys; sys.exit(0 if json.load(sys.stdin).get(\"stop_hook_active\") else 1)' || python3 \"$CLAUDE_PROJECT_DIR/tools/check-documents.py\" --hook",
+            "timeout": 30,
+            "statusMessage": "documents/ を検査中"
+          }
+        ]
+      }
+    ]
+  }
+}
