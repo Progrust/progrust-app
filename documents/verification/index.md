@@ -1,5 +1,8 @@
 # 技術検証の結果
 
+* [Remotion Player の WebView での動作と性能の技術検証](issue-1-remotion-player-webview.md) - Remotion Player が Tauri の WKWebView で動き、再生開始 300ms・シーク 200ms の目安を満たすかを Issue #1 で検証した結果（ページ自身が計測して Tauri のコマンドで書き出す方法、再生開始とシークの表、1 倍と 2 倍の通しの再生のコマ落ち、AudioDecoder を消してまねた macOS 13 の状態、2 倍速で 1 フレームずつ飛ぶこと、再生中のシークの後の停止）を記す。
+* [1 文 1 ファイルの音声の再生と同期の技術検証](issue-2-m4a-audio-sync.md) - 1 文 1 ファイルの .m4a を Player の中で同期して再生できるかを Issue #2 で検証した結果（@remotion/media の Audio と Html5Audio の動作、音声と絵のずれの表、0.75〜2 倍速での声の高さ、AAC の前後の無音と durations.json の seconds の食い違い、許せるずれの量と Audio 部品の選択がユーザーの判断になること）を記す。
+* [独自のプレーヤー操作を Player の API で作れるかの技術検証](issue-3-player-custom-controls.md) - Remotion Player の外に動画画面の操作（再生位置の取得と変更、文ごとの移動、5 秒のスキップ、シークバーのシーンの印、枠の外の字幕、文の単位での位置の保存、Space・←→・Shift+←→ のキー操作）を作れるかを Issue #3 で検証した結果（自動確認 21 項目、キー操作の衝突を避ける controls={false} と spaceKeyToPlayOrPause={false}、合成イベントでの確認の限界）を記す。
 * [動画の描画チェックを CI で実行できるかの技術検証](issue-7-render-check-in-ci.md) - 教材チェックツールの動画の描画チェックと禁止事項の lint が CI で実行できるかを Issue #7 で検証した結果（画面なしの描画とエラー検出、ネットワークなしでの実行、Studio・チェックツール・Vite の 3 か所で同じコードが動くこと、ESLint と stylelint による禁止事項の検出と限界）を記す。
 * [claude -p の隔離起動の技術検証](issue-8-claude-isolated-invocation.md) - claude -p を、ユーザー設定を読み込まず、ツールを使わせず、学習者のログイン状態のまま起動できるかを Issue #8 で検証した結果（フラグの組み合わせごとの効き方、--bare が OAuth を読まないこと、ツール無効の確認、設定ディレクトリに残るもの、推奨のフラグと再実行の 1 行のコマンド）を記す。
 * [claude -p の出力の形とエラーの見分け方の技術検証](issue-9-claude-output-and-errors.md) - claude -p の json 出力から回答の本文を取り出せるか、stream-json で回答を少しずつ表示できるか、未ログインとモデル指定の誤りで終了コードと出力がどうなるかを Issue #9 で検証した結果（subtype が success のままになること、分類コードは stream-json にだけ出ること、エラーの文が標準出力に出ること、利用上限は未再現）を記す。
