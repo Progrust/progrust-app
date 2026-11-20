@@ -39,7 +39,7 @@ content/
 
 ## 2. 章とレッスンの並び（chapters.json）
 
-カリキュラム（章立てと学習順）の唯一の定義とする。
+`curriculum.md` §3 に定めた章立てと学習順を、アプリが読む形式で表したものとする。内容は `curriculum.md` §3 と一致させる（教材チェックツールで検証する: `content-guidelines.md` §6）。
 
 ```json
 [

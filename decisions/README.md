@@ -112,3 +112,5 @@
 | [0074](0074-do-not-log-video-viewing.md) | 動画の視聴を試行ログに記録しない | 採用 | `learning-record-and-analysis.md` |
 | [0075](0075-video-design-system-progrust-video.md) | 動画の見た目を、スライドのデザインシステムを改めた「Progrust Video」に定める | 採用 | `screens.md`, `content-format.md` |
 | [0076](0076-carry-over-slide-visual-and-writing-decisions.md) | スライドで決めた見た目と書き方の判断を、動画でも引き継ぐ | 採用 | `content-format.md`, `content-guidelines.md` |
+| [0077](0077-curriculum-uses-trpl-as-coverage-guide.md) | カリキュラムを、TRPL を網羅の目安にして独自の章立てで組み立てる | 採用 | `curriculum.md`, `content-guidelines.md` |
+| [0078](0078-curriculum-spec-as-source-of-chapters-json.md) | カリキュラムの唯一の定義を `curriculum.md` とし、`chapters.json` をそのデータ形式とする | 採用 | `curriculum.md`, `content-format.md`, `content-guidelines.md` |

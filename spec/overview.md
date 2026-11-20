@@ -38,4 +38,4 @@
 
 ## 6. 教材
 
-教材の形式は `content-format.md`、作成ルールは `content-guidelines.md` に定める。
+章立てと学習順は `curriculum.md`、教材の形式は `content-format.md`、作成ルールは `content-guidelines.md` に定める。
