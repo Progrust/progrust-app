@@ -5,7 +5,7 @@ description: "AI にツールを使わせず、標準出力で返させた結果
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[学習記録・分析の設計方針](../spec/learning-record-and-analysis/design-principles.md)「AI にファイルを直接書かせない」
+- 関連仕様: [Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[学習記録・分析の設計方針](../spec/learning-record-and-analysis/design-principles.md)「AI にファイルを直接書かせない」、[claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)、[学習記録・分析の AI ジョブ](../spec/learning-record-and-analysis/ai-jobs.md)、[演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)、[セキュリティとプライバシー](../spec/non-functional/security-privacy.md)
 - 置き換え: なし
 
 ## 背景

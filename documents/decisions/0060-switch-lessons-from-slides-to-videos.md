@@ -5,7 +5,7 @@ description: "レッスンの教材を、スライドからナレーションつ
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [Progrust の概要](../spec/overview.md)「機能」、[レッスンの動画の形式（video/）](../spec/content-format/video/index.md)
+- 関連仕様: [Progrust の概要](../spec/overview.md)「機能」、[レッスンの動画の形式（video/）](../spec/content-format/video/index.md)、[動画を構成するファイル](../spec/content-format/video/structure.md)
 - 置き換え: なし
 
 ## 背景

@@ -5,7 +5,7 @@ description: "動画の見た目を、スライドのデザインシステムを
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [画面の見た目とテーマ](../spec/screens/appearance.md)「デザインシステム」、[レッスンの動画の形式（video/）](../spec/content-format/video/index.md)
+- 関連仕様: [画面の見た目とテーマ](../spec/screens/appearance.md)「デザインシステム」、[レッスンの動画の形式（video/）](../spec/content-format/video/index.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「動きと画面の量」
 - 置き換え: [ADR 0047](0047-separate-slide-design-system.md)
 
 ## 背景

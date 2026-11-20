@@ -5,7 +5,7 @@ description: "動画を、書き出したファイルにせず、アプリの中
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画を構成するファイル](../spec/content-format/video/structure.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)
+- 関連仕様: [動画を構成するファイル](../spec/content-format/video/structure.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)、[フロントエンドとバックエンドの役割分担](../spec/architecture/responsibilities.md)、[画面の見た目とテーマ](../spec/screens/appearance.md)、[動画の色の指定](../spec/content-format/video/colors.md)、[動画のシーンの書き方](../spec/content-format/video/scenes.md)
 - 置き換え: なし
 
 ## 背景

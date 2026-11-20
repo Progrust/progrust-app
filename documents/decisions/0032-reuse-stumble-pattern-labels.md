@@ -5,7 +5,7 @@ description: "躓きの pattern ラベルを、既存のラベル一覧から再
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [学習記録ファイル（records/*.md）](../spec/learning-record-and-analysis/record-file.md)「frontmatter」
+- 関連仕様: [学習記録ファイル（records/*.md）](../spec/learning-record-and-analysis/record-file.md)「frontmatter」、[学習記録・分析の AI ジョブ](../spec/learning-record-and-analysis/ai-jobs.md)、[分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)
 - 置き換え: なし
 
 ## 背景

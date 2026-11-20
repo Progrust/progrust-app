@@ -5,7 +5,7 @@ description: "Rust ツールチェーンを同梱・自動導入せず、導入�
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「見つからない場合」
+- 関連仕様: [外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「見つからない場合」、[初回起動画面](../spec/screens/first-launch.md)
 - 置き換え: なし
 
 ## 背景

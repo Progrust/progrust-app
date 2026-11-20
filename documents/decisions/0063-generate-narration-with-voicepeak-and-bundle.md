@@ -5,7 +5,7 @@ description: "ナレーションの音声を教材の作者の環境で VOICEPEA
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画の音声](../spec/content-format/video/voice.md)
+- 関連仕様: [動画の音声](../spec/content-format/video/voice.md)、[教材チェックツール](../spec/content-guidelines/check-tool.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)
 - 置き換え: なし
 
 ## 背景

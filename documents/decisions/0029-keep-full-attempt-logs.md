@@ -5,7 +5,7 @@ description: "試行ログにコード全体のスナップショットを記録
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [試行ログ（attempts/*.json）](../spec/learning-record-and-analysis/attempt-log.md)
+- 関連仕様: [試行ログ（attempts/*.json）](../spec/learning-record-and-analysis/attempt-log.md)、[学習記録・分析の AI ジョブ](../spec/learning-record-and-analysis/ai-jobs.md)、[演習コードの下書き](../spec/lesson-flow/drafts.md)
 - 置き換え: なし
 
 ## 背景

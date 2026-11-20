@@ -1,11 +1,11 @@
 ---
 type: Decision
 title: "ADR 0054"
-description: "コードの Diff を、行の先頭の記号で書き、章によらない固定の色で示す"
+description: "コードの Diff を、行の先頭の記号で書き、章によらない固定の色で示す（ADR 0076 で動画に引き継いだ）"
 ---
 
 - 日付: 2026-11-01
-- 関連仕様: [動画でのコードの表示](../spec/content-format/video/code-display.md)
+- 関連仕様: [動画でのコードの表示](../spec/content-format/video/code-display.md)、[動画の台本（script.json）](../spec/content-format/video/script-json.md)
 - 置き換え: なし
 
 ## 背景

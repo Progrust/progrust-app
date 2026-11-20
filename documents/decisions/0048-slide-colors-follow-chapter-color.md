@@ -1,11 +1,11 @@
 ---
 type: Decision
 title: "ADR 0048"
-description: "スライドの主役・補助の色を、開いている章の章カラーに合わせる"
+description: "スライドの主役・補助の色を、開いている章の章カラーに合わせる（ADR 0076 で動画に引き継いだ）"
 ---
 
 - 日付: 2026-11-01
-- 関連仕様: [動画の色の指定](../spec/content-format/video/colors.md)
+- 関連仕様: [動画の色の指定](../spec/content-format/video/colors.md)、[動画を構成するファイル](../spec/content-format/video/structure.md)
 - 置き換え: なし
 
 ## 背景

@@ -5,7 +5,7 @@ description: "質疑応答の会話履歴を、画面を開いている間だけ
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [質疑応答の会話履歴](../spec/qa-chat/history.md)
+- 関連仕様: [質疑応答の会話履歴](../spec/qa-chat/history.md)、[claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)
 - 置き換え: なし
 
 ## 背景

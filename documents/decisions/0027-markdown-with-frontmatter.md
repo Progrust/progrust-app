@@ -5,7 +5,7 @@ description: "学習記録と分析ファイルを Markdown + YAML frontmatter �
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [学習記録・分析の設計方針](../spec/learning-record-and-analysis/design-principles.md)「ファイル形式」
+- 関連仕様: [学習記録・分析の設計方針](../spec/learning-record-and-analysis/design-principles.md)「ファイル形式」、[学習記録ファイル（records/*.md）](../spec/learning-record-and-analysis/record-file.md)、[分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)、[学習記録・分析ファイルの手動編集への対応](../spec/learning-record-and-analysis/manual-edit.md)、[トップページ（ダッシュボード）](../spec/screens/top-page.md)
 - 置き換え: なし
 
 ## 背景

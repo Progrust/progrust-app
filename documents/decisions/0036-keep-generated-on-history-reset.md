@@ -5,7 +5,7 @@ description: "学習履歴をすべてリセットしても、生成した問題
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [設定画面と settings.json](../spec/screens/settings-screen.md)「設定項目」
+- 関連仕様: [設定画面と settings.json](../spec/screens/settings-screen.md)「設定項目」、[生成問題一覧と生成問題の演習](../spec/exercise-generation/list-and-exercise.md)
 - 置き換え: なし
 
 ## 背景

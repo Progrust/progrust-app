@@ -5,7 +5,7 @@ description: "判定で失敗したテストケースの入力・期待する出
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [コードの提出（submit）](../spec/exercise-runner/submit.md)「判定結果」
+- 関連仕様: [コードの提出（submit）](../spec/exercise-runner/submit.md)「判定結果」、[演習の作成ルール](../spec/content-guidelines/exercise.md)「問題」
 - 置き換え: なし
 
 ## 背景

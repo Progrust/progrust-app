@@ -5,7 +5,7 @@ description: "スライドで決めた見た目と書き方の判断を、動画
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画でのコードの表示](../spec/content-format/video/code-display.md)、[動画の色の指定](../spec/content-format/video/colors.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「画面の文章」、[動画の作成ルール](../spec/content-guidelines/video.md)「コード」、[動画の作成ルール](../spec/content-guidelines/video.md)「エラー」、[動画の作成ルール](../spec/content-guidelines/video.md)「図」
+- 関連仕様: [動画でのコードの表示](../spec/content-format/video/code-display.md)、[動画の色の指定](../spec/content-format/video/colors.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「画面の文章」、[動画の作成ルール](../spec/content-guidelines/video.md)「コード」、[動画の作成ルール](../spec/content-guidelines/video.md)「エラー」、[動画の作成ルール](../spec/content-guidelines/video.md)「図」、[動画を構成するファイル](../spec/content-format/video/structure.md)、[動画の台本（script.json）](../spec/content-format/video/script-json.md)、[動画のシーンの書き方](../spec/content-format/video/scenes.md)
 - 置き換え: なし
 
 ## 背景

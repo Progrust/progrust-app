@@ -5,7 +5,7 @@ description: "想定する学習者を他のプログラミング言語の経験
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [想定する学習者](../spec/content-guidelines/target-learner.md)
+- 関連仕様: [想定する学習者](../spec/content-guidelines/target-learner.md)、[カリキュラムの方針](../spec/curriculum/policy.md)
 - 置き換え: なし
 
 ## 背景

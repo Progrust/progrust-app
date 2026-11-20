@@ -5,7 +5,7 @@ description: "演習問題の生成をバックグラウンドのジョブで行
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [演習問題生成の流れ](../spec/exercise-generation/flow.md)、[ジョブキュー（jobs.json）](../spec/claude-integration/job-queue.md)
+- 関連仕様: [演習問題生成の流れ](../spec/exercise-generation/flow.md)、[ジョブキュー（jobs.json）](../spec/claude-integration/job-queue.md)、[生成問題一覧と生成問題の演習](../spec/exercise-generation/list-and-exercise.md)、[画面の通知（トースト）](../spec/screens/notifications.md)、[問題生成の画面（生成問題一覧、生成設定画面）](../spec/screens/generation-screens.md)
 - 置き換え: なし
 
 ## 背景

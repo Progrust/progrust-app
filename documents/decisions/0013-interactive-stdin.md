@@ -5,7 +5,7 @@ description: "実行時の標準入力を、コンソールから対話的に入
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [コードの実行（run）](../spec/exercise-runner/run.md)「対話的な標準入力」
+- 関連仕様: [コードの実行（run）](../spec/exercise-runner/run.md)「対話的な標準入力」、[演習画面](../spec/screens/exercise-screen.md)
 - 置き換え: なし
 
 ## 背景

@@ -5,7 +5,7 @@ description: "演習の判定方式を、標準出力の比較と隠しテスト
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [演習のファイル形式](../spec/content-format/exercise.md)「判定方式」、[コードの提出（submit）](../spec/exercise-runner/submit.md)
+- 関連仕様: [演習のファイル形式](../spec/content-format/exercise.md)「判定方式」、[コードの提出（submit）](../spec/exercise-runner/submit.md)、[レッスン定義の形式（lesson.json）](../spec/content-format/lesson-json.md)、[演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)
 - 置き換え: なし
 
 ## 背景

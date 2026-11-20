@@ -5,7 +5,7 @@ description: "レッスンの受講順を制限せず、推奨レッスンを示
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [レッスンの受講順](../spec/lesson-flow/order.md)
+- 関連仕様: [レッスンの受講順](../spec/lesson-flow/order.md)、[トップページ（ダッシュボード）](../spec/screens/top-page.md)、[レッスン一覧画面](../spec/screens/lesson-list.md)
 - 置き換え: なし
 
 ## 背景

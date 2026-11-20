@@ -5,7 +5,7 @@ description: "字幕を動画の中に置かず、アプリの機能として表
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画画面](../spec/screens/video-screen.md)
+- 関連仕様: [動画画面](../spec/screens/video-screen.md)、[設定画面と settings.json](../spec/screens/settings-screen.md)、[動画の台本（script.json）](../spec/content-format/video/script-json.md)
 - 置き換え: なし
 
 ## 背景

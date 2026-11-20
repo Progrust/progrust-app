@@ -5,7 +5,7 @@ description: "Claude のモデルを用途ごとに選べるようにする"
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [AI モデルの選択](../spec/claude-integration/model-selection.md)
+- 関連仕様: [AI モデルの選択](../spec/claude-integration/model-selection.md)、[設定画面と settings.json](../spec/screens/settings-screen.md)
 - 置き換え: なし
 
 ## 背景

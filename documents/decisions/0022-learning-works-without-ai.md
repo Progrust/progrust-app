@@ -5,7 +5,7 @@ description: "AI 機能が使えなくても学習を続けられるようにす
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [claude が使えない場合の動作](../spec/claude-integration/unavailable.md)、[外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「見つからない場合」
+- 関連仕様: [claude が使えない場合の動作](../spec/claude-integration/unavailable.md)、[外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「見つからない場合」、[Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[ジョブキュー（jobs.json）](../spec/claude-integration/job-queue.md)
 - 置き換え: なし
 
 ## 背景

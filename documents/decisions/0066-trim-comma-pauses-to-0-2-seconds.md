@@ -5,7 +5,7 @@ description: "「、」の間を、音声を作ったあとに 0.2 秒へ切り�
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画の音声](../spec/content-format/video/voice.md)
+- 関連仕様: [動画の音声](../spec/content-format/video/voice.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「台本」
 - 置き換え: なし
 
 ## 背景

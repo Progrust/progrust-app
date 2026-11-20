@@ -1,7 +1,7 @@
 ---
 type: Convention
 title: "参照とリンクの書き方"
-description: "他の文書への参照を Markdown リンクで書くこと、本文の相対パスと frontmatter の `/` 始まりのパス、コードブロックの中でのパスの書き方、仕様と ADR のリンクの向き、ファイルを移動・改名したときのリンクの直し方を定める。"
+description: "他の文書への参照を Markdown リンクで書くこと、本文の相対パスと frontmatter の `/` 始まりのパス、コードブロックの中でのパスの書き方、仕様と ADR のリンクの向き、仕様に関係する ADR の探し方、ファイルを移動・改名したときのリンクの直し方を定める。"
 ---
 
 ## リンクの書き方
@@ -32,7 +32,25 @@ description: "他の文書への参照を Markdown リンクで書くこと、�
 ## 仕様と ADR のリンクの向き
 
 - 仕様と ADR のリンクは、ADR から仕様への片方向だけにする。仕様から ADR へのリンクを書かない。
-- ある仕様に関係する ADR を探すときは、`documents/decisions/` をその仕様のパスで検索する。
+- ADR から仕様へのリンクは、ADR の本文の「関連仕様」の行に書く。載せる仕様の決め方は [ADR の運用ルール](decision-records.md)「本文」に従う。
+
+## 仕様に関係する ADR の探し方
+
+ある仕様に関係する ADR は、次の順に探す。
+
+1. `documents/decisions/` の ADR の「関連仕様」の行を、その仕様が属する機能のディレクトリのパス（例: `spec/qa-chat/`）で検索する。運用ルールに関係する ADR は、`conventions/` のファイルのパスで検索する。
+
+   ```bash
+   grep -l '^- 関連仕様:.*spec/qa-chat/' documents/decisions/*.md
+   ```
+
+2. その機能が他の機能の決まりに従うと定めているとき（その機能の `scope.md` に参照先がある）は、参照先の機能のパスでも同じように検索する。変える concept が他の機能の concept をリンクで参照しているときは、その concept のパスでも検索する。
+   - 例: 質疑応答は `claude -p` の呼び出し方を [Claude Code 連携](../spec/claude-integration/index.md) に従うと定めているので、`spec/claude-integration/` でも検索する。
+3. 見つかった ADR の決定内容を `decisions/index.md` の説明で確かめ、関係する ADR を開く。
+
+- 変える範囲が、機能のディレクトリより狭いとき（1つの concept だけを変えるときや、字幕のように機能の一部だけを変えるとき）は、ディレクトリのパスの代わりに、その内容を定めている concept のパス（例: `spec/screens/video-screen.md`）で検索する。あわせて、その concept があるディレクトリの `index.md` のパス（例: `spec/screens/index.md`）でも検索する。ディレクトリの仕様の全体を対象にする ADR は、`index.md` にリンクしているからである。どの concept が定めているか分からないときは、先に `documents/spec/` をその語で検索して concept を見つける。
+- `decisions/index.md` の見出しは、ADR を「関連仕様」の先頭の仕様で分けたものである。ある仕様の見出しの下にあるのは、その仕様に関係する ADR の一部だけなので、見出しだけを見て済ませない。
+- ADR の本文（「背景」など）で触れているだけの仕様は「関連仕様」に載らない。ある語に触れた ADR を広く探すときは、`documents/decisions/` をその語で検索する。
 
 ## 移動と改名
 

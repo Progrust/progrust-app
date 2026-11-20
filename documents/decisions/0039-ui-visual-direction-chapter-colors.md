@@ -5,7 +5,7 @@ description: "画面のビジュアルデザインを、開いている章の色
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [画面の見た目とテーマ](../spec/screens/appearance.md)
+- 関連仕様: [画面の見た目とテーマ](../spec/screens/appearance.md)、[画面仕様の未決事項](../spec/screens/open-questions.md)
 - 置き換え: なし
 
 ## 背景

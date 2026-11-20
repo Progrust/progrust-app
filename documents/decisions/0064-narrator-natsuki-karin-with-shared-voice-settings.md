@@ -5,7 +5,7 @@ description: "ナレーターを夏色花梨とし、声の設定を 1 か所に
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画の音声](../spec/content-format/video/voice.md)
+- 関連仕様: [動画の音声](../spec/content-format/video/voice.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「動きと画面の量」
 - 置き換え: なし
 
 ## 背景

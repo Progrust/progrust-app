@@ -1,11 +1,11 @@
 ---
 type: Decision
 title: "ADR 0058"
-description: "エラーをエラーコードだけで説明しない"
+description: "エラーをエラーコードだけで説明しない（ADR 0076 で動画に引き継いだ）"
 ---
 
 - 日付: 2026-11-01
-- 関連仕様: [動画の作成ルール](../spec/content-guidelines/video.md)「エラー」
+- 関連仕様: [動画の作成ルール](../spec/content-guidelines/video.md)「エラー」、[教材レビューのチェックリスト](../spec/content-guidelines/review-checklist.md)
 - 置き換え: なし
 
 ## 背景

@@ -5,7 +5,7 @@ description: "許可クレートを初回起動時に一括でビルドし、ロ
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「初回準備」、[許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「許可クレート」
+- 関連仕様: [許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「初回準備」、[許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「許可クレート」、[外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「初回準備」、[実行・提出時のプロジェクトの組み立て](../spec/exercise-runner/project-assembly.md)、[オフライン時の動作](../spec/non-functional/offline.md)、[初回起動画面](../spec/screens/first-launch.md)
 - 置き換え: なし
 
 ## 背景

@@ -5,7 +5,7 @@ description: "学習データの事実はアプリが計算し、AI には解釈
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [学習記録・分析の設計方針](../spec/learning-record-and-analysis/design-principles.md)「事実と解釈の分離」
+- 関連仕様: [学習記録・分析の設計方針](../spec/learning-record-and-analysis/design-principles.md)「事実と解釈の分離」、[Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[学習記録ファイル（records/*.md）](../spec/learning-record-and-analysis/record-file.md)、[分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)、[学習記録・分析の AI ジョブ](../spec/learning-record-and-analysis/ai-jobs.md)
 - 置き換え: なし
 
 ## 背景

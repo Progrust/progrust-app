@@ -5,7 +5,7 @@ description: "動画の再生操作に、文ごとの移動と 5 秒のスキッ
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画画面](../spec/screens/video-screen.md)
+- 関連仕様: [動画画面](../spec/screens/video-screen.md)、[設定画面と settings.json](../spec/screens/settings-screen.md)
 - 置き換え: なし
 
 ## 背景

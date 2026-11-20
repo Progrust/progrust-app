@@ -5,7 +5,7 @@ description: "動画の長さと 1 文の長さを目安とし、超えてよい
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画の作成ルール](../spec/content-guidelines/video.md)「構成と長さ」、[動画の作成ルール](../spec/content-guidelines/video.md)「台本」、[教材チェックツール](../spec/content-guidelines/check-tool.md)
+- 関連仕様: [動画の作成ルール](../spec/content-guidelines/video.md)「構成と長さ」、[動画の作成ルール](../spec/content-guidelines/video.md)「台本」、[教材チェックツール](../spec/content-guidelines/check-tool.md)、[動画の台本（script.json）](../spec/content-format/video/script-json.md)、[動画の音声](../spec/content-format/video/voice.md)
 - 置き換え: なし
 
 ## 背景

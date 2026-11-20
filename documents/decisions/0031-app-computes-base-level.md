@@ -5,7 +5,7 @@ description: "習熟レベルの基準をアプリが計算し、AI は ±1 の�
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)「基準レベルの計算（アプリ）」、[分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)「AI によるレベル調整」
+- 関連仕様: [分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)「基準レベルの計算（アプリ）」、[分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)「AI によるレベル調整」、[学習記録・分析の AI ジョブ](../spec/learning-record-and-analysis/ai-jobs.md)
 - 置き換え: なし
 
 ## 背景

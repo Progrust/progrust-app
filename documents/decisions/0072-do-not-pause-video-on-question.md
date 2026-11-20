@@ -5,7 +5,7 @@ description: "質問を送信しても、動画を一時停止しない"
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [質疑応答の画面](../spec/qa-chat/screen.md)
+- 関連仕様: [質疑応答の画面](../spec/qa-chat/screen.md)、[質疑応答で AI に渡す入力](../spec/qa-chat/ai-input.md)
 - 置き換え: なし
 
 ## 背景

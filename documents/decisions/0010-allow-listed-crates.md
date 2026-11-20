@@ -5,7 +5,7 @@ description: "演習で許可リストの外部クレートを使えるように
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「許可クレート」、[レッスン定義の形式（lesson.json）](../spec/content-format/lesson-json.md)
+- 関連仕様: [許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「許可クレート」、[レッスン定義の形式（lesson.json）](../spec/content-format/lesson-json.md)、[実行・提出時のプロジェクトの組み立て](../spec/exercise-runner/project-assembly.md)、[教材チェックツール](../spec/content-guidelines/check-tool.md)、[演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)
 - 置き換え: なし
 
 ## 背景

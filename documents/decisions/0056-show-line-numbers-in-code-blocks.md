@@ -1,11 +1,11 @@
 ---
 type: Decision
 title: "ADR 0056"
-description: "コードブロックに行番号を表示し、文で行番号を指してよいことにする"
+description: "コードブロックに行番号を表示し、文で行番号を指してよいことにする（ADR 0076 で動画に引き継いだ）"
 ---
 
 - 日付: 2026-11-01
-- 関連仕様: [動画でのコードの表示](../spec/content-format/video/code-display.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「コード」
+- 関連仕様: [動画でのコードの表示](../spec/content-format/video/code-display.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「コード」、[動画の台本（script.json）](../spec/content-format/video/script-json.md)
 - 置き換え: なし
 
 ## 背景

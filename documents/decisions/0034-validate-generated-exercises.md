@@ -5,7 +5,7 @@ description: "生成した問題を自動で検証し、不合格なら修正を
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)「検証」、[演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)「検証に失敗した場合」
+- 関連仕様: [演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)「検証」、[演習問題生成の出力と検証](../spec/exercise-generation/output-and-validation.md)「検証に失敗した場合」、[演習問題生成の流れ](../spec/exercise-generation/flow.md)、[セキュリティとプライバシー](../spec/non-functional/security-privacy.md)、[許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)
 - 置き換え: なし
 
 ## 背景

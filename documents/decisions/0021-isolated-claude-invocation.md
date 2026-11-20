@@ -5,7 +5,7 @@ description: "`claude -p` を空の一時ディレクトリで、学習者のユ
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)
+- 関連仕様: [claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)、[質疑応答の会話履歴](../spec/qa-chat/history.md)
 - 置き換え: なし
 
 ## 背景

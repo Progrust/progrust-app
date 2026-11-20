@@ -5,7 +5,7 @@ description: "動画のシーンを、制限のない React（TSX）で書く"
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画のシーンの書き方](../spec/content-format/video/scenes.md)、[動画のコードの禁止事項](../spec/content-format/video/prohibited-code.md)、[教材チェックツール](../spec/content-guidelines/check-tool.md)
+- 関連仕様: [動画のシーンの書き方](../spec/content-format/video/scenes.md)、[動画のコードの禁止事項](../spec/content-format/video/prohibited-code.md)、[教材チェックツール](../spec/content-guidelines/check-tool.md)、[動画でのコードの表示](../spec/content-format/video/code-display.md)、[フロントエンドとバックエンドの役割分担](../spec/architecture/responsibilities.md)、[セキュリティとプライバシー](../spec/non-functional/security-privacy.md)、[教材レビューのチェックリスト](../spec/content-guidelines/review-checklist.md)、[リポジトリ構成](../spec/architecture/repository.md)
 - 置き換え: [ADR 0005](0005-slides-in-restricted-html.md)
 
 ## 背景

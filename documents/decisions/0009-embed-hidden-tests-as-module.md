@@ -5,7 +5,7 @@ description: "隠しテストを、対象ファイルの末尾に子モジュー
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [コードの提出（submit）](../spec/exercise-runner/submit.md)「test 方式」
+- 関連仕様: [コードの提出（submit）](../spec/exercise-runner/submit.md)「test 方式」、[演習のファイル形式](../spec/content-format/exercise.md)「判定方式」
 - 置き換え: なし
 
 ## 背景

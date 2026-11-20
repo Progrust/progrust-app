@@ -5,7 +5,7 @@ description: "台本で、もとの文（text）と読ませる文（say）を�
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画の台本（script.json）](../spec/content-format/video/script-json.md)、[動画の音声](../spec/content-format/video/voice.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「台本」
+- 関連仕様: [動画の台本（script.json）](../spec/content-format/video/script-json.md)、[動画の音声](../spec/content-format/video/voice.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「台本」、[質疑応答で AI に渡す入力](../spec/qa-chat/ai-input.md)、[動画画面](../spec/screens/video-screen.md)、[教材チェックツール](../spec/content-guidelines/check-tool.md)
 - 置き換え: なし
 
 ## 背景

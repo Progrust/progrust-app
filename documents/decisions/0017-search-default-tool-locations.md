@@ -5,7 +5,7 @@ description: "外部ツールを PATH 以外の既定のインストール先か
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「検出」
+- 関連仕様: [外部ツール（cargo・claude）への依存](../spec/architecture/external-tools.md)「検出」、[設定画面と settings.json](../spec/screens/settings-screen.md)
 - 置き換え: なし
 
 ## 背景

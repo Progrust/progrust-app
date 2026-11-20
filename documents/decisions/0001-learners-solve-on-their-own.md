@@ -5,7 +5,7 @@ description: "学習者に演習を自力で解かせることを、機能を設
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [演習の作成ルール](../spec/content-guidelines/exercise.md)「問題」、[質疑応答を利用できる場面](../spec/qa-chat/availability.md)、[質疑応答の回答の方針](../spec/qa-chat/answer-policy.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)
+- 関連仕様: [演習の作成ルール](../spec/content-guidelines/exercise.md)「問題」、[質疑応答を利用できる場面](../spec/qa-chat/availability.md)、[質疑応答の回答の方針](../spec/qa-chat/answer-policy.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)、[質疑応答で AI に渡す入力](../spec/qa-chat/ai-input.md)
 - 置き換え: なし
 
 ## 背景

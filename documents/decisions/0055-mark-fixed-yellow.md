@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0055"
-description: "マーカー（span.mark）を、章によらない固定の黄にする"
+description: "マーカー（span.mark）を、章によらない固定の黄にする（ADR 0076 で動画に引き継いだ）"
 ---
 
 - 日付: 2026-11-01

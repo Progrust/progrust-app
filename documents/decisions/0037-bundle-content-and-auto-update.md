@@ -5,7 +5,7 @@ description: "教材をアプリに同梱し、GitHub Releases と Tauri の自�
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [配布と更新](../spec/non-functional/distribution.md)
+- 関連仕様: [配布と更新](../spec/non-functional/distribution.md)、[データの保存場所](../spec/architecture/data-locations.md)「アプリ同梱データ（`{app_resources}`）」
 - 置き換え: なし
 
 ## 背景

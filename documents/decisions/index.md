@@ -15,15 +15,15 @@
 * [ADR 0006](0006-element-ids-are-permanent.md) - 要素 ID を全データで共通にし、公開後は変更・削除しない
 * [ADR 0007](0007-derive-introduced-lesson.md) - 要素の導入レッスンを、要素マスタに持たせず学習順から求める
 * [ADR 0008](0008-judge-mode-per-lesson.md) - 演習の判定方式を、標準出力の比較と隠しテストからレッスンごとに選ぶ
-* [ADR 0048](0048-slide-colors-follow-chapter-color.md) - スライドの主役・補助の色を、開いている章の章カラーに合わせる
-* [ADR 0049](0049-slide-accent-light-chapter-color.md) - スライドの補助の色を、同じ章カラーの淡い段にする
-* [ADR 0050](0050-semantic-colors-fixed-in-slides.md) - スライドでは、意味と色が結びついた要素を章によらない固定の色にする
-* [ADR 0051](0051-slides-outside-chapter-use-chapter-4-color.md) - 章に属さずに表示するスライドの主役の色を、第4章の章カラーにする
-* [ADR 0053](0053-mark-and-wavy-error-in-code.md) - コードの強調とエラーの箇所を、行全体ではなく字句単位で示す
-* [ADR 0054](0054-diff-with-line-prefix-and-fixed-colors.md) - コードの Diff を、行の先頭の記号で書き、章によらない固定の色で示す
-* [ADR 0055](0055-mark-fixed-yellow.md) - マーカー（span.mark）を、章によらない固定の黄にする
-* [ADR 0056](0056-show-line-numbers-in-code-blocks.md) - コードブロックに行番号を表示し、文で行番号を指してよいことにする
-* [ADR 0057](0057-scopes-on-code-and-no-code-in-diagrams.md) - 変数が生きている範囲はコードに重ねた枠で示し、図の中にコードを書かない
+* [ADR 0048](0048-slide-colors-follow-chapter-color.md) - スライドの主役・補助の色を、開いている章の章カラーに合わせる（ADR 0076 で動画に引き継いだ）
+* [ADR 0049](0049-slide-accent-light-chapter-color.md) - スライドの補助の色を、同じ章カラーの淡い段にする（ADR 0076 で動画に引き継いだ）
+* [ADR 0050](0050-semantic-colors-fixed-in-slides.md) - スライドでは、意味と色が結びついた要素を章によらない固定の色にする（ADR 0076 で動画に引き継いだ）
+* [ADR 0051](0051-slides-outside-chapter-use-chapter-4-color.md) - 章に属さずに表示するスライドの主役の色を、第4章の章カラーにする（ADR 0076 で動画に引き継いだ）
+* [ADR 0053](0053-mark-and-wavy-error-in-code.md) - コードの強調とエラーの箇所を、行全体ではなく字句単位で示す（ADR 0076 で動画に引き継いだ）
+* [ADR 0054](0054-diff-with-line-prefix-and-fixed-colors.md) - コードの Diff を、行の先頭の記号で書き、章によらない固定の色で示す（ADR 0076 で動画に引き継いだ）
+* [ADR 0055](0055-mark-fixed-yellow.md) - マーカー（span.mark）を、章によらない固定の黄にする（ADR 0076 で動画に引き継いだ）
+* [ADR 0056](0056-show-line-numbers-in-code-blocks.md) - コードブロックに行番号を表示し、文で行番号を指してよいことにする（ADR 0076 で動画に引き継いだ）
+* [ADR 0057](0057-scopes-on-code-and-no-code-in-diagrams.md) - 変数が生きている範囲はコードに重ねた枠で示し、図の中にコードを書かない（ADR 0076 で動画に引き継いだ）
 * [ADR 0061](0061-render-videos-with-remotion-player.md) - 動画を、書き出したファイルにせず、アプリの中で Remotion の Player で描画する
 * [ADR 0062](0062-write-video-scenes-in-unrestricted-tsx.md) - 動画のシーンを、制限のない React（TSX）で書く
 * [ADR 0063](0063-generate-narration-with-voicepeak-and-bundle.md) - ナレーションの音声を教材の作者の環境で VOICEPEAK から作り、圧縮してアプリに同梱する
@@ -42,8 +42,8 @@
 
 * [ADR 0001](0001-learners-solve-on-their-own.md) - 学習者に演習を自力で解かせることを、機能を設計するうえでの原則とする
 * [ADR 0002](0002-target-experienced-programmers.md) - 想定する学習者を他のプログラミング言語の経験者とする
-* [ADR 0058](0058-do-not-explain-errors-by-code-only.md) - エラーをエラーコードだけで説明しない
-* [ADR 0059](0059-plain-style-in-slide-headings.md) - スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す
+* [ADR 0058](0058-do-not-explain-errors-by-code-only.md) - エラーをエラーコードだけで説明しない（ADR 0076 で動画に引き継いだ）
+* [ADR 0059](0059-plain-style-in-slide-headings.md) - スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す（ADR 0076 で動画に引き継いだ）
 * [ADR 0069](0069-video-and-sentence-length-as-guidelines.md) - 動画の長さと 1 文の長さを目安とし、超えてよいことにする
 
 # コード実行・判定
@@ -122,6 +122,8 @@
 * [ADR 0082](0082-reference-by-links-without-section-numbers.md) - 文書間の参照を Markdown リンクで書き、節番号での参照を廃止する
 * [ADR 0083](0083-express-adr-status-in-okf-frontmatter.md) - ADR の状態を OKF の status と superseded_by で表し、番号・ファイル名・本文は変えない
 * [ADR 0085](0085-check-documents-with-own-checker.md) - ドキュメントを独自の検査スクリプトで検査して hook で自動実行し、OKF の公式 validator は手動で実行する
+* [ADR 0086](0086-list-all-affected-specs-and-find-adrs-by-path-search.md) - ADR の関連仕様に、判断が内容を決めている仕様をすべて載せ、仕様に関係する ADR を関連仕様の行の検索で探す
+* [ADR 0087](0087-note-carry-over-in-adr-description.md) - 後の ADR が別の対象に引き継いだ ADR の description の末尾に、引き継いだ ADR と対象を示す注記を足す
 
 # 置き換え済み・廃止
 

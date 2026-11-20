@@ -5,7 +5,7 @@ description: "動画を基準サイズ 1280×720 で組み、場面ごとに内�
 ---
 
 - 日付: 2026-11-19
-- 関連仕様: [動画を構成するファイル](../spec/content-format/video/structure.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「動きと画面の量」
+- 関連仕様: [動画を構成するファイル](../spec/content-format/video/structure.md)、[動画の作成ルール](../spec/content-guidelines/video.md)「動きと画面の量」、[動画のシーンの書き方](../spec/content-format/video/scenes.md)、[動画画面](../spec/screens/video-screen.md)
 - 置き換え: なし
 
 ## 背景

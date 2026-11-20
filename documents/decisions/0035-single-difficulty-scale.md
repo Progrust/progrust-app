@@ -5,7 +5,7 @@ description: "問題生成の難易度と複雑さを、1 つの 5 段階の「�
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [演習問題の生成設定](../spec/exercise-generation/settings.md)「難易度」
+- 関連仕様: [演習問題の生成設定](../spec/exercise-generation/settings.md)「難易度」、[問題生成の画面（生成問題一覧、生成設定画面）](../spec/screens/generation-screens.md)、[分析ファイル（analysis/analysis.md）](../spec/learning-record-and-analysis/analysis-file.md)
 - 置き換え: なし
 
 ## 背景

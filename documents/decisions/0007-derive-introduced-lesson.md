@@ -5,7 +5,7 @@ description: "要素の導入レッスンを、要素マスタに持たせず学
 ---
 
 - 日付: 2026-10-31
-- 関連仕様: [章とレッスンの並びの形式（chapters.json）](../spec/content-format/chapters-json.md)、[要素マスタの形式（elements.json）](../spec/content-format/elements-json.md)
+- 関連仕様: [章とレッスンの並びの形式（chapters.json）](../spec/content-format/chapters-json.md)、[要素マスタの形式（elements.json）](../spec/content-format/elements-json.md)、[教材チェックツール](../spec/content-guidelines/check-tool.md)
 - 置き換え: なし
 
 ## 背景
