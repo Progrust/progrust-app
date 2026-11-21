@@ -79,6 +79,7 @@
 * [ADR 0114](0114-allow-integration-and-doc-tests.md) - 学習者が tests/ の統合テストを書けるようにし、ドキュメントテストも実行して、ch11-05 と ch11-06 のレッスンを残す
 * [ADR 0125](0125-crates-unavailable-status-without-attempt-log.md) - ビルドが初回準備のやり直しが要る失敗になった実行・提出の結果を、新しい状態 `crates_unavailable` とし、試行ログに記録せず、準備の後に自動ではやり直さない
 * [ADR 0132](0132-no-allcrates-dependency-without-crates.md) - 許可クレートを使わない演習のプロジェクトには、全許可クレートに依存する空のライブラリへの path 依存を書かない
+* [ADR 0134](0134-allow-unused-dependencies-cargo-lint.md) - 許可クレートを使う演習のプロジェクトの Cargo.toml で、cargo の「使っていない依存」の警告（cargo::unused_dependencies）を止める
 
 # レッスン進行・進捗管理
 

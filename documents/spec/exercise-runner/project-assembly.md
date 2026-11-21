@@ -8,11 +8,12 @@ description: "実行・提出のたびに作る `project/`（と生成問題の�
 
 | ファイル | 内容 |
 |---|---|
-| `Cargo.toml` | パッケージ名 `progrust_exercise`、edition 2024。`[dependencies]` には、演習の `dependencies` に挙げたクレートを `allowed-crates.toml` の指定のまま書き、最後に `allcrates/` のライブラリへの path 依存 `progrust_allowed_crates = { path = "../allcrates" }` を書く（[許可クレートと作業領域](crates-and-workspace.md)「作業領域」）。許可クレートを使わない演習では `[dependencies]` を空にし、path 依存も書かない |
+| `Cargo.toml` | パッケージ名 `progrust_exercise`、edition 2024。`[dependencies]` には、演習の `dependencies` に挙げたクレートを `allowed-crates.toml` の指定のまま書き、最後に `allcrates/` のライブラリへの path 依存 `progrust_allowed_crates = { path = "../allcrates" }` を書く（[許可クレートと作業領域](crates-and-workspace.md)「作業領域」）。続けて `[lints.cargo]` に `unused_dependencies = "allow"` を書く。許可クレートを使わない演習では `[dependencies]` を空にし、path 依存も `[lints.cargo]` も書かない |
 | `Cargo.lock` | 同梱の `Cargo.lock` をコピーする |
 | `src/**`・`tests/**` | エディタ上の全ファイル |
 
 - 演習のコードから `use` できるのは、演習の `dependencies` に挙げたクレートだけである。`progrust_allowed_crates` は中身が空なので、path 依存を足しても使えるクレートは増えない。
+- `[lints.cargo]` の `unused_dependencies = "allow"` は、演習のコードが使わない依存（`progrust_allowed_crates` など）について cargo が出す「使っていない依存」の警告（`` warning: unused dependency `progrust_allowed_crates` ``）を止める。コンパイラ（rustc）が学習者のコードに出す警告は止めない。
 - エディタから受け取ったファイルパスは、`src/` 以下または `tests/` 以下で拡張子が `.rs` の相対パスに限る。`..` を含むパスや絶対パスは拒否する。
 - ビルドには `--offline` を付け、`--locked` と `--frozen` は付けない。ビルドの失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまる場合は初回準備をやり直す。
 - ビルド先は、許可クレートを使う演習は `target/`、使わない演習は `target-std/` にする（`CARGO_TARGET_DIR`）。
