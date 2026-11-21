@@ -155,6 +155,7 @@
 * [ADR 0087](0087-note-carry-over-in-adr-description.md) - 後の ADR が別の対象に引き継いだ ADR の description の末尾に、引き継いだ ADR と対象を示す注記を足す
 * [ADR 0088](0088-agents-file-found-problems-as-issues.md) - AI エージェントが作業中に見つけた問題を、原因の調査や改善案なしに、確認せずに GitHub の Issue に起票し、その決まりを運用ルールに置く
 * [ADR 0089](0089-keep-verification-reports-in-documents.md) - 技術検証の結果を `documents/verification/` に1つの Issue につき1文書で残し、そのための type `Verification Report` を加える
+* [ADR 0121](0121-no-tracking-issues-use-labels.md) - Issue の一覧のための Issue を作らず、Issue のまとまりをラベルで表して一覧する
 
 # 置き換え済み・廃止
 
