@@ -67,7 +67,7 @@
 * [ADR 0012](0012-separate-build-dir-without-crates.md) - ビルド先を、許可クレートを使う演習と使わない演習で分ける
 * [ADR 0013](0013-interactive-stdin.md) - 実行時の標準入力を、コンソールから対話的に入力する方式にする
 * [ADR 0015](0015-show-failed-case-details.md) - 判定で失敗したテストケースの入力・期待する出力・実際の出力を表示する
-* [ADR 0097](0097-share-crate-builds-via-allcrates-library.md) - 全許可クレートに依存する空のライブラリへの path 依存を、初回準備と演習の両方のプロジェクトに足し、許可クレートの組み合わせによらずビルド結果を共有する
+* [ADR 0097](0097-share-crate-builds-via-allcrates-library.md) - 全許可クレートに依存する空のライブラリへの path 依存を、初回準備と演習の両方のプロジェクトに足し、許可クレートの組み合わせによらずビルド結果を共有する（ADR 0132 で path 依存するプロジェクトの範囲を変えた）
 * [ADR 0098](0098-separate-build-dir-for-validation.md) - 生成問題の検証のビルド先を学習者のものと分け、許可クレートのビルド結果は初回準備の後に APFS のクローンで複製する
 * [ADR 0099](0099-allow-package-cache-wait-during-preparation.md) - 初回準備がクレートをダウンロードしている間に、許可クレートを使わない演習が cargo のパッケージキャッシュのロックで待つことを許し、アプリ専用の CARGO_HOME は使わない
 * [ADR 0100](0100-redo-preparation-when-rustc-changes.md) - 初回準備の状態に rustc の版を記録し、起動時に rustc の版が変わっていたら初回準備をやり直す
@@ -78,6 +78,7 @@
 * [ADR 0113](0113-judge-learner-tests-by-count-and-pass.md) - 学習者が書いたテストを、演習ごとに指定した件数以上あってすべて通ることで判定し、テストが実装の誤りを見つけられるかまでは判定しない
 * [ADR 0114](0114-allow-integration-and-doc-tests.md) - 学習者が tests/ の統合テストを書けるようにし、ドキュメントテストも実行して、ch11-05 と ch11-06 のレッスンを残す
 * [ADR 0125](0125-crates-unavailable-status-without-attempt-log.md) - ビルドが初回準備のやり直しが要る失敗になった実行・提出の結果を、新しい状態 `crates_unavailable` とし、試行ログに記録せず、準備の後に自動ではやり直さない
+* [ADR 0132](0132-no-allcrates-dependency-without-crates.md) - 許可クレートを使わない演習のプロジェクトには、全許可クレートに依存する空のライブラリへの path 依存を書かない
 
 # レッスン進行・進捗管理
 

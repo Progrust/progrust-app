@@ -32,7 +32,7 @@ rand = "=0.9.1"
 └── target-std-validate/  # validate/ の、許可クレートを使わない問題のビルド先
 ```
 
-- `allcrates/` は、パッケージ名 `progrust_allowed_crates`、edition 2024 のライブラリで、`[dependencies]` は `allowed-crates.toml` の内容そのまま、`src/lib.rs` は空とする。`warmup/`・`project/`・`validate/` は、どれもこのライブラリに path 依存する（[実行・提出時のプロジェクトの組み立て](project-assembly.md)）。これにより、許可クレートの feature の組み合わせが、どの演習のビルドでも初回準備と同じになる。
+- `allcrates/` は、パッケージ名 `progrust_allowed_crates`、edition 2024 のライブラリで、`[dependencies]` は `allowed-crates.toml` の内容そのまま、`src/lib.rs` は空とする。`warmup/` と、許可クレートを使う演習の `project/`・`validate/` は、このライブラリに path 依存する。許可クレートを使わない演習の `project/`・`validate/` は、path 依存しない（[実行・提出時のプロジェクトの組み立て](project-assembly.md)）。これにより、許可クレートの feature の組み合わせが、許可クレートを使うどの演習のビルドでも初回準備と同じになり、許可クレートを使わない演習のビルドは、許可クレートのソースもビルド結果も要らない。
 - ビルド先は `CARGO_TARGET_DIR` で指定する。許可クレートを使う演習は、初回準備でビルド済みの依存を再利用できる。
 - 許可クレートを使わない演習は `target-std/` にビルドし、初回準備の `target/` のロックを待たずにビルドできる。ただし、初回準備がクレートをダウンロードしている間は、cargo のパッケージキャッシュのロックで待つことがある。
 - `validate/` は、`project/` と別のビルド先（`target-validate/`・`target-std-validate/`）を使う。生成問題の検証と学習者の実行・提出は、互いのビルドを待たずに並行して行える。
