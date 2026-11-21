@@ -16,9 +16,9 @@ description: "学習記録ファイル `records/*.md` のファイル名（`reco
 ```yaml
 ---
 schema_version: 1
-record_id: 2026-10-31_ch04-03_01
-session_id: 20261031T130200_ch04-03
-lesson_id: ch04-03
+record_id: 2026-10-31_ch04-04_01
+session_id: 20261031T130200_ch04-04
+lesson_id: ch04-04
 kind: lesson
 title: 所有権のムーブ
 difficulty: null

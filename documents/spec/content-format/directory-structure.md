@@ -24,7 +24,7 @@ content/
         │   ├── durations.json      # 音声の長さ（spec/content-format/video/voice.md）
         │   └── cue-reference.json  # 合図を合わせたときの音声の長さ（spec/content-format/video/timeline-and-cues.md）
         ├── assets/                 # このレッスン専用の画像
-        └── exercise/               # 演習（spec/content-format/exercise.md）
+        └── exercise/               # 演習（spec/content-format/exercise.md）。動画のみのレッスンにはない
             ├── problem.md
             ├── explanation.md
             ├── starter/            # 初期コード

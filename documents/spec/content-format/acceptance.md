@@ -6,7 +6,8 @@ description: "教材データ形式の仕様を満たしたと判断する条件
 
 - `chapters.json` に載っているすべてのレッスンについて、`lesson.json` と必要なファイルが揃っていることを教材チェックツールで確認できる。
 - どのレッスンの `primary_elements` にも含まれない要素（`deprecated` を除く）は、教材チェックツールでエラーになる。
-- `kind` が `lesson` で `tags` のない `lesson.json` は、教材チェックツールでエラーになる。
+- `kind` が `lesson`・`video_only` で `tags` のない `lesson.json` は、教材チェックツールでエラーになる。
+- `kind` が `video_only` で、`exercise` を持つか、`primary_elements`・`secondary_elements` が空でない `lesson.json` は、教材チェックツールでエラーになる。
 - 色を 16 進表記で直接指定した動画のコードと、`@tauri-apps/` で始まるモジュールを import した動画のコードは、教材チェックツールでエラーになる。
 - ダークモードに切り替えたとき、動画の中の文字・図の色がすべてテーマに合わせて変わる。
 - 第4章の動画では `c-primary` が第4章の章カラーで表示され、同じ動画を第2章に移すと第2章の章カラーで表示される。`c-ok`・`c-ng`・`callout`・マーカー（`mark`）は、どの章でも同じ色で表示される。

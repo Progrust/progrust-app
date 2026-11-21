@@ -8,7 +8,7 @@ description: "ch17 スマートポインタの章の説明と、Box、Option の
 
 | ID | タイトル | 主に扱う内容 |
 | --- | --- | --- |
-| ch17-01 | Box | ヒープに値を置く、再帰的な型 |
+| ch17-01 | Box | ヒープに値を置く、型の大きさがコンパイル時に決まっている必要があること、再帰的な型 |
 | ch17-02 | Option の中身を借りる・取り出す | `as_ref`・`as_deref`・`take`・`replace`、`std::mem::take`・`std::mem::replace` |
 | ch17-03 | Deref と参照外し型強制 | `Deref` トレイト、`&String` が `&str` として渡せる理由 |
 | ch17-04 | Drop | 破棄時の処理、`std::mem::drop` で早めに破棄する |

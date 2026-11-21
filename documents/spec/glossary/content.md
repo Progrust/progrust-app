@@ -8,8 +8,10 @@ description: "章、レッスン、動画、台本、演習、要素、判定方
 |---|---|---|
 | 教材 | content | アプリに同梱する章・レッスン・要素マスタの総称。形式は [教材データ形式](../content-format/index.md) |
 | 章 | chapter | レッスンをまとめる単位。ID は `ch{NN}`（例: `ch04`） |
-| レッスン | lesson | 「動画 1 本 + 演習 1 問」の学習単位。ID は `ch{NN}-{NN}`（例: `ch04-03`） |
+| レッスン | lesson | 「動画 1 本 + 演習 1 問」の学習単位。動画のみのレッスンは演習を持たない。ID は `ch{NN}-{NN}`（例: `ch04-03`） |
 | 章末復習レッスン | chapter review | 各章の最後に置く、演習のみのレッスン。ID は `ch{NN}-review` |
+| 動画のみのレッスン | video-only lesson | 周辺知識だけを扱う、演習のないレッスン（`lesson.json` の `kind` が `video_only`）。ID はレッスンと同じ `ch{NN}-{NN}` |
+| 周辺知識 | background knowledge | Rust の文法や機能そのものではないが、Rust を理解するうえで必要な知識（メモリの仕組み、スレッドとデータ競合など。[想定する学習者](../content-guidelines/target-learner.md)） |
 | 動画 | video | レッスンの知識をインプットするための、ナレーションつきの 16:9 の教材。動画ファイルではなく、アプリの中で描画する（[レッスンの動画の形式（video/）](../content-format/video/index.md)） |
 | シーン | scene | 動画を構成する場面の単位（表紙、まとめ など） |
 | 台本 | script | 動画のナレーションを文ごとに並べたデータ（`script.json`。[動画の台本（script.json）](../content-format/video/script-json.md)） |

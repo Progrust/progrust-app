@@ -62,7 +62,7 @@ schema_version: 1
 # --- アプリ管理 ---
 updated_at: 2026-10-31T13:33:00+09:00
 based_on_records: 42
-last_record_id: 2026-10-31_ch04-03_01
+last_record_id: 2026-10-31_ch04-04_01
 activity:
   total_records: 42
   total_active_minutes: 812

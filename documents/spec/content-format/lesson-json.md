@@ -1,12 +1,12 @@
 ---
 type: Specification
 title: "レッスン定義の形式（lesson.json）"
-description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elements`・`secondary_elements`・`estimated_minutes`・`exercise.judge`（`min_learner_tests` を含む）など）と、`kind` ごとの `tags` の要否を定める。"
+description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elements`・`secondary_elements`・`estimated_minutes`・`exercise.judge`（`min_learner_tests` を含む）など）と、`kind` ごとの `tags`・要素・`exercise` の要否を定める。"
 ---
 
 ```json
 {
-  "id": "ch04-03",
+  "id": "ch04-04",
   "chapter": "ch04",
   "kind": "lesson",
   "title": "所有権のムーブ",
@@ -28,12 +28,13 @@ description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elem
 | フィールド | 説明 |
 |---|---|
 | `id` / `chapter` | レッスン ID と所属する章の ID。`chapters.json` と一致すること |
-| `kind` | `lesson` / `chapter_review` / `generated`（生成問題のみ） |
+| `kind` | `lesson` / `video_only`（動画のみのレッスン）/ `chapter_review` / `generated`（生成問題のみ） |
 | `title` / `summary` | 表示名と、レッスン一覧に表示する 1 行の説明 |
-| `tags` | 検索ワード（string[]）。レッスン検索の対象にする語（[レッスン検索](../screens/lesson-search.md)）。`kind` が `lesson` のレッスンでは必須で、1 件以上を書く。空の文字列と、同じレッスンの中での重複は書けない |
-| `primary_elements` | 主要素の ID（1〜2 件） |
-| `secondary_elements` | 副要素の ID |
+| `tags` | 検索ワード（string[]）。レッスン検索の対象にする語（[レッスン検索](../screens/lesson-search.md)）。`kind` が `lesson`・`video_only` のレッスンでは必須で、1 件以上を書く。空の文字列と、同じレッスンの中での重複は書けない |
+| `primary_elements` | 主要素の ID（1〜2 件）。`video_only` では空の配列にする |
+| `secondary_elements` | 副要素の ID。`video_only` では空の配列にする |
 | `estimated_minutes` | 目安の所要時間（分） |
+| `exercise` | 演習の定義。`video_only` では書かない |
 | `exercise.layout` | `single`（`src/main.rs` の 1 ファイルのみ）/ `multi`（複数ファイル） |
 | `exercise.judge.mode` | `stdout` / `test`（[演習のファイル形式](exercise.md)「判定方式」） |
 | `exercise.judge.target` | `test` 方式で隠しテストを組み込むファイル（`src/main.rs` または `src/lib.rs`）。`stdout` 方式では `src/main.rs` 固定 |

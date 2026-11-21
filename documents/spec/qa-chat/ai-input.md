@@ -7,7 +7,7 @@ description: "動画の再生中と解説表示中のそれぞれで AI に渡�
 ## 動画の再生中
 
 1. 指示文（`prompts/chat-video.md`）
-2. レッスンのタイトルと主要素の説明（要素マスタの `name`・`description`）
+2. レッスンのタイトルと主要素の説明（要素マスタの `name`・`description`）。動画のみのレッスンには主要素がないので、タイトルだけを渡す
 3. レッスンの台本（[動画の台本（script.json）](../content-format/video/script-json.md)）の内容
    - 全文: シーンごとにシーンの名前を見出しにし、そのシーンの各文の ID と `text` を台本の順に並べたもの
    - `ai_note`

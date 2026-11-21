@@ -8,8 +8,8 @@ description: "`tools/` の教材チェックツールで検証するチェック
 
 | チェック項目 | 内容 |
 |---|---|
-| カリキュラム | `chapters.json` の章の並び、各章の ID・タイトル・説明、レッスンの並びと、章末復習レッスン以外の各レッスンの `lesson.json` の `title` が [章とレッスンの一覧](../curriculum/chapters/index.md) と一致する |
-| 構成 | `chapters.json` の全レッスンのディレクトリと必要なファイルが存在する。章末復習レッスン以外は、`video/` に `script.json`・`index.tsx`・`durations.json` と、すべての文の音声ファイルがある |
+| カリキュラム | `chapters.json` の章の並び、各章の ID・タイトル・説明、レッスンの並びと、章末復習レッスン以外の各レッスンの `lesson.json` の `title` が [章とレッスンの一覧](../curriculum/chapters/index.md) と一致する。`lesson.json` の `kind` が `video_only` のレッスンが、同じ一覧で動画のみのレッスンと定めたレッスンと一致する |
+| 構成 | `chapters.json` の全レッスンのディレクトリと必要なファイルが存在する。章末復習レッスン以外は、`video/` に `script.json`・`index.tsx`・`durations.json` と、すべての文の音声ファイルがある。動画のみのレッスンには `exercise/` がない |
 | 定義 | `lesson.json` が [レッスン定義の形式（lesson.json）](../content-format/lesson-json.md) の形式に合っている。要素 ID が要素マスタに存在する |
 | 既習要素 | `secondary_elements` の各要素が、そのレッスンにとって既習の要素である |
 | 要素マスタ | `deprecated` でない要素は、いずれかのレッスンの `primary_elements` に含まれている |
@@ -23,6 +23,8 @@ description: "`tools/` の教材チェックツールで検証するチェック
 | 初期コード | 初期コードが判定で正解にならない |
 | テストケース | 3 件以上ある。`test` 方式では `case_labels` のキーが `judge_tests.rs` のテスト関数名と一致する |
 | クレート | `dependencies` が許可クレートの一覧にある |
+
+「問題文・解説」「模範解答」「初期コード」「テストケース」「クレート」は、動画のみのレッスンでは検査しない。
 
 次の項目は警告とする。警告は結果に表示し、エラーにしない（CI を失敗にしない）。
 

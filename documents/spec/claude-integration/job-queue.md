@@ -9,7 +9,7 @@ description: "`jobs.json` の項目、ジョブの種類・状態・実行順・
   {
     "job_id": "job_20261031T133100_001",
     "type": "record",
-    "session_id": "20261031T130200_ch04-03",
+    "session_id": "20261031T130200_ch04-04",
     "record_id": null,
     "generation_id": null,
     "status": "pending",
