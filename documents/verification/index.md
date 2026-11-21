@@ -1,6 +1,6 @@
 # 技術検証の結果
 
-* [Remotion Player の WebView での動作と性能の技術検証](issue-1-remotion-player-webview.md) - Remotion Player が Tauri の WKWebView で動き、再生開始 300ms・シーク 200ms の目安を満たすかを Issue #1 で検証した結果（ページ自身が計測して Tauri のコマンドで書き出す方法、再生開始とシークの表、1 倍と 2 倍の通しの再生のコマ落ち、AudioDecoder を消してまねた macOS 13 の状態、2 倍速で 1 フレームずつ飛ぶこと、再生中のシークの後の停止）を記す。
+* [Remotion Player の WebView での動作と性能の技術検証](issue-1-remotion-player-webview.md) - Remotion Player が Tauri の WKWebView で動き、再生開始 300ms・シーク 200ms の目安を満たすかを Issue #1 で検証した結果（ページ自身が計測して Tauri のコマンドで書き出す方法、再生開始とシークの表、1 倍と 2 倍の通しの再生のコマ落ち、AudioDecoder を消してまねた macOS 13 の状態、2 倍速で 1 フレームずつ飛ぶこと、再生中のシークの後の停止、それらを人が見て問題ないとした判断）を記す。
 * [1 文 1 ファイルの音声の再生と同期の技術検証](issue-2-m4a-audio-sync.md) - 1 文 1 ファイルの .m4a を Player の中で同期して再生できるかを Issue #2 で検証した結果（@remotion/media の Audio と Html5Audio の動作、音声と絵のずれの表、0.75〜2 倍速での声の高さ、AAC の前後の無音と durations.json の seconds の食い違い、許せるずれの量と Audio 部品の選択がユーザーの判断になること）を記す。
 * [独自のプレーヤー操作を Player の API で作れるかの技術検証](issue-3-player-custom-controls.md) - Remotion Player の外に動画画面の操作（再生位置の取得と変更、文ごとの移動、5 秒のスキップ、シークバーのシーンの印、枠の外の字幕、文の単位での位置の保存、Space・←→・Shift+←→ のキー操作）を作れるかを Issue #3 で検証した結果（自動確認 21 項目、キー操作の衝突を避ける controls={false} と spaceKeyToPlayOrPause={false}、合成イベントでの確認の限界）を記す。
 * [レッスンごとの動画の遅延読み込みの技術検証](issue-4-lazy-load-lesson-video.md) - レッスンごとに動画のコード・音声・画像を遅延読み込みできるかを Issue #4 で検証した結果（Vite のプラグインで作るレッスンごとの仮想モジュール、塊の一覧、tauri:// で配信されたファイルの記録、音声の置き方 2 通りの比較、tauri:// が Range に 200 で全体を返すこと）を記す。
