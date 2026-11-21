@@ -166,7 +166,8 @@
 * [ADR 0122](0122-hold-label-for-deferred-issues.md) - 対応するが今は対応しない Issue にラベル `保留` を付け、保留の理由と対応するきっかけを Issue のコメントに書く（ADR 0130 で `保留` を付けるかどうかを決める者を変えた）
 * [ADR 0123](0123-refile-closed-issue-when-situation-changed.md) - 閉じた Issue と同じ問題を見つけたとき、閉じたときから状況が変わっていれば起票し、対応しない Issue を閉じるときに理由とまた問題になる条件をコメントに書く
 * [ADR 0129](0129-note-partial-change-in-adr-description.md) - 後の ADR が採用した ADR の決定の一部だけを変えたときは、古い ADR を採用のままにし、description の末尾に、変えた ADR と変えた内容を示す注記を足す
-* [ADR 0130](0130-triage-undecided-issues-by-skill.md) - ユーザーがスキル `triage-issues` を呼んだときは、開いている `未判断` の Issue を AI エージェントが仕分け、ユーザーの判断が要るもの以外は、対応するかどうかを決めて、直す・保留にする・閉じるところまで処理する
+* [ADR 0130](0130-triage-undecided-issues-by-skill.md) - ユーザーがスキル `triage-issues` を呼んだときは、開いている `未判断` の Issue を AI エージェントが仕分け、ユーザーの判断が要るもの以外は、対応するかどうかを決めて、直す・保留にする・閉じるところまで処理する（ADR 0133 で仕分ける Issue の範囲を変えた）
+* [ADR 0133](0133-triage-also-picks-up-accepted-open-issues.md) - スキル `triage-issues` で、`未判断` の Issue に加えて、対応すると決めて開いたままの Issue も仕分け、解消しているか、その場で直せるようになっていれば処理する
 
 # 置き換え済み・廃止
 
