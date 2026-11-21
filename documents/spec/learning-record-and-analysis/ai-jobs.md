@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "学習記録・分析の AI ジョブ"
-description: "記録セッションと分析セッションの入力、試行ログの圧縮、出力の検証と保存、分析の再構築（rebuild）の手順を定める。"
+description: "記録セッションと分析セッションの入力、試行ログの圧縮、分析セッションに出力させるフィールド、出力の検証と保存、分析の再構築（rebuild）の手順を定める。"
 ---
 
 記録・分析・再構築はジョブとして実行する。`claude -p` の呼び出し方・モデル・ジョブキューは [Claude Code 連携](../claude-integration/index.md) に従う。
@@ -23,7 +23,7 @@ description: "記録セッションと分析セッションの入力、試行ロ
 
 **試行ログの圧縮**
 
-- 2 回目以降の `run` / `submit` のコードは、直前のスナップショットとの差分（unified diff）に変換する。最初と最後の提出は全文を渡す。
+- 最初の `run` / `submit` のコードと、最後の提出のコードは全文を渡す。それ以外の `run` / `submit` のコードは、直前のスナップショットとの差分（unified diff）に変換する。直前のスナップショットは、下の件数の上限で残したイベントのうち、そのイベントの直前のものとする。
 - `stderr` は 1 イベントあたり 2,000 文字で切り詰める。
 - `run` / `submit` が 30 件を超える場合は、最初の 5 件・最後の 10 件・結果の `status` が変化したイベントを優先して残す。
 
@@ -49,14 +49,20 @@ description: "記録セッションと分析セッションの入力、試行ロ
 
 過去の全記録は渡さず、「現在の分析 + 新しい記録 + 集計値」で差分的に更新する。
 
+**出力**
+
+- AI には、frontmatter のうち AI 管理のフィールド（各要素の `level`・`level_reason`、`focus_recommendation`、`recommended_difficulty`）と、本文を出力させる。アプリ管理のフィールド（[分析ファイル（analysis/analysis.md）](analysis-file.md)「frontmatter」）は出力させない。
+- `elements` には、入力 5 の集計結果にあるすべての要素を、`level`・`level_reason` の 2 つだけで出力させる。
+
 **出力の検証**
 
 - frontmatter を解析できること。
+- 集計結果にある要素のうち、`elements` に無い要素は、`level` を `base_level`、`level_reason` を空にする。集計結果に無い要素は除去する。
 - `level` が [分析ファイル（analysis/analysis.md）](analysis-file.md)「AI によるレベル調整」 の制約を満たすこと（違反時は `base_level` を採用し、`level_reason` を空にする）。
 - `focus_recommendation` の要素 ID が要素マスタに存在すること（存在しないものは除去）。
 - `recommended_difficulty` が 1〜5 であること（範囲外なら 1〜5 に丸める）。
 - 本文に必須セクション（[分析ファイル（analysis/analysis.md）](analysis-file.md)「本文」）がすべて存在すること。
-- 検証に成功したら、アプリ管理フィールドを上書きし、旧版を `history/` に退避して保存する。`history/` は直近 20 件を保持する。
+- 検証に成功したら、AI の出力にアプリ管理フィールドを合わせて分析ファイルを組み立て、旧版を `history/` に退避して保存する。`history/` は直近 20 件を保持する。
 
 ## 分析の再構築（rebuild）
 

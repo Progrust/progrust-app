@@ -32,7 +32,7 @@ description: "フロントエンドがファイルシステムや子プロセス
 
 | イベント | 内容 | 担当仕様 |
 |---|---|---|
-| `run_output` | 実行中の出力（stdout / stderr / system） | [コード実行・判定](../exercise-runner/index.md) |
+| `run_output` | 実行中の出力。1 つのイベントに、stdout / stderr / system の断片を受け取った順に複数入れる | [コード実行・判定](../exercise-runner/index.md) |
 | `run_finished` | 実行・提出の結果 | [コード実行・判定](../exercise-runner/index.md) |
 | `chat_delta` / `chat_finished` | 質疑応答の回答（ストリーミング） | [質疑応答](../qa-chat/index.md) |
 | `job_updated` | ジョブの状態変化 | [Claude Code 連携](../claude-integration/index.md) |

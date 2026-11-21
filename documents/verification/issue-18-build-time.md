@@ -1,7 +1,7 @@
 ---
 type: Verification Report
 title: "ビルドの時間と初回準備のやり直しの技術検証"
-description: "実行のたびに project/ を作り直すときのアプリ側の処理時間、--offline のビルドが失敗する状態ごとの終了コードと stderr の文、cargo のキャッシュ自動削除（gc）が既定で有効なこと、許可クレートを増やしたときの初回準備の時間とディスク使用量を Issue #18 で検証した結果を記す。"
+description: "実行のたびに project/ を作り直すときのアプリ側の処理時間、--offline のビルドが失敗する状態ごとの終了コードと stderr の文、cargo のキャッシュ自動削除（gc）が既定で有効なこと、許可クレートを増やしたときの初回準備の時間とディスク使用量を Issue #18 で検証した結果と、ユーザーが Claude の推奨に任せた初回準備のやり直しの条件の判断を記す。"
 ---
 
 - 日付: 2026-11-21
@@ -124,6 +124,13 @@ warmup（空の CARGO_HOME・空の target から `cargo build` → `cargo test 
 - `cargo test --no-run` が増やすのは、空のテストの実行ファイル 1 つ（約 1MB）だけ。依存は dev プロファイルを共有する。release ビルドは作っていない（仕様にない）。
 - 実行のたびに project を作り直しても target は増えない。30 通りの異なるソースを続けてビルドしても、std の target は 1.3MB のまま、tokio を使う target も増減なし（339.6MB から 338.8MB）。ただし、feature の違いで作り直した依存の成果物は target に加わる（上の 339MB と 251.6MB の差 約 80MB は、別の組み合わせの検証で作った分）。別の組み合わせの演習が増えるほど target は大きくなる。
 
+### 検証のあとの判断
+
+検証のあと、ユーザーは、残った判断を Claude の推奨に任せた。Claude は次のように決め、仕様に書いた。
+
+- rustc の版: `prepared.json` に `rustc -vV` の出力（`rustc_version`）を持たせ、起動時に今の rustc と違えば初回準備をやり直す（[ADR 0100](../decisions/0100-redo-preparation-when-rustc-changes.md)）。
+- cargo の gc: 案 (a) にした。上の 1〜3 の失敗の文（E0786 はパスがビルド先の中を指すときだけ）を検出したら、初回準備を自動でやり直す。アプリ専用の `CARGO_HOME` にはしない（[ADR 0105](../decisions/0105-detect-lost-crates-from-offline-build-errors.md)）。
+
 ## 判定
 
 - アプリ側の処理時間 500ms 以内: 満たした。組み立ては 1ms 未満。cargo のビルドとバイナリの実行は基準の対象外。他の処理（cargo の起動、JSON の解析、通知）は試作に含めておらず、実装で確かめる。
@@ -132,7 +139,7 @@ warmup（空の CARGO_HOME・空の target から `cargo build` → `cargo test 
 
 ## 残った事項
 
-ユーザーの判断が要る点（Issue は開いたままにする）:
+ユーザーの判断が要るとした点は、検証のあとに決まった（「検証のあとの判断」）。決める前の選択肢は次のとおり。
 
 - 初回準備のやり直しの条件に rustc の版を加えるか。加えるなら、`prepared.json` に `rustc -vV` の出力（または `commit-hash`）を持たせ、起動時に今の rustc と比べて違えばやり直す（warmup を先に実行すれば、最初の演習で待たされない）。加えない場合の影響は上のとおり（最初の演習が数秒遅くなる、target が増える）。
 - cargo の gc の影響をどう扱うか。数か月使っていない許可クレートで `--offline` のビルドが失敗する。案は、(a) 失敗の文（上の 1・2）を検出して自動で初回準備を再実行する（ネットワークがあるときだけ）、(b) アプリ専用の CARGO_HOME にする（学習者の他の cargo の gc の影響を受けない。仕様は学習者の既定の CARGO_HOME を使うので、ADR 0011 の判断と変わる）、(c) 起動時に `registry/cache` に全依存の `.crate` があるかを確かめる。
@@ -144,7 +151,7 @@ warmup（空の CARGO_HOME・空の target から `cargo build` → `cargo test 
 - release プロファイルのビルドの大きさ・時間。
 - アプリ側の他の処理（cargo の起動、JSON の解析、イベント通知）を含めた実測。
 
-仕様の変更案:
+仕様の変更案（失敗の文と E0786、rustc の版、gc の後の自動の再実行は、ADR 0100・ADR 0105 で仕様に書いた）:
 
 - 「依存が見つからないエラーになった場合は初回準備をやり直す」に、上の実際の文を明記し、検出の対象に E0786 を加える。target の欠落と rustc の版の変更は失敗にならないので、この方法では検出できない。
 - `prepared.json` に rustc の版を持たせる案（上のとおり）。

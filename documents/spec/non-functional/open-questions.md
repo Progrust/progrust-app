@@ -1,7 +1,7 @@
 ---
 type: Open Questions
 title: "非機能要件の未決事項"
-description: "非機能要件の仕様でまだ決まっていない事項（一般公開をする場合に決めること: 公開するかどうか、配布と更新の方法、コード署名、Remotion・VOICEPEAK の音声・書体のライセンス、Anthropic の利用規約。一般公開した後に決めること: macOS の他のバージョンと他の OS への対応）を記す。"
+description: "非機能要件の仕様でまだ決まっていない事項（一般公開をする場合に決めること: 公開するかどうか、配布と更新の方法、コード署名、Remotion・VOICEPEAK の音声・書体のライセンス、Anthropic の利用規約、claude.ai のログイン以外の認証と管理者の設定への対応。一般公開した後に決めること: macOS の他のバージョンと他の OS への対応）を記す。"
 ---
 
 アプリの完成までは、どれも決めない（[公開範囲と配布](distribution.md)、[対応環境](environments.md)）。
@@ -15,6 +15,7 @@ description: "非機能要件の仕様でまだ決まっていない事項（一
 - VOICEPEAK（夏色花梨）の音声をアプリに同梱して配布できるか。調べた範囲では、製品ページに「商用・業務用途には別途商用ライセンスが必要」「別のソフトウェアに組み込んで商用利用する際は問い合わせ」とあり、個人利用の許諾範囲では音声を素材として配布することが禁止されている。AHS に確認する。ナレーターは `content/voice.json` で差し替えられる（[動画の音声](../content-format/video/voice.md)）。
 - 書体（Murecho、Red Hat Mono）のファイルをアプリに同梱して配布できるか（ライセンス）。
 - 学習者の Claude Code をアプリから `claude -p` で呼び出すことが、Anthropic の利用規約に照らして問題ないか。
+- 学習者が claude.ai のログイン以外の方法（`settings.json` の `apiKeyHelper`・`env` による API キー、Bedrock、Vertex、プロキシなど）で Claude Code を使っている場合と、管理者の設定・管理プラグインが効く PC（会社の管理下の PC など）で使う場合に対応するか。アプリはユーザー設定を読み込まずに `claude -p` を呼び、claude.ai のログインだけを使う（[claude -p の呼び出しの共通ルール](../claude-integration/invocation.md)「認証」）。
 
 ## 一般公開した後に決めること
 

@@ -1,10 +1,10 @@
 ---
 type: Verification Report
 title: "claude -p の隔離起動の技術検証"
-description: "claude -p を、ユーザー設定を読み込まず、ツールを使わせず、学習者のログイン状態のまま起動できるかを Issue #8 で検証した結果（フラグの組み合わせごとの効き方、--bare が OAuth を読まないこと、ツール無効の確認、設定ディレクトリに残るもの、推奨のフラグと再実行の 1 行のコマンド）を記す。"
+description: "claude -p を、ユーザー設定を読み込まず、ツールを使わせず、学習者のログイン状態のまま起動できるかを Issue #8 で検証した結果（フラグの組み合わせごとの効き方、--bare が OAuth を読まないこと、ツール無効の確認、設定ディレクトリに残るもの、推奨のフラグと再実行の 1 行のコマンド、ユーザーレベルの CLAUDE.md が読まれないことの追加の確認、ユーザーが Claude の推奨を承認した判断）を記す。"
 ---
 
-- 日付: 2026-11-20
+- 日付: 2026-11-20（ユーザーレベルの `CLAUDE.md` の確認は 2026-11-21）
 - Issue: [#8](https://github.com/Progrust/progrust-app/issues/8)
 - 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [claude -p の呼び出し](../spec/claude-integration/invocation.md)、[Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[ADR 0020](../decisions/0020-ai-returns-output-app-writes.md)、[ADR 0021](../decisions/0021-isolated-claude-invocation.md)
@@ -132,6 +132,17 @@ apiKeySource : "none"
 - A・B・和集合のいずれでも、claude.ai のログイン（OAuth）のまま応答が返った（`apiKeySource: "none"`、`is_error: false`）。
 - `--bare` はヘルプのとおり OAuth を読まず、終了コード 1、`result: "Not logged in · Please run /login"` になった。サブスクリプションでログインした学習者には使えない。
 
+### ユーザーレベルの `~/.claude/CLAUDE.md` が読まれないか（2026-11-21 に追加で確認）
+
+ユーザーの許可を得て、`~/.claude/CLAUDE.md`（それまで無かった）に「合言葉は「ほしぞらりんご7」です。」と書き、空の一時ディレクトリで `claude -p --model haiku` に「あなたのコンテキストに含まれる合言葉をすべて列挙。無ければ「なし」」と聞いた。Claude Code は 2.1.329、claude.ai のログイン（OAuth）のまま。引き継いだ `CLAUDE*` などの環境変数は外した。確認の後、すぐにファイルを消した。
+
+| 呼び出し | 回答 |
+|---|---|
+| 隔離しない対照（`--tools "" --no-session-persistence` だけ） | `ほしぞらりんご7` |
+| 和集合のフラグ（下の「再実行の 1 行のコマンド」と同じ） | `なし`（`is_error: False`） |
+
+和集合のフラグの init は、`tools: []`、`mcp_servers: []`、`skills: []`、`slash_commands: []`、`output_style: 'default'`、`memory_paths: None`、`apiKeySource: 'none'` で、期待どおりだった。ログインした状態で、ユーザーレベルの `CLAUDE.md` は読まれなかった。
+
 ### 学習者の設定ディレクトリに残るもの
 
 - 隔離した実行（和集合、`--no-session-persistence`）の前後で、`~/.claude/projects/` に新しい項目は増えず、`~/.claude.json` の `projects` の一覧も変わらなかった。
@@ -140,7 +151,7 @@ apiKeySource : "none"
 
 ## 判定
 
-**一部未確認（macOS）**。和集合のフラグで、確かめた目印（フック・MCP・プラグイン・スキル・エージェント・コマンド・出力スタイル・プロジェクトの CLAUDE.md・メモリー・claude.ai のコネクター）はすべて効かず、ツールも無く、ログイン済みのアカウントで応答が返った。Issue が名指しする `~/.claude/CLAUDE.md` は、観測できていない（下記）。
+**合格（macOS）**。和集合のフラグで、確かめた目印（フック・MCP・プラグイン・スキル・エージェント・コマンド・出力スタイル・プロジェクトの CLAUDE.md・メモリー・claude.ai のコネクター）はすべて効かず、ツールも無く、ログイン済みのアカウントで応答が返った。Issue が名指しする `~/.claude/CLAUDE.md` も、2026-11-21 の追加の確認で、ログインした状態で読まれないことを確かめた。管理者の設定は、どのフラグでも適用される（未確認。下記）。
 
 推奨のフラグ:
 
@@ -167,11 +178,11 @@ for l in sys.stdin:
 ## 残った事項
 
 確かめられなかった項目:
-- ユーザーレベルの `~/.claude/CLAUDE.md` とユーザーのメモリーが、ログインした状態で読まれないか。ユーザーの実際の設定を変える必要があるため確かめていない（検証した環境には `~/.claude/CLAUDE.md` が無い）。`CLAUDE_CONFIG_DIR` を変える方法も、`HOME` を一時ディレクトリにする方法も未ログインになり、応答で確かめられない。init の `memory_paths` が無いことと、デバッグログの `project memory is off` までは確かめた。プロジェクトの CLAUDE.md とメモリーは、認証した状態で読まれないことを確かめた。
+- ユーザーレベルの自動のメモリー（`~/.claude/CLAUDE.md` 以外）が、ログインした状態で読まれないか。init の `memory_paths` が無いことと、デバッグログの `project memory is off` までは確かめた。`~/.claude/CLAUDE.md` は 2026-11-21 に確かめた（上の「結果」）。プロジェクトの CLAUDE.md とメモリーは、認証した状態で読まれないことを確かめた。
 - 管理者の設定（macOS では `/Library/Application Support/ClaudeCode/managed-settings.json`）と管理プラグイン。ヘルプとログのとおり、どのフラグでも適用される。検証した Mac には無いので未確認。
 - 空の `CLAUDE_CONFIG_DIR`・`HOME` を使った (b) の判定は、init とフック・MCP の副作用による。応答の内容では確かめていない。
 
-ユーザーの判断が要る点:
+ユーザーの判断が要る点（2026-11-21 に決まった。下の「ユーザーの判断」）:
 1. 設定ファイルでの認証を捨ててよいか。和集合のフラグはユーザー・プロジェクトの settings.json を読まない。学習者が settings.json の `apiKeyHelper` や `env`（Bedrock・Vertex・プロキシなど）で認証を設定している場合、それも効かなくなると推定する（試していない）。claude.ai のログイン（OAuth）は効くことを確かめた。シェルの環境変数 `ANTHROPIC_API_KEY` は効くと推定する（試していない。Finder から起動したアプリには届かない）。サブスクリプションのログインだけを対象にしてよいか。
 2. 管理者の設定・管理プラグインが呼び出しに効くことを許容するか。フラグでは止められない。会社などの管理下の PC を学習者が使う場合に効く。
 3. 既定のシステムプロンプトを置き換えるか。和集合のフラグでも、Claude Code の既定のシステムプロンプトは使われる。確認の実行で、モデルは、コンテキストに作業ディレクトリや実行環境の情報（プラットフォーム、シェル、OS、使用モデル、日付など）とユーザーのメールアドレスが含まれると答えた。学習者の設定ではないが、呼び出しの条件を完全にアプリで決めたい場合は `--system-prompt` で置き換える案がある（試していない）。
@@ -185,3 +196,8 @@ for l in sys.stdin:
 その他:
 - cwd をリポジトリの中にすると、Claude Code は git のルートをプロジェクトとみなし、上の階層の CLAUDE.md を読む可能性がある。アプリが OS の一時ディレクトリを使う仕様なら問題ないが、場所を変える場合は注意する。
 - 隔離していない `claude -p` は、正常に終わったときも、MCP サーバーが起動した孫プロセスを孤児として残した（Claude Code 自体の挙動。アプリは隔離して呼ぶので直接は影響しない）。
+
+ユーザーの判断（2026-11-21）:
+- Claude は、上の 1 は claude.ai のログインだけを対象にする、2 は一般公開をする場合に扱う、3 は既定のシステムプロンプトを `--system-prompt` で置き換える、を推奨した。上の「仕様の変更案」も推奨した。ユーザーは「私は細かい技術的な話はわからないので、あなたの推奨通りで進めて大丈夫です」と示し、推奨を承認した。
+- 仕様（[claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)、[非機能要件の未決事項](../spec/non-functional/open-questions.md)）を直し、[ADR 0106](../decisions/0106-isolated-claude-flags-and-oauth-only.md) を追加した。
+- `--system-prompt` で置き換えたときの動作は、この検証では試していない。実装時に確かめる。

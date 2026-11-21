@@ -13,5 +13,6 @@ description: "指示文を `prompts/` に Markdown で置くこと、`{{name}}` 
 | `prompts/record.md` | 記録セッション |
 | `prompts/analysis.md` | 分析セッション |
 | `prompts/generate.md` | 問題生成 |
+| `prompts/generate-fix.md` | 検証に失敗した生成問題の修正の依頼 |
 | `prompts/chat-video.md` | 動画についての質疑応答 |
 | `prompts/chat-explanation.md` | 解説表示後の質疑応答 |

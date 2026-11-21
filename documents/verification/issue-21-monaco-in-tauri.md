@@ -1,12 +1,12 @@
 ---
 type: Verification Report
 title: "Monaco Editor を Tauri の中で使えるかの技術検証"
-description: "Monaco Editor を Tauri の WKWebView で、CDN なしの同梱、Web Worker、CSP と両立して使えるかと、Cmd+Enter・Cmd+Shift+Enter・Cmd+. の既定の割り当てを上書きできるかを Issue #21 で検証した結果（style-src に 'unsafe-inline' が要ること、日本語入力と実キー入力は未確認）を記す。"
+description: "Monaco Editor を Tauri の WKWebView で、CDN なしの同梱、Web Worker、CSP と両立して使えるかと、Cmd+Enter・Cmd+Shift+Enter・Cmd+. の既定の割り当てを上書きできるかを Issue #21 で検証した結果（style-src に 'unsafe-inline' が要ること、人が操作して確かめた日本語入力と実キーでのショートカット、CSP を仕様に定めた判断）を記す。"
 ---
 
 - 日付: 2026-11-21
 - Issue: [#21](https://github.com/Progrust/progrust-app/issues/21)
-- 確かめた OS: macOS 27.2.1（Apple Silicon、WKWebView）。日本語入力（IME）と実キーでのショートカットは、人の操作が要るので確かめていない
+- 確かめた OS: macOS 27.2.1（Apple Silicon、WKWebView）。日本語入力（IME）と実キーでのショートカットは、検証のあとに人が試作のアプリを操作して確かめた
 - 関連仕様: [演習画面](../spec/screens/exercise-screen.md)、[技術スタック](../spec/architecture/tech-stack.md)、[セキュリティとプライバシー](../spec/non-functional/security-privacy.md)、[ADR 0004](../decisions/0004-monaco-without-completion.md)
 
 ## 環境
@@ -78,16 +78,23 @@ default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsa
 - Rust の構文強調: `monaco.editor.colorize` が 5 種類の色クラス（mtk1・6・7・8・20）を返し、`tokenize` が `keyword.rust` などを返した。0.57 の新しいパスで登録できる。
 - 非同期の `Canceled` の unhandled rejection が 1 件、Monaco のログに `NotAllowedError`（clipboard の `write` 由来）が 1 件出た。合成のキーイベント（`isTrusted=false`）を送ったことによるものと思われるが、切り分けていない。
 
-### 日本語入力（IME）: 確かめられなかった
+### 日本語入力（IME）: 人が操作して確かめた
 
-人の入力が要るので試していない。代わりに既知の問題を調べた。
+最初の検証では、人の入力が要るので試さず、既知の問題を調べた（下記）。そのあと、人が試作のアプリ（release ビルドの .app、CSP は上の `style-src 'unsafe-inline'` ありのもの）を操作して確かめた。試作には、押したキーと変換の開始・確定（`compositionstart`・`compositionend`）を画面に出す欄を足した。確かめた項目は次のとおりで、すべて問題なかった（人の報告は「全部大丈夫だった」）。
+
+1. コメント行の後ろで「こんにちは」を変換して確定する。
+2. 変換中に矢印キーと Enter を押す。
+3. 変換候補がカーソルの近くに出るかを見る。
+4. 変換中に Cmd+Enter を押し、文字が消えたり二重になったりしないかを見る。
+
+調べた既知の問題:
 
 - Monaco は隠した `<textarea>` で入力を受け、composition イベントを処理する。VS Code の Wiki に IME のテスト手順がある（https://github.com/Microsoft/vscode/wiki/IME-Test）。microsoft/monaco-editor の Issue で「Safari・WKWebView の日本語入力が壊れる」という具体的な報告は、検索では見つからなかった（網羅はしていない）。
 - WebKit Bug 165004（https://bugs.webkit.org/show_bug.cgi?id=165004）: macOS の WebKit は、日本語 IME のとき `compositionstart`・`compositionupdate`・`input` を `keydown` より先に発火し、変換を確定する Enter の keydown は `compositionend` の後に `isComposing === false` で届く（Chrome は keydown が先）。このため「Enter で送信」のような keydown の処理は、変換の確定で誤作動する。回避は `keyCode === 229` の併用。この Bug は 2026 年 4 月に別の Bug（311717）の修正で解消されたと報告されている。**この Mac の WKWebView に修正が入っているかは未確認**。macOS 13 の WKWebView は修正前の可能性が高い。
 - 演習画面のショートカットは Cmd+Enter など修飾キー付きなので、変換の確定の Enter（修飾キー無し）とは別物。アプリ側で自前の keydown ハンドラーを作る場合は、変換中（`isComposing` または `keyCode === 229`）は処理しない判定が要る。Monaco 自身のキー処理が WebKit の順序の問題をどう扱うかは未確認。
 - 古い関連 Bug: WebKit Bug 49523（compositionupdate を聞く textarea の style を変えると、変換の途中の文字が混入する）。Monaco は textarea 方式なので同じ型の問題に注意する。
 
-### ショートカット: Monaco 側は確かめた、WebView 側は確かめられなかった
+### ショートカット: Monaco 側と、人が押した実キーで確かめた
 
 Monaco の既定の割り当て（`editor._standaloneKeybindingService.getKeybindings()` の 380 件。mac では CtrlCmd = Cmd）:
 
@@ -119,21 +126,30 @@ Tauri の macOS の既定メニュー（`NSApp.mainMenu` の実測、46 項目�
 
 確かめられなかったこと: WKWebView・AppKit が、本物の Cmd+Enter・Cmd+Shift+Enter・Cmd+. を、ページの keydown に渡す前に取るか。macOS では Cmd+. が標準の「中止」の意味を持ち、AppKit では Esc と同じく `cancelOperation:` に結び付くため、ページに keydown が届かない可能性がある。Cmd+Enter・Cmd+Shift+Enter には標準の割り当てが無い。
 
+検証のあと、人が試作のアプリで、エディタにフォーカスして実キーの Cmd+Enter・Cmd+Shift+Enter・Cmd+. を押した。試作は、上の `addCommand` で 3 つのキーを登録し、呼ばれたら画面の欄に表示する。3 つとも表示され、問題なかった。Cmd+. も、WKWebView・AppKit に取られずにページに届いた。
+
+### 検証のあとの判断
+
+検証のあと、ユーザーは、残った判断を Claude の推奨に任せた。Claude は次のように決め、仕様に書いた（[ADR 0111](../decisions/0111-bundle-monaco-and-set-csp.md)）。
+
+- CSP を仕様に定める。読み込み先はアプリ自身と Tauri の IPC に限り、`style-src` に `'unsafe-inline'` を許す。フォントと画像は `data:` も許す。
+- Monaco は CDN を使わず、Web Worker を含めて同梱する。
+- 演習画面のショートカットは、Monaco の `addCommand` で既定を上書きし、エディタの外でも効くよう window の keydown のキャプチャでも受ける。日本語の変換中はショートカットとして扱わない。
+- 不要な言語・機能を外した入口を使うかは、仕様に書かず、実装で決める。
+
 ## 判定
 
-基準「オフラインで動き、日本語を入力でき、演習画面のショートカットが効く」に対して、一部だけ確かめた。
+基準「オフラインで動き、日本語を入力でき、演習画面のショートカットが効く」は、macOS で満たした。
 
 - オフライン: 満たした。Worker 込みで、厳しめの CSP と両立し、外部読み込みは無かった。
-- 日本語入力: 未確認。既知の WebKit の問題は調べた。
-- ショートカット: Monaco 側は満たした（既定との衝突は上書きできる）。Tauri の既定メニューとも衝突しない。実キーが WKWebView を通ってページに届くか（特に Cmd+.）は未確認。
+- 日本語入力: 満たした（人が操作して確かめた）。
+- ショートカット: 満たした。Monaco の既定との衝突は上書きでき、Tauri の既定メニューとも衝突しない。実キーの 3 つ（Cmd+. を含む）がページに届くことを、人が操作して確かめた。
 
 ## 残った事項
 
-- 人が確かめる項目（試作の .app を起動して行う。CSP は `style-src 'unsafe-inline'` ありの版を使う）:
-  - 日本語入力: (1) コメント行に「こんにちは」を変換して確定する、(2) 変換中に矢印・Enter を押す、(3) 変換候補がカーソルの近くに出るか見る、(4) 変換中に Cmd+Enter を押す。
-  - 実キー: エディタにフォーカスして Cmd+Enter・Cmd+Shift+Enter・Cmd+. を押し、画面の表示（ページの keydown に届いたか）を見る。
-- ユーザーの判断が要る点: CSP を仕様に定めるか。現状、仕様に CSP の記述は無い。定めるなら `style-src 'unsafe-inline'` を含める必要がある。
-- 仕様の変更案（仕様は直していない。食い違いは無く、ADR 0004 の方針のまま使える）:
+- 人が確かめる項目は、検証のあとに確かめた（「日本語入力（IME）」「ショートカット」）。エディタの外にフォーカスがあるときの実キーと、window の keydown のキャプチャで受ける場合の変換中の判定（`isComposing` または `keyCode === 229`）は、人の操作では確かめていない。実装で確かめる。
+- ユーザーの判断が要るとした点（CSP を仕様に定めるか）は、検証のあとに決まった（「検証のあとの判断」）。
+- 仕様の変更案（下の 2 つは ADR 0111 で仕様に書いた。3 つ目は実装で決める）:
   - 技術スタックかセキュリティとプライバシーに「Monaco は CDN を使わず同梱する（loader にローカルの monaco-editor を渡す）。Worker は同梱し `worker-src 'self'`。CSP は `style-src 'unsafe-inline'` が必要」と書く。
   - 演習画面のショートカットは Monaco の `addCommand` で登録する。エディタの外でも効かせるなら、window の keydown のキャプチャを併用する。補完を使わない（ADR 0004）ので、Rust では Cmd+.（quickFix）に何も割り当てられておらず衝突しない。
   - 補完・LSP を使わない前提で、不要な言語・機能を外した入口を使うと軽い。保守の手間（版を上げるたびの import 一覧の確認）が増える。

@@ -1,7 +1,7 @@
 ---
 type: Verification Report
 title: "claude -p の出力の形とエラーの見分け方の技術検証"
-description: "claude -p の json 出力から回答の本文を取り出せるか、stream-json で回答を少しずつ表示できるか、未ログインとモデル指定の誤りで終了コードと出力がどうなるかを Issue #9 で検証した結果（subtype が success のままになること、分類コードは stream-json にだけ出ること、エラーの文が標準出力に出ること、利用上限は未再現）を記す。"
+description: "claude -p の json 出力から回答の本文を取り出せるか、stream-json で回答を少しずつ表示できるか、未ログインとモデル指定の誤りで終了コードと出力がどうなるかを Issue #9 で検証した結果（subtype が success のままになること、分類コードは stream-json にだけ出ること、エラーの文が標準出力に出ること、利用上限は未再現、ユーザーが Claude の推奨を承認した判断）を記す。"
 ---
 
 - 日付: 2026-11-20
@@ -110,7 +110,7 @@ description: "claude -p の json 出力から回答の本文を取り出せる�
 - 利用上限に達したときの終了コードと出力（`rate_limit`・`billing_error` のどちらになるか、`rate_limit_event` の `status` がどう変わるか）。
 - text 形式での標準エラー出力の警告が、形式とフラグのどちらによるか。
 
-ユーザーの判断が要る点:
+ユーザーの判断が要る点（2026-11-21 に決まった。下の「ユーザーの判断」）:
 1. ジョブの出力形式。仕様ではジョブは `--output-format json`。json には分類コードが無く、エラーの判定は `result` の英語の文（`Not logged in · Please run /login` など）と `api_error_status` に頼ることになる。選択肢は、(a) ジョブも stream-json にして `assistant` の `error` で分類する、(b) json のまま文で判定する。(a) は `--verbose` が必須で行ごとの処理が要るが、分類コードで判定できる。
 2. 利用上限の判定。再現していないので、`rate_limit`・`billing_error`（と `rate_limit_event` の `status`）で判定する前提にしてよいか、上限に達したときに改めて確かめるか。
 
@@ -118,3 +118,8 @@ description: "claude -p の json 出力から回答の本文を取り出せる�
 - 「その他」の詳細を「標準エラー出力の先頭」としているが、エラーの文は標準出力（text では本文、json・stream-json では `result`）に出て、標準エラー出力は空か、関係ない警告（ログインの期限の予告など）だった。詳細は `result` の文を基本にし、標準エラー出力は補助にするのがよい。
 - 「未ログイン」を「終了コードと出力から認証エラーと判定」としている。終了コードはどのエラーでも 1 で見分けに使えない。判定は出力（`error: "authentication_failed"` または `result` の文）による。
 - エラーの判定には `subtype` ではなく `is_error` を使う必要がある（エラーでも `subtype: "success"`）。
+
+ユーザーの判断（2026-11-21）:
+- Claude は、上の 1 は (a) ジョブも stream-json にして `assistant` の `error` で分類する、2 は `rate_limit`・`billing_error` で判定する前提にし、実際に上限に達したときに確かめる、を推奨した。上の「仕様と食い違う点」も推奨のとおりに直すことにした。ユーザーは「私は細かい技術的な話はわからないので、あなたの推奨通りで進めて大丈夫です」と示し、推奨を承認した。
+- 仕様（[claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)、[AI 呼び出しのエラーの分類と表示](../spec/claude-integration/errors.md)）を直し、[ADR 0107](../decisions/0107-classify-claude-errors-from-stream-json.md) を追加した。
+- 利用上限の出力は、引き続き未確認である。上限に達したときに確かめる。

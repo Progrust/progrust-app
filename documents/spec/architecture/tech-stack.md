@@ -8,7 +8,7 @@ description: "層ごとの採用技術（Tauri 2、React + TypeScript、Monaco E
 |---|---|
 | アプリ基盤 | Tauri 2 |
 | フロントエンド | React + TypeScript（ビルドは Vite） |
-| コードエディタ | Monaco Editor（シンタックスハイライトと基本的な編集機能のみ。補完・LSP 連携は行わない） |
+| コードエディタ | Monaco Editor（シンタックスハイライトと基本的な編集機能のみ。補完・LSP 連携は行わない）。CDN を使わず、Web Worker を含めてアプリのビルドに同梱する |
 | 動画の再生 | Remotion（`@remotion/player`）。動画はファイルに書き出さず、フロントエンドで描画する（[レッスンの動画の形式（video/）](../content-format/video/index.md)） |
 | バックエンド | Rust（Tauri のコマンドとして実装） |
 | 演習のビルド・実行 | 学習者の環境にインストールされた Rust ツールチェーン（`cargo`） |

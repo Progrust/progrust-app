@@ -1,7 +1,7 @@
 ---
 type: Verification Report
 title: "test 方式のテスト結果の読み取りの技術検証"
-description: "test 方式の libtest の出力からテストごとの結果と panic メッセージを確実に読み取れるかを Issue #15 で検証した結果（出力形式、学習者の出力との混合、process::exit・abort・無限ループ、10 秒の制限での打ち切り、1 回起動する方式とテストごとに別プロセスで実行する方式の比較）を記す。"
+description: "test 方式の libtest の出力からテストごとの結果と panic メッセージを確実に読み取れるかを Issue #15 で検証した結果（出力形式、学習者の出力との混合、process::exit・abort・無限ループ、10 秒の制限での打ち切り、1 回起動する方式とテストごとに別プロセスで実行する方式の比較、テストごとに別プロセスで実行すると決めた判断）を記す。"
 ---
 
 - 日付: 2026-11-21
@@ -101,6 +101,15 @@ progrust_judge::c11_hang: timeout
 
 10 個のテストで、single は 0.01 秒、per-test（4 並列）は 0.02 秒だった（3 回とも同じ。load average 16 の状態）。プロセスを分けるコストは無視できる。
 
+### 検証のあとの判断
+
+検証のあと、ユーザーは、残った判断を Claude の推奨に任せた。Claude は per-test 方式に決め、仕様（[コードの提出（submit）](../spec/exercise-runner/submit.md)「test 方式」）に書いた（[ADR 0101](../decisions/0101-run-each-hidden-test-in-own-process.md)）。
+
+- `--list progrust_judge::` で名前を得て、名前ごとに `--exact {名前} --test-threads=1` で別のプロセスを起動する。同時に起動するのは CPU の論理コア数までとした。`--nocapture` は付けない。
+- 結果は、終了コードと結果の行で決める。結果の行がないまま終了コード 0 で終わったものは `runtime_error`、テスト全体の制限時間で止めたものと起動する前に制限時間に達したものは `timeout` にする。
+- 関数名は、`--list` で得た名前の `progrust_judge::` より後の部分とする。
+- panic メッセージの取り出し方は、上の推奨のとおりにした。
+
 ## 判定
 
 基準「テストケースごとの結果と panic メッセージ（`assert_eq!` の左辺・右辺を含む）を、確実に取り出せる」は、条件付きで満たした。
@@ -111,11 +120,11 @@ progrust_judge::c11_hang: timeout
 
 ## 残った事項
 
-- ユーザーの判断: テストの実行方法を per-test 方式にするか（仕様の「test 方式」4・5 は「1 回起動して出力を読む」）。推奨は per-test。理由は、crash・`process::exit`・無限ループが他のテストの結果に影響せず、`runtime_error` と `timeout` がテストごとに付くので、仕様の `cases[].status` の 4 種類をそのまま実現できるから。代償は、プロセス管理と並列数の実装が増えること。
-- 仕様の変更案（「test 方式」5）: テスト名は `{モジュールの経路}::progrust_judge::{関数名}` になりうる（`judge.target` が main.rs・lib.rs 以外のとき。[隠しテストを読み込む #[path] の解決の技術検証](issue-14-hidden-test-path-resolution.md)）。表示名は、`--list` で得た名前の `progrust_judge::` 以降を使う。
-- 仕様の変更案（「test 方式」4）: `--nocapture` を付けない。`--test-threads` は指定しなくてよい（per-test なら各プロセスで `--test-threads=1`）。結果は `failures:` より前の `test 名前 ... ok|FAILED` の行から読む。panic メッセージは、`failures:` 以降の最後の `thread '名前' ... panicked at` の次の行から、次の節の見出しまでを取り出す（`note: run with RUST_BACKTRACE` の行は除く）。
-- 仕様の変更案（[実行時の制限](../spec/exercise-runner/limits.md)「テスト全体の実行時間」）: `--list` で得た名前のうち、結果が出ていないものを `timeout` にする。
+- ユーザーの判断: テストの実行方法を per-test 方式にするか（仕様の「test 方式」4・5 は「1 回起動して出力を読む」）。推奨は per-test。理由は、crash・`process::exit`・無限ループが他のテストの結果に影響せず、`runtime_error` と `timeout` がテストごとに付くので、仕様の `cases[].status` の 4 種類をそのまま実現できるから。代償は、プロセス管理と並列数の実装が増えること。検証のあと、per-test に決まった（「検証のあとの判断」）。
+- 仕様の変更案（「test 方式」5）: テスト名は `{モジュールの経路}::progrust_judge::{関数名}` になりうる（`judge.target` が main.rs・lib.rs 以外のとき。[隠しテストを読み込む #[path] の解決の技術検証](issue-14-hidden-test-path-resolution.md)）。表示名は、`--list` で得た名前の `progrust_judge::` 以降を使う。ADR 0101 で仕様に書いた。仕様は `judge.target` を main.rs・lib.rs に限っているので、今は経路が付かない。
+- 仕様の変更案（「test 方式」4）: `--nocapture` を付けない。`--test-threads` は指定しなくてよい（per-test なら各プロセスで `--test-threads=1`）。結果は `failures:` より前の `test 名前 ... ok|FAILED` の行から読む。panic メッセージは、`failures:` 以降の最後の `thread '名前' ... panicked at` の次の行から、次の節の見出しまでを取り出す（`note: run with RUST_BACKTRACE` の行は除く）。ADR 0101 で仕様に書いた。
+- 仕様の変更案（[実行時の制限](../spec/exercise-runner/limits.md)「テスト全体の実行時間」）: `--list` で得た名前のうち、結果が出ていないものを `timeout` にする。ADR 0101 で、提出の仕様の結果の表に書いた。制限値の表の「終わっていないテストケースを `timeout`」は、そのままにした。
 - 別の問題: 仕様どおり 1 回の起動で読む方式では、`std::process::exit(0)` が呼ばれると、終了コード 0 のまま結果行が欠け、全テストが成功したように見えうる。この方式を採るなら、`--list` の件数と結果行の件数が一致することを必ず確かめる。per-test 方式なら起きない。
 - 注意: `RUSTC_BOOTSTRAP` は値が何でも `--format json` を有効にする（`0` でも）。使わない前提だが、アプリが子プロセスに環境を引き継ぐ場合、学習者側の環境変数で意図せず有効にならないかに注意する（結果の読み取りには影響しない）。
 - 確かめられなかった項目: `#[test]` が 1 件もないときの `--list` の挙動（0 件のときは `compile_error` ではなく専用のエラーにしたほうがよいと考えられるが、未検証）。
-- Issue は、上の判断が決まるまで開いたままにする。
+- 上の判断は、検証のあとに決まった（「検証のあとの判断」）。

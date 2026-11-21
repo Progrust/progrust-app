@@ -1,7 +1,7 @@
 ---
 type: Verification Report
 title: "許可クレートのビルド結果の共有の技術検証"
-description: "初回準備でビルドした許可クレートを、各演習が作り直さずに使えるかを Issue #12 で検証した結果（rand だけの今の一覧では作り直しなし、10 クレートの想定の一覧では feature の違いによる作り直し、Cargo.lock の不一致がエラーにならないこと、空のライブラリへの path 依存で作り直しがなくなること、空の main.rs で warmup が失敗すること）を記す。"
+description: "初回準備でビルドした許可クレートを、各演習が作り直さずに使えるかを Issue #12 で検証した結果（rand だけの今の一覧では作り直しなし、10 クレートの想定の一覧では feature の違いによる作り直し、Cargo.lock の不一致がエラーにならないこと、空のライブラリへの path 依存で作り直しがなくなること、空の main.rs で warmup が失敗すること、ユーザーが Claude の推奨に任せて案 b にした判断）を記す。"
 ---
 
 - 日付: 2026-11-20
@@ -201,6 +201,15 @@ asm $W/project progrust_exercise rand 'fn main() { println!("LEARNER"); }'
 - 想定の一覧の lock に含まれるクレートの `rust-version` は、最大で 1.85（tokio）だった。最低バージョン（rustc 1.85）を超えるものはない。
 - 未記載のクレートを `use` したときのコンパイラのヒントは ``use `cargo add regex` to add it to your `Cargo.toml` `` で、学習者がアプリの中ではできない操作を案内する（仕様どおりの組み立てでも同じ）。
 
+### 検証のあとの判断
+
+検証のあと、ユーザーは、残った判断を Claude の推奨に任せた。Claude は次のように決め、仕様に書いた。
+
+- 方式: 案 b にした。全許可クレートに依存する空のライブラリ `allcrates/`（`progrust_allowed_crates`）に、warmup・project・validate のどれもが path 依存する。同梱の `Cargo.lock` は、このライブラリをルートにして生成する（[ADR 0097](../decisions/0097-share-crate-builds-via-allcrates-library.md)）。
+- warmup の `src/main.rs` は `fn main() {}` にした（Issue #33）。`--locked` と `--frozen` を付けないことを仕様に書いた（ADR 0097）。
+- `crates_hash` に rustc の版を含めるかは、`prepared.json` に rustc の版を別の項目として持たせ、変わったら初回準備をやり直すことにした（[ADR 0100](../decisions/0100-redo-preparation-when-rustc-changes.md)）。
+- cargo の自動削除でソースが消えた場合は、`--offline` のビルドの失敗の文から判定して、初回準備を自動でやり直すことにした（[ADR 0105](../decisions/0105-detect-lost-crates-from-offline-build-errors.md)）。
+
 ## 判定
 
 基準は「許可クレートの一部だけに依存する演習で、依存を作り直さずにビルドが終わる」である。
@@ -221,14 +230,14 @@ ADR 0011 の「ビルド結果を全演習で共有する」は、一覧が 2 �
 - 学習者が `rustup update` した後は、`crates_hash` が `allowed-crates.toml` と `Cargo.lock` だけのハッシュで rustc のバージョンを含まないため、初回準備がやり直されないと考えられる。rustc のバージョンはビルド単位のハッシュに入るので、`target/` の依存は全部作り直しになり、最初の実行が長くかかる。ソースは `CARGO_HOME` にあるので、オフラインでも失敗しない。この Mac に別の toolchain を入れられないので未確認（cargo の仕組みからの推定）。`crates_hash` に `rustc -vV` を含めるかどうかを検討する余地がある。
 - cargo の全体キャッシュの自動削除（1.88 以降の stable。ネットワークから取ったファイルは 3 か月使わないと削除される。`--offline` の実行中は削除しない）で、許可クレートを使う演習を長く使わない間に、ソースが消えることがありうる。仕様の「依存が見つからないエラーになったら初回準備をやり直す」で回復できるが、回復にはネットワークが要る。確認していない。
 
-ユーザーの判断が要る点（Issue は開いたままにする）:
+ユーザーの判断が要るとした点は、検証のあとに決まった（「検証のあとの判断」）。決める前の推奨は次のとおり。
 
 1. 方式を選ぶ。
    - 案 b: 空のライブラリ `progrust_allowed_crates` への path 依存を project と validate に足す（推奨。作り直しが 0 で、使えるクレートは演習の `dependencies` のまま）。
    - 案 d: 組み合わせの初回だけ数秒遅いのを受け入れる。
    - 案 a: 毎回全クレートを書く（演習の `dependencies` の意味が変わる）。
 
-仕様の変更が要りそうな点（提案）:
+仕様の変更が要りそうな点（提案）。手順 1 の `fn main() {}`、案 b の組み立て、`--locked`・`--frozen` を付けないことは、ADR 0097 で仕様に書いた。`cargo test --no-run` は残した。
 
 - [許可クレートと作業領域](../spec/exercise-runner/crates-and-workspace.md)「初回準備」の手順 1: 空の `src/main.rs` では `cargo build` が E0601 で失敗する。`fn main() {}` を置くと書く必要がある。
 - 案 b を採るなら、[project/ の組み立て](../spec/exercise-runner/project-assembly.md)の `Cargo.toml` に、全許可クレートに依存するライブラリへの path 依存の行を足す。作業領域の構成にそのライブラリ（例: `allcrates/`）を加え、warmup もそのライブラリに依存させる。
