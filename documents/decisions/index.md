@@ -34,6 +34,8 @@
 * [ADR 0076](0076-carry-over-slide-visual-and-writing-decisions.md) - スライドで決めた見た目と書き方の判断を、動画でも引き継ぐ
 * [ADR 0092](0092-play-narration-with-html5audio.md) - 文の音声を、AAC の .m4a・1 文 1 ファイルのまま、Remotion の Html5Audio で鳴らす
 * [ADR 0093](0093-scope-lesson-css-with-build-time-prefix.md) - レッスン専用の CSS を、ビルド時に全セレクタの前へレッスンの属性セレクタを付けて、そのレッスンの動画の中に閉じ込める
+* [ADR 0094](0094-close-lint-bypasses-in-video-code.md) - 動画のコードの lint に、検査をすり抜ける書き方と CSS の @import の禁止を加え、lint が検出する範囲を検証で試した範囲に定める
+* [ADR 0096](0096-do-not-use-staticfile-in-video-code.md) - 動画のコードで Remotion の staticFile() を使わず、教材チェックツールの lint でエラーにする
 
 # カリキュラム
 
@@ -47,6 +49,7 @@
 * [ADR 0058](0058-do-not-explain-errors-by-code-only.md) - エラーをエラーコードだけで説明しない（ADR 0076 で動画に引き継いだ）
 * [ADR 0059](0059-plain-style-in-slide-headings.md) - スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す（ADR 0076 で動画に引き継いだ）
 * [ADR 0069](0069-video-and-sentence-length-as-guidelines.md) - 動画の長さと 1 文の長さを目安とし、超えてよいことにする
+* [ADR 0095](0095-render-check-all-lessons-in-ci.md) - CI で、描画のチェックを毎回すべてのレッスンに行い、描画のチェックで見つかるのは描画したフレームのエラーだけだと仕様に書く
 
 # コード実行・判定
 
