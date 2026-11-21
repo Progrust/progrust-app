@@ -35,7 +35,7 @@ description: "学習者データ（`{app_data_dir}`）とアプリ同梱デー�
 
 ```
 {app_resources}/
-├── content/                        # 教材（原本: リポジトリの content/。動画のコードと音声、動画が読み込む画像を除く（spec/architecture/responsibilities.md）。形式は spec/content-format/index.md）
+├── content/                        # 教材（原本: リポジトリの content/。動画のコードと、動画が読み込む画像を除く。動画の音声は含める（spec/architecture/responsibilities.md）。形式は spec/content-format/index.md）
 ├── templates/                      # 学習記録・分析のテンプレート（原本: リポジトリの documents/spec/learning-record-and-analysis/templates/ の record.md.tmpl と analysis.md.tmpl。同梱するときに .tmpl を取る）
 │   ├── record.md
 │   └── analysis.md

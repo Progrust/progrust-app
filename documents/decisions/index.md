@@ -11,6 +11,7 @@
 * [ADR 0084](0084-keep-record-templates-as-assets.md) - 学習記録・分析のテンプレートを、`.md.tmpl` の asset としてバンドルに置く
 * [ADR 0111](0111-bundle-monaco-and-set-csp.md) - Monaco Editor を CDN を使わずに同梱し、アプリに CSP を設定して読み込み先を自身と Tauri の IPC に限り（Monaco のため style-src に 'unsafe-inline' を許す）、演習画面のショートカットを Monaco のコマンドとキャプチャの keydown で受ける
 * [ADR 0117](0117-raise-min-rustc-only-when-author-decides.md) - rustc の最低バージョンはアプリのリリースに合わせて上げず、作者が決めたときに上げる。バージョンが足りないときは rustup update stable を案内する
+* [ADR 0128](0128-serve-narration-from-resources-via-asset-protocol.md) - 動画の音声をフロントエンドのビルドに含めず、アプリ同梱データに置いて、Tauri のアセットプロトコル（asset://）で読む
 
 # 教材データ形式
 
@@ -39,6 +40,7 @@
 * [ADR 0094](0094-close-lint-bypasses-in-video-code.md) - 動画のコードの lint に、検査をすり抜ける書き方と CSS の @import の禁止を加え、lint が検出する範囲を検証で試した範囲に定める
 * [ADR 0096](0096-do-not-use-staticfile-in-video-code.md) - 動画のコードで Remotion の staticFile() を使わず、教材チェックツールの lint でエラーにする
 * [ADR 0120](0120-video-only-lessons-have-no-elements-or-attempt-sessions.md) - 動画のみのレッスンには要素を持たせず、試行セッションも作らない
+* [ADR 0127](0127-encode-narration-with-ffmpeg-aac-and-measure-with-ffprobe.md) - 文の音声を ffmpeg に組み込みの AAC エンコーダーで .m4a に変換し、durations.json の seconds と cue-reference.json の長さを ffprobe の format の duration で測る
 
 # カリキュラム
 
@@ -50,7 +52,7 @@
 # 教材作成ガイドライン
 
 * [ADR 0001](0001-learners-solve-on-their-own.md) - 学習者に演習を自力で解かせることを、機能を設計するうえでの原則とする
-* [ADR 0002](0002-target-experienced-programmers.md) - 想定する学習者を他のプログラミング言語の経験者とする
+* [ADR 0002](0002-target-experienced-programmers.md) - 想定する学習者を他のプログラミング言語の経験者とする（ADR 0118 で既知とする概念の範囲を変えた）
 * [ADR 0058](0058-do-not-explain-errors-by-code-only.md) - エラーをエラーコードだけで説明しない（ADR 0076 で動画に引き継いだ）
 * [ADR 0059](0059-plain-style-in-slide-headings.md) - スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す（ADR 0076 で動画に引き継いだ）
 * [ADR 0069](0069-video-and-sentence-length-as-guidelines.md) - 動画の長さと 1 文の長さを目安とし、超えてよいことにする
@@ -74,6 +76,7 @@
 * [ADR 0112](0112-run-learner-tests-with-test-button.md) - 演習画面に、学習者が書いたテストを cargo test で動かす「テスト」ボタンをどの演習でも置き、cargo の出力をそのまま表示する
 * [ADR 0113](0113-judge-learner-tests-by-count-and-pass.md) - 学習者が書いたテストを、演習ごとに指定した件数以上あってすべて通ることで判定し、テストが実装の誤りを見つけられるかまでは判定しない
 * [ADR 0114](0114-allow-integration-and-doc-tests.md) - 学習者が tests/ の統合テストを書けるようにし、ドキュメントテストも実行して、ch11-05 と ch11-06 のレッスンを残す
+* [ADR 0125](0125-crates-unavailable-status-without-attempt-log.md) - ビルドが初回準備のやり直しが要る失敗になった実行・提出の結果を、新しい状態 `crates_unavailable` とし、試行ログに記録せず、準備の後に自動ではやり直さない
 
 # レッスン進行・進捗管理
 
@@ -91,6 +94,7 @@
 * [ADR 0024](0024-run-jobs-serially.md) - AI のジョブを 1 件ずつ直列に実行する
 * [ADR 0106](0106-isolated-claude-flags-and-oauth-only.md) - `claude -p` を検証で確かめたフラグの組み合わせで隔離して呼び、既定のシステムプロンプトを置き換え、認証は claude.ai のログインだけを使う
 * [ADR 0107](0107-classify-claude-errors-from-stream-json.md) - ジョブも stream-json で呼び出し、AI 呼び出しのエラーを `is_error` と `assistant` の行の `error` の分類コードで見分ける
+* [ADR 0124](0124-pass-only-six-env-vars-to-claude.md) - アプリが `claude` を起動するときは、引き継いだ環境変数をそのまま渡さず、HOME・USER・LOGNAME・PATH・SHELL・TMPDIR の 6 つだけを渡す
 
 # 質疑応答
 
@@ -102,7 +106,7 @@
 * [ADR 0026](0026-separate-facts-from-interpretation.md) - 学習データの事実はアプリが計算し、AI には解釈だけを任せる
 * [ADR 0027](0027-markdown-with-frontmatter.md) - 学習記録と分析ファイルを Markdown + YAML frontmatter で保存する
 * [ADR 0028](0028-separate-record-and-analysis-sessions.md) - 学習記録と分析を、別々の AI セッションで行う
-* [ADR 0029](0029-keep-full-attempt-logs.md) - 試行ログにコード全体のスナップショットを記録し、学習記録の生成後も保持する
+* [ADR 0029](0029-keep-full-attempt-logs.md) - 試行ログにコード全体のスナップショットを記録し、学習記録の生成後も保持する（ADR 0125 で試行ログに記録する実行・提出の範囲を変えた）
 * [ADR 0030](0030-incremental-analysis-update.md) - 分析ファイルを「現在の分析 + 新しい記録 + 集計値」で差分的に更新する
 * [ADR 0031](0031-app-computes-base-level.md) - 習熟レベルの基準をアプリが計算し、AI は ±1 の範囲でのみ調整する
 * [ADR 0032](0032-reuse-stumble-pattern-labels.md) - 躓きの pattern ラベルを、既存のラベル一覧から再利用させる
@@ -116,6 +120,7 @@
 * [ADR 0034](0034-validate-generated-exercises.md) - 生成した問題を自動で検証し、不合格なら修正を 2 回まで依頼する
 * [ADR 0035](0035-single-difficulty-scale.md) - 問題生成の難易度と複雑さを、1 つの 5 段階の「難易度」にまとめる
 * [ADR 0109](0109-generated-exercise-layout-and-starter-rules.md) - 生成問題の複数ファイルを ch10-04 の完了後に限り、初期コードがビルドできることを検証に加え、判定方式の制約と修正の依頼の入力を生成の仕様に定める
+* [ADR 0126](0126-redo-validation-after-crates-are-prepared-again.md) - 生成問題の検証のビルドが初回準備のやり直しが要る失敗になったときは、検証の失敗とせず、初回準備が終わってから同じ出力の検証をやり直す
 
 # 画面仕様
 
@@ -145,19 +150,20 @@
 
 # ドキュメントの運用ルール
 
-* [ADR 0079](0079-manage-documents-as-okf-bundle.md) - ドキュメントを `documents/` に集約し、OKF v0.3 のバンドルとして AI エージェントが管理する
-* [ADR 0080](0080-use-minimal-okf-frontmatter.md) - OKF の frontmatter のうち type・title・description・status・superseded_by だけを使い、type を6つに固定する
+* [ADR 0079](0079-manage-documents-as-okf-bundle.md) - ドキュメントを `documents/` に集約し、OKF v0.3 のバンドルとして AI エージェントが管理する（ADR 0089 でバンドルのルートのディレクトリの数を変えた）
+* [ADR 0080](0080-use-minimal-okf-frontmatter.md) - OKF の frontmatter のうち type・title・description・status・superseded_by だけを使い、type を6つに固定する（ADR 0088 で `Convention` の範囲を、ADR 0089 で type の数を変えた）
 * [ADR 0081](0081-split-specs-into-one-topic-per-file.md) - 仕様を1トピック1ファイルに分け、受け入れ条件と未決事項は機能ごとに1ファイルにまとめる
 * [ADR 0082](0082-reference-by-links-without-section-numbers.md) - 文書間の参照を Markdown リンクで書き、節番号での参照を廃止する
 * [ADR 0083](0083-express-adr-status-in-okf-frontmatter.md) - ADR の状態を OKF の status と superseded_by で表し、番号・ファイル名・本文は変えない
 * [ADR 0085](0085-check-documents-with-own-checker.md) - ドキュメントを独自の検査スクリプトで検査して hook で自動実行し、OKF の公式 validator は手動で実行する
 * [ADR 0086](0086-list-all-affected-specs-and-find-adrs-by-path-search.md) - ADR の関連仕様に、判断が内容を決めている仕様をすべて載せ、仕様に関係する ADR を関連仕様の行の検索で探す
 * [ADR 0087](0087-note-carry-over-in-adr-description.md) - 後の ADR が別の対象に引き継いだ ADR の description の末尾に、引き継いだ ADR と対象を示す注記を足す
-* [ADR 0088](0088-agents-file-found-problems-as-issues.md) - AI エージェントが作業中に見つけた問題を、原因の調査や改善案なしに、確認せずに GitHub の Issue に起票し、その決まりを運用ルールに置く
+* [ADR 0088](0088-agents-file-found-problems-as-issues.md) - AI エージェントが作業中に見つけた問題を、原因の調査や改善案なしに、確認せずに GitHub の Issue に起票し、その決まりを運用ルールに置く（ADR 0122 でラベルの数を、ADR 0123 で閉じた Issue と同じ問題の扱いを変えた）
 * [ADR 0089](0089-keep-verification-reports-in-documents.md) - 技術検証の結果を `documents/verification/` に1つの Issue につき1文書で残し、そのための type `Verification Report` を加える
 * [ADR 0121](0121-no-tracking-issues-use-labels.md) - Issue の一覧のための Issue を作らず、Issue のまとまりをラベルで表して一覧する
 * [ADR 0122](0122-hold-label-for-deferred-issues.md) - 対応するが今は対応しない Issue にラベル `保留` を付け、保留の理由と対応するきっかけを Issue のコメントに書く
 * [ADR 0123](0123-refile-closed-issue-when-situation-changed.md) - 閉じた Issue と同じ問題を見つけたとき、閉じたときから状況が変わっていれば起票し、対応しない Issue を閉じるときに理由とまた問題になる条件をコメントに書く
+* [ADR 0129](0129-note-partial-change-in-adr-description.md) - 後の ADR が採用した ADR の決定の一部だけを変えたときは、古い ADR を採用のままにし、description の末尾に、変えた ADR と変えた内容を示す注記を足す
 
 # 置き換え済み・廃止
 

@@ -163,10 +163,10 @@ afconvert -f m4af -d aac -b 64000 -c 1 x.wav x.m4a   # 比較用
 
 仕様の変更案
 
-- 動画の音声の仕様の「切り詰めたあとの音声を `.m4a` に変換し、変換後のファイルの長さを `seconds` に書く」は、エンコーダーと長さの測り方で値が変わる。エンコーダーを ffmpeg の `aac` に決め、長さは ffprobe（または afinfo の valid frames）で測ると書く案。Issue #36 に起票済み。
+- 動画の音声の仕様の「切り詰めたあとの音声を `.m4a` に変換し、変換後のファイルの長さを `seconds` に書く」は、エンコーダーと長さの測り方で値が変わる。エンコーダーを ffmpeg の `aac` に決め、長さは ffprobe（または afinfo の valid frames）で測ると書く案。Issue #36 に起票済み。2026-11-21 に、ffmpeg の `aac` で変換し、ffprobe の format の duration で測ると決まり、仕様を直した（[ADR 0127](../decisions/0127-encode-narration-with-ffmpeg-aac-and-measure-with-ffprobe.md)）。
 
 検証中に見つけた別の問題（事実のみ）
 
-- `tauri://` のアセットは Range 要求に 206 を返さず、200 で全体を返す。mediabunny が警告する。1 文 30〜50KB のファイルでは問題は出なかった。長い音声ファイルでは、読み直しが失敗するおそれがある（mediabunny の警告の文言）。Issue #35 に起票済み。
+- `tauri://` のアセットは Range 要求に 206 を返さず、200 で全体を返す。mediabunny が警告する。1 文 30〜50KB のファイルでは問題は出なかった。長い音声ファイルでは、読み直しが失敗するおそれがある（mediabunny の警告の文言）。Issue #35 に起票済み。2026-11-21 に、音声を Tauri のリソースに置いて asset:// で読むと決まった（[ADR 0128](../decisions/0128-serve-narration-from-resources-via-asset-protocol.md)）。
 - WKWebView の `AudioContext.outputLatency` が、音を出す前は 1.7×10^14 のような壊れた値を返す（鳴らしたあとは 0.0207）。Remotion は `getAudioSyncAnchorTolerance` でこの値を使い、`@remotion/media` の同期の許容量を決めている。今回の計測では、ずれは大きくならなかった。
 - `@remotion/media` では、Player が文ごとに `waiting` イベントを出す（[Issue #1 の検証結果](issue-1-remotion-player-webview.md)「残った事項」）。

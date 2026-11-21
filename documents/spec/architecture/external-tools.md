@@ -14,6 +14,7 @@ description: "cargo と claude の検出方法と必要条件、見つからな�
 | `claude` | 設定で指定したパス → `PATH` → `~/.local/bin` → `~/.claude/local` → npm のグローバルインストール先 | `claude --version` が成功すること |
 
 - `PATH` に見つかった場合も見つからなかった場合も、表の既定のインストール先を探索する（macOS で Finder から起動した場合を含む）。
+- `claude --version` を起動するときに渡す環境変数は、[claude -p の呼び出しの共通ルール](../claude-integration/invocation.md)「環境変数」に従う。
 - 検出結果（パス・バージョン）はメモリに保持し、`get_environment_status` で返す。
 
 ## 見つからない場合

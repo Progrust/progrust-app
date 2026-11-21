@@ -24,7 +24,7 @@ description: "非機能要件の仕様でまだ決まっていない事項（一
   - Claude Code の Legal and compliance のページは、他の開発者が自分の製品で claude.ai のログインを提供することと、利用者に代わってサブスクリプションの認証情報でリクエストを送ることを認めていない。一方で、利用者が改変していない Claude Code に自分のサブスクリプションでサインインすることは妨げないと書いている。
   - Consumer Terms は、API キーを使う場合と明示的に認めた場合を除き、スクリプトなどの自動の手段でサービスを使うことを禁じている。
   - 他の製品から `claude -p` を子プロセスとして起動することを、明示的に認める文も禁じる文も見つからなかった。
-- 学習者が claude.ai のログイン以外の方法（`settings.json` の `apiKeyHelper`・`env` による API キー、Bedrock、Vertex、プロキシなど）で Claude Code を使っている場合と、管理者の設定・管理プラグインが効く PC（会社の管理下の PC など）で使う場合に対応するか。アプリはユーザー設定を読み込まずに `claude -p` を呼び、claude.ai のログインだけを使う（[claude -p の呼び出しの共通ルール](../claude-integration/invocation.md)「認証」）。
+- 学習者が claude.ai のログイン以外の方法（`settings.json` の `apiKeyHelper`・`env` やシェルの環境変数による API キー、Bedrock、Vertex、プロキシなど）で Claude Code を使っている場合と、管理者の設定・管理プラグインが効く PC（会社の管理下の PC など）で使う場合に対応するか。アプリはユーザー設定を読み込まず、決めた環境変数だけを渡して `claude -p` を呼び、claude.ai のログインだけを使う（[claude -p の呼び出しの共通ルール](../claude-integration/invocation.md)「環境変数」「認証」）。
 
 ## 一般公開した後に決めること
 

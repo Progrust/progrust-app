@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "claude -p の呼び出しの共通ルール"
-description: "`--model` の指定、ツール・ユーザー設定を使わない起動のフラグ、使う認証、既定のシステムプロンプトの置き換え、一時ディレクトリ、標準入力での指示文の渡し方、出力形式、用途ごとの制限時間を定める。"
+description: "`--model` の指定、ツール・ユーザー設定を使わない起動のフラグ、`claude` に渡す環境変数、使う認証、既定のシステムプロンプトの置き換え、一時ディレクトリ、標準入力での指示文の渡し方、出力形式、用途ごとの制限時間を定める。"
 ---
 
 - 設定画面で選択したモデルを `--model` で指定する（[AI モデルの選択](model-selection.md)）。
@@ -26,10 +26,22 @@ description: "`--model` の指定、ツール・ユーザー設定を使わな�
 - 出力形式のフラグは、下の「出力形式」による。
 - Claude Code の版を上げるときは、これらのフラグが同じ効果を持つことを確かめる。
 
+## 環境変数
+
+- `claude` を起動するときは、アプリが引き継いだ環境変数をそのまま渡さない。次の 6 つだけを渡す。
+
+```
+HOME USER LOGNAME PATH SHELL TMPDIR
+```
+
+- 値は、アプリが受け取ったものをそのまま渡す。アプリが受け取っていない変数は渡さない。
+- `claude -p` の呼び出しだけでなく、アプリが `claude` を起動するすべての場合に同じにする。検出のための `claude --version`（[外部ツール（cargo・claude）への依存](../architecture/external-tools.md)「検出」）と、接続テスト（[claude が使えない場合の動作](unavailable.md)）を含む。
+- cargo と学習者のプログラムの起動には、この決まりを当てはめない。
+
 ## 認証
 
 - 学習者が Claude Code で claude.ai にログインした状態（OAuth）を使う。
-- ユーザー設定を読み込まないので、`settings.json` の `apiKeyHelper` や `env` による認証（API キー、Bedrock、Vertex、プロキシなど）は使えない。
+- ユーザー設定を読み込まないので、`settings.json` の `apiKeyHelper` や `env` による認証（API キー、Bedrock、Vertex、プロキシなど）は使えない。上の「環境変数」のとおり、シェルの環境変数（`ANTHROPIC_API_KEY`、プロキシの変数、`CLAUDE_CONFIG_DIR` など）も `claude` に渡らないので、それらによる認証と設定も使えない。
 - 管理者の設定（macOS では `/Library/Application Support/ClaudeCode/managed-settings.json`）と管理プラグインは、どのフラグでも適用される。アプリでは止めない。
 
 ## 出力形式

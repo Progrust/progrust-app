@@ -67,3 +67,4 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
 
 - スナップショットはファイル全体を保存する。
 - `error_codes` の抽出方法と、`stdout` / `stderr` の保存の上限は [実行・提出の試行ログへの記録](../exercise-runner/attempt-log.md) に従う。
+- 結果の状態が `crates_unavailable` の実行・提出は、学習者のコードを実行・判定していないので、記録しない（[実行・提出の試行ログへの記録](../exercise-runner/attempt-log.md)）。

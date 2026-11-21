@@ -1,17 +1,17 @@
 ---
 type: Specification
 title: "コードの実行（run）"
-description: "実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`）を定める。"
+description: "実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`、`crates_unavailable`）を定める。"
 ---
 
 ## 手順
 
 1. `cargo build --offline --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
-2. ビルドに失敗したら、コンパイラの診断を表示して終了する（`compile_error`）。
+2. ビルドに失敗したら、コンパイラの診断を表示して終了する（`compile_error`）。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、診断を表示せずに終了する（`crates_unavailable`）。
 3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。
 4. 標準出力・標準エラー出力を、「出力の送り方」のとおり `run_output` イベントで送る。
 5. 学習者のプログラム（3 で起動したプロセス）が終了したら、同じプロセスグループに残ったプロセスを止める（「停止」）。その後に届く出力は最大 300ms だけ待って受け取り、実行を終える。パイプの終わり（EOF）は待たない。
-6. `run_finished` イベントで結果を送り、試行ログに `run` イベントを追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。
+6. `run_finished` イベントで結果を送り、試行ログに `run` イベントを追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。`crates_unavailable` のときは、`run_finished` イベントは送るが、試行ログには追記しない。
 
 - 演習には必ず `src/main.rs` があるものとする（[演習のファイル形式](../content-format/exercise.md)「ファイル」）。
 - コンパイラの警告も表示する。cargo 自身の進捗メッセージ（`Compiling ...` など）は表示しない。
@@ -21,11 +21,11 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）を、演習画面の「テスト」ボタンで実行する。どの演習でも使える。隠しテストは組み込まない。
 
 1. `cargo test --offline --no-run --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
-2. ビルドに失敗したら、コンパイラの診断を表示して終了する（`compile_error`）。
+2. ビルドに失敗したら、実行の手順の 2 と同じく終了する（`compile_error` または `crates_unavailable`）。
 3. 成功したら、`cargo test --offline --no-fail-fast` を、`project/` を作業ディレクトリとし、環境変数 `CARGO_TERM_COLOR=always` を付けて、新しいプロセスグループで起動する。
 4. 3 の cargo の標準出力・標準エラー出力を、そのまま `run_output` イベントで送る。cargo が出す `Running ...`・`Doc-tests ...` などの行と、テストごとの結果の行（`test {名前} ... ok` など）も表示する。
 5. 3 の cargo が終了したら、実行の手順の 5 と同じく、同じプロセスグループに残ったプロセスを止めて実行を終える。
-6. `run_finished` イベントで結果を送り、試行ログに `run` イベント（`mode` は `test`）を追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。
+6. `run_finished` イベントで結果を送り、試行ログに `run` イベント（`mode` は `test`）を追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。`crates_unavailable` のときの扱いは、実行の手順の 6 と同じにする。
 
 - 出力の送り方と停止は、実行と同じにする（「出力の送り方」「停止」）。制限値も実行と同じにする（[実行・判定の制限値](limits.md)）。
 - 標準入力は、3 で起動した直後に閉じる。入力欄は表示しない。
@@ -60,5 +60,6 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 | `runtime_error` | 終了コードが 0 以外、またはシグナルで終了した（panic を含む）。出力量の上限を超えて停止した場合も含む |
 | `timeout` | 制限時間を超えたため停止した |
 | `stopped` | 学習者が停止ボタンを押した（ビルド中を含む） |
+| `crates_unavailable` | ビルドの失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまった。学習者のコードは実行していない |
 
 テスト実行では、「終了」は 3 で起動した cargo の終了を指す。

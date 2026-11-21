@@ -1,14 +1,14 @@
 ---
 type: Specification
 title: "コードの提出（submit）"
-description: "`stdout` 方式と `test` 方式それぞれの判定手順、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容を定める。"
+description: "`stdout` 方式と `test` 方式それぞれの判定手順、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）の扱いを定める。"
 ---
 
 提出中はコンソールにビルドの診断と判定の進み具合だけを表示し、プログラムの出力は表示しない。
 
 ## stdout 方式
 
-1. [コードの実行（run）](run.md)「手順」 と同じ方法でビルドする。失敗したら `compile_error` で終了する。
+1. [コードの実行（run）](run.md)「手順」 と同じ方法でビルドする。失敗したら `compile_error` で終了する。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、`crates_unavailable` で終了する。
 2. テストケースごとに実行ファイルを起動し、`stdin` を書き込んで標準入力を閉じ、標準出力を受け取る。
 3. 正規化した標準出力を `expected_stdout` と比較する。
 4. 1 件失敗しても残りのテストケースはすべて実行する。
@@ -26,7 +26,7 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
    mod progrust_judge;
    ```
 
-3. `cargo test --offline --no-run --message-format=json-diagnostic-rendered-ansi` でビルドする。失敗したら `compile_error` で終了する。隠しテストの側でエラーが出た場合は、「問題文で指定された関数名・型・シグネチャを確認してください」と併せて表示する。
+3. `cargo test --offline --no-run --message-format=json-diagnostic-rendered-ansi` でビルドする。失敗したら `compile_error` で終了する。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、`crates_unavailable` で終了する。隠しテストの側でエラーが出た場合は、「問題文で指定された関数名・型・シグネチャを確認してください」と併せて表示する。
 4. テスト実行ファイルを引数 `--list progrust_judge::` で起動し、出力の `{名前}: test` の行から隠しテストの名前を得る（学習者自身が書いたテストは判定に含めない）。名前の `progrust_judge::` より後の部分を、テストケースの関数名とする。
 5. 得た名前ごとに、テスト実行ファイルを引数 `--exact {名前} --test-threads=1` で別々のプロセスとして起動する。同時に起動するのは CPU の論理コア数までとする。`--nocapture` は付けない。
 6. プロセスごとに、次のとおりテストケースの結果を決める。結果の行は、行末が ` ... ok` または ` ... FAILED` で、その直前に `test {名前}` がある行とする（行頭に学習者の出力が付いていてもよい）。
@@ -63,7 +63,7 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
 
 | 項目 | 内容 |
 |---|---|
-| `status` | `passed`（全テストケース通過）/ `wrong`（1 件以上失敗）/ `compile_error` |
+| `status` | `passed`（全テストケース通過）/ `wrong`（1 件以上失敗）/ `compile_error` / `crates_unavailable`（判定をしていない。下の「判定をしなかった提出」） |
 | `passed` / `total` | 通過したテストケース数 / 全テストケース数 |
 | `cases[]` | テストケースごとの `name`（表示名）・`status`（`pass` / `fail` / `timeout` / `runtime_error`）・`detail` |
 
@@ -74,3 +74,11 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
 - `timeout` / `runtime_error`: 標準エラー出力の先頭
 
 画面には、通過数と失敗したテストケースの名前をすべて表示し、最初に失敗したテストケースの `detail` を表示する。表示する場所と、詳細の開閉は [演習画面](../screens/exercise-screen.md) に従う。
+
+## 判定をしなかった提出
+
+`status` が `crates_unavailable` の提出は、テストケースを 1 件も実行していない。
+
+- `passed` と `total` は 0、`cases[]` は空にする。
+- 提出として数えない。試行ログに `submit` イベントを追記しない（[実行・提出の試行ログへの記録](attempt-log.md)）。
+- 画面での扱いは [演習画面](../screens/exercise-screen.md)「判定結果」に従う。

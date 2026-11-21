@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0079"
-description: "ドキュメントを `documents/` に集約し、OKF v0.3 のバンドルとして AI エージェントが管理する"
+description: "ドキュメントを `documents/` に集約し、OKF v0.3 のバンドルとして AI エージェントが管理する（ADR 0089 でバンドルのルートのディレクトリの数を変えた）"
 ---
 
 - 日付: 2026-11-20

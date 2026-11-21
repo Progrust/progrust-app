@@ -1,7 +1,7 @@
 ---
 type: Verification Report
 title: "レッスンごとの動画の遅延読み込みの技術検証"
-description: "レッスンごとに動画のコード・音声・画像を遅延読み込みできるかを Issue #4 で検証した結果（Vite のプラグインで作るレッスンごとの仮想モジュール、塊の一覧、tauri:// で配信されたファイルの記録、音声の置き方 2 通りの比較、tauri:// が Range に 200 で全体を返すこと）を記す。"
+description: "レッスンごとに動画のコード・音声・画像を遅延読み込みできるかを Issue #4 で検証した結果（Vite のプラグインで作るレッスンごとの仮想モジュール、塊の一覧、tauri:// で配信されたファイルの記録、音声の置き方 2 通りの比較、tauri:// が Range に 200 で全体を返すこと、ユーザーが音声の置き方を asset:// に決めた判断）を記す。"
 ---
 
 - 日付: 2026-11-21
@@ -157,3 +157,8 @@ ch04 の文 h1（52,755 バイト）を 2.5 秒再生した。
   - 試作の timeline.ts はレッスンごとに間（LEAD・TAIL・GAP）を持つ。仕様の `useCues()` はアプリが合図を計算する前提で、この検証ではレッスンごとの timeline のままにしたので、未確認。
   - [データの置き場所](../spec/architecture/data-locations.md): リソースに `content/` を入れるとき、動画のコードと音声を除く設定が要る。
 - この WKWebView の `performance.getEntriesByType('resource')` は tauri:// のファイルを記録しない。アプリの性能の計測や遅延読み込みの確認で、Resource Timing に頼れない。
+
+ユーザーの判断（2026-11-21）:
+- 音声の置き方について、Claude は、再生に問題が見えていないことから Vite のアセット（tauri://）のままにすることを推奨し、もう一方の案として Tauri のリソース + `convertFileSrc`（asset://）を示した。ユーザーは「`asset://` のほうが使い方として正しいと思うので`asset://` にしましょう。」と示し、asset:// にすると決めた。
+- 仕様（[フロントエンドとバックエンドの役割分担](../spec/architecture/responsibilities.md)、[Tauri の権限](../spec/architecture/tauri-permissions.md)、[データの保存場所](../spec/architecture/data-locations.md)、[セキュリティとプライバシー](../spec/non-functional/security-privacy.md)）を直し、[ADR 0128](../decisions/0128-serve-narration-from-resources-via-asset-protocol.md) を追加した。
+- この検証では、asset:// を、CSP が無く、スコープをリソースの全体にした試作で確かめた。仕様の CSP と、音声ファイルだけに絞ったスコープの下での再生は、Issue #46 の技術検証で確かめる。

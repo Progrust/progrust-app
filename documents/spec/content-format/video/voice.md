@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "動画の音声"
-description: "VOICEPEAK で作る音声ファイルの形式と置き場所、声の設定（`voice.json`）、読みの対応表（`readings.json`）、音声の長さ（`durations.json`）、音声を作るツールの動作を定める。"
+description: "VOICEPEAK で作る音声ファイルの形式と置き場所、声の設定（`voice.json`）、読みの対応表（`readings.json`）、音声の長さ（`durations.json`）、音声を作るツールの動作（`.m4a` への変換のしかたと長さの測り方を含む）を定める。"
 ---
 
 - ナレーションの音声は、教材の作者の環境で、VOICEPEAK の CLI から作る。作った音声はリポジトリに入れ、アプリに同梱する。学習者の環境に VOICEPEAK は要らない。CI では音声を作らない。
@@ -60,7 +60,7 @@ description: "VOICEPEAK で作る音声ファイルの形式と置き場所、�
 
 | フィールド | 説明 |
 |---|---|
-| `seconds` | その文の音声ファイル（`voice/{文の ID}.m4a`）の長さ（秒） |
+| `seconds` | その文の音声ファイル（`voice/{文の ID}.m4a`）の長さ（秒）。測り方は下の「音声を作るツール」に定める |
 | `say` | その音声を作ったときの `say` |
 | `voice` | その音声を作ったときの声の設定（`voice.json` と同じ形） |
 
@@ -69,12 +69,18 @@ description: "VOICEPEAK で作る音声ファイルの形式と置き場所、�
 
 **音声を作るツール**
 
-`tools/` に置く。作者の環境の VOICEPEAK と ffmpeg を使う。
+`tools/` に置く。作者の環境の VOICEPEAK と ffmpeg（ffprobe を含む）を使う。
 
 - 台本の文を 1 文ずつ順に VOICEPEAK に渡して、音声を作る。VOICEPEAK を同時に 2 つ以上動かさない。
 - `durations.json` の `say`・`voice` が台本の `say`・`voice.json` と同じで、音声ファイルがある文は、作り直さない。すべての文を作り直す指定もできる。
 - `say` が 140 字を超える文があるときは、エラーにして音声を作らない。
 - 「、」の間は次のように作る。`say` をそのまま VOICEPEAK に渡して音声を作り、できた音声の中の「、」にあたる無音を `pause` 秒まで切り詰める。`pause` 秒より短い無音と、文の途中の「。」にあたる無音は、そのままにする。
-- 切り詰めたあとの音声を `.m4a` に変換し、変換後のファイルの長さを `durations.json` の `seconds` に書く。
+- 切り詰めたあとの音声を、ffmpeg に組み込みの AAC エンコーダー（`aac`）で `.m4a` に変換する。
+
+  ```sh
+  ffmpeg -i {切り詰めたあとの音声}.wav -c:a aac -b:a 64k -ac 1 {文の ID}.m4a
+  ```
+
+- 変換後の `.m4a` の長さを、ffprobe の `format` の `duration` で測り、`durations.json` の `seconds` に書く。`cue-reference.json` に書く音声の長さも、同じ測り方の値にする。
 - 台本にない文の音声ファイルと、`durations.json`・`cue-reference.json` の記録は消す。
 - `cue-reference.json` の書き方は [動画のタイムラインと合図](timeline-and-cues.md) に定める。
