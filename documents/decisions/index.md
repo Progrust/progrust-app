@@ -32,6 +32,7 @@
 * [ADR 0066](0066-trim-comma-pauses-to-0-2-seconds.md) - 「、」の間を、音声を作ったあとに 0.2 秒へ切り詰める
 * [ADR 0068](0068-compose-at-1280x720-and-zoom-per-scene.md) - 動画を基準サイズ 1280×720 で組み、場面ごとに内容のある範囲へ寄せて見せる
 * [ADR 0076](0076-carry-over-slide-visual-and-writing-decisions.md) - スライドで決めた見た目と書き方の判断を、動画でも引き継ぐ
+* [ADR 0092](0092-play-narration-with-html5audio.md) - 文の音声を、AAC の .m4a・1 文 1 ファイルのまま、Remotion の Html5Audio で鳴らす
 
 # カリキュラム
 

@@ -1,7 +1,7 @@
 ---
 type: Verification Report
 title: "1 文 1 ファイルの音声の再生と同期の技術検証"
-description: "1 文 1 ファイルの .m4a を Player の中で同期して再生できるかを Issue #2 で検証した結果（@remotion/media の Audio と Html5Audio の動作、音声と絵のずれの表、0.75〜2 倍速での声の高さ、AAC の前後の無音と durations.json の seconds の食い違い、許せるずれの量と Audio 部品の選択がユーザーの判断になること）を記す。"
+description: "1 文 1 ファイルの .m4a を Player の中で同期して再生できるかを Issue #2 で検証した結果（@remotion/media の Audio と Html5Audio の動作、音声と絵のずれの表、0.75〜2 倍速での声の高さ、AAC の前後の無音と durations.json の seconds の食い違い、@remotion/media が文の頭で音を二重に鳴らすこと、人が聞いて Html5Audio を選び、許せるずれの量を数値で決めないとした判断）を記す。"
 ---
 
 - 日付: 2026-11-21
@@ -36,6 +36,11 @@ afconvert -f m4af -d aac -b 64000 -c 1 x.wav x.m4a   # 比較用
 - 音の時刻（Html5Audio）: Player の共有の `<audio>` の `currentTime` と、そのときの絵の位置から計算した、文の中の秒の差。
 - 正の値は音が絵より遅いこと。単位は ms。
 - 声の高さ: 440Hz の正弦波の .m4a を各速度で鳴らし、出力のいちばん強い周波数を測った（聞いて確かめる代わりの指標）。
+- 文の頭の音の重なり（`@remotion/media`）: verbose ログに出る、断片（約 21ms）ごとの予定の時刻（AudioContext の時刻）とファイルの中の秒を使った。鳴らす時間が重なるように予定された 2 つの断片のうち、ファイルの中の秒が違うものを数えた。記録したのは開始の予定だけで、断片を止めたかは記録していない。
+
+### 人が聞いた確認
+
+計測のあと、ユーザーが release ビルドの試作を、人が触る画面で起動して聞いた。出力は Mac の内蔵スピーカー。音声のファイルは ffmpeg の m4a にし、ヘッダーで `@remotion/media` の Audio と Html5Audio を切り替えた。音声と絵のずれ（1 倍、0.75 倍・2 倍など速度を変えたとき、前の文・次の文・±5 秒・シークバーでのシークの直後）と、速度を変えたときの声の高さと音質を比べた。Player の `preservePitch` は true、Html5Audio の `preservePitch` も true にした。
 
 ## 結果
 
@@ -102,6 +107,26 @@ afconvert -f m4af -d aac -b 64000 -c 1 x.wav x.m4a   # 比較用
 - Html5Audio は、Player の中で `<audio>` の `playbackRate` を Player の速度にし、`preservesPitch=true` を設定していた（Player の中の要素の値で確認）。Html5Audio は Web Audio を通らないので AnalyserNode では測れず、表の `<audio>` の行は、Player を通さない `<audio>` を `createMediaElementSource` で測った値（WebKit 自身の動き）である。
 - macOS 13 の WebKit には、unprefixed の `preservesPitch` が Safari 17.2 より前にはなく `webkitPreservesPitch` だけある（MDN の互換データ）。既定は true なので、声の高さは保たれる見込み（未確認）。
 
+### 文の頭の音の重なり（`@remotion/media`）
+
+計測（「音声と絵のずれ（`@remotion/media`）」と同じ回）の verbose ログで、鳴らす時間が重なるように予定され、ファイルの中の秒が違う 2 つの断片を数えた。
+
+| ファイル | 1 倍の通し | 0.75〜2 倍 |
+|---|---|---|
+| ffmpeg の m4a（2 回） | 2 回とも、文の頭を検出できた 20 文（21 文のうち 1 文は検出できなかった）のすべてで重なる予定があった。位置はファイルの 64〜85ms、2 つの断片のファイルの中の秒の差は 21.4ms か 42.7ms | 0.75〜1.5 倍（各 5〜6 文）: 1 回目は全文、2 回目は 6 文中 3〜5 文。2 倍は文の頭の検出が欠けたので文の数は数えていない（重なる予定は 14〜19 か所）。位置は 16〜119ms、差は 21〜112ms |
+| afconvert の m4a（1 回） | 21 文のすべてで重なる予定があった。位置は 43〜85ms、差は 21.4〜64.0ms | 0.75 倍は 6 文中 5 文、1.25・1.5 倍は 6 文のすべて、2 倍は検出できた 5 文のすべて |
+
+- 文の声は、ファイルの 34〜102ms から始まる（各文の WAV の頭の無音の長さ）。重なりは、声の出だしに当たる。たとえば m7（「なぜ、使えなくするのでしょうか。」、フレーム 1476 から）は、声が 50ms から始まる。2 回とも、ファイルの 106.7ms からの断片が先に、85.3ms からの断片が約 2ms 後に予定され、約 20ms の間、重なっていた。
+- シークの直後（7 か所 × 2 回）と同じ文の中で後ろへ戻るシーク（4 か所 × 2 回）では、重なる予定は 1 回のシークにつき 0〜1 か所だった。
+- 原因は調べていない。Html5Audio は `<audio>` で鳴らすので、この仕組みでは鳴らさない。
+
+### 人が聞いた結果
+
+- 音声と絵のずれ: どちらの部品でも、1 倍、速度を変えたとき、シークの直後のどれも、特に気にならなかった。ユーザーの判断では、動画には口の動き（口パク）などがないので、大きくずれていない限り気付けない。
+- 音質: `@remotion/media` では、1 倍の再生で、文の言い始めがダブって聞こえる場所があった。m7「なぜ、使えなくするのでしょうか。」の「なぜ」の言い始めが特に気になった。Html5Audio で同じ場所を聞くと、ダブらず、特に気にならなかった。
+- 声の高さ: Html5Audio で 0.75 倍・2 倍などに変えて聞いても、声の高さと音質は特に気にならなかった。
+- ユーザーは、Html5Audio を使うと決めた。許せるずれの量は、数値では決めず、見て聞いて気にならなければよいとした（[ADR 0092](../decisions/0092-play-narration-with-html5audio.md)）。
+
 ### AAC の前後の無音（priming）と durations.json の seconds
 
 試作の durations.json の seconds は WAV の長さ。21 文で比べた。
@@ -125,33 +150,23 @@ afconvert -f m4af -d aac -b 64000 -c 1 x.wav x.m4a   # 比較用
 | 基準 | 結果 |
 |---|---|
 | .m4a を再生できる | 満たした |
-| シークの直後と文の切れ目でずれが目立たない | 許せる量が未決のため判定できない。`@remotion/media` はおおむね ±50ms 以内、Html5Audio は約 100ms（速度を変えると最大 210ms）音が遅れる。聞いた判断は未確認 |
-| すべての再生速度で声の高さが変わらない | 代わりの指標では、`@remotion/media` は `preservePitch={true}` を付けたときだけ保たれ、Html5Audio は既定で保たれる。聞いた判断は未確認 |
+| シークの直後と文の切れ目でずれが目立たない | 満たした。Html5Audio は約 100ms（速度を変えると最大 210ms）音が遅れるが、人が見て聞いて気にならなかった。許せる量は数値では決めない（ADR 0092） |
+| すべての再生速度で声の高さが変わらない | Html5Audio で満たした。代わりの指標で保たれ、0.75 倍・2 倍などで人が聞いても気にならなかった。`@remotion/media` は、文の言い始めがダブって聞こえた |
 
-Issue は開いたままにする。
+使う部品を Html5Audio にすれば基準をすべて満たすので、Issue を閉じる。
 
 ## 残った事項
 
-ユーザーの判断が要る点
+判断が要る点: なし。Audio 部品と許せるずれの量は、ユーザーが聞いて決めた（「人が聞いた結果」、ADR 0092）。
 
-1. 音声と絵のずれの許容量。参考の BT.1359（音が先 45ms・音が後 125ms）なら、`@remotion/media` は収まり、Html5Audio は速度を変えたときに超えることがある。
-2. Audio 部品の選択。
-   - `@remotion/media` の Audio: ずれが小さい。ピッチの保持に Player の `preservePitch={true}` が要り、ピッチシフトの音質は聞いて確かめる必要がある。
-   - 最初から Html5Audio: WebKit の `preservesPitch` で声の高さが保たれる。約 100ms の遅れが残る。
+確かめられなかった項目: なし。
 
-確かめられなかった項目
+仕様の変更案
 
-- 実際に聞いて、声の高さが保たれているか、ピッチシフトの音質（`@remotion/media` の pitch shift の劣化）。
-- 実際に見て聞いて、ずれが目立つか。
-
-仕様の変更案（documents/ は変更していない）
-
-- 動画の音声の仕様の「切り詰めたあとの音声を `.m4a` に変換し、変換後のファイルの長さを `seconds` に書く」は、エンコーダーと長さの測り方で値が変わる。エンコーダーを ffmpeg の `aac` に決め、長さは ffprobe（または afinfo の valid frames）で測ると書く案。
-- `@remotion/media` を使うなら、Player に `preservePitch` を付ける必要がある（既定 false）。実装の決まりにする案（ADR 0061 の周辺）。
-- 教材データ形式の未決事項「AAC の .m4a を WebView で再生できることの確認」は、macOS 27.2.1 の WebKit では再生できた。
+- 動画の音声の仕様の「切り詰めたあとの音声を `.m4a` に変換し、変換後のファイルの長さを `seconds` に書く」は、エンコーダーと長さの測り方で値が変わる。エンコーダーを ffmpeg の `aac` に決め、長さは ffprobe（または afinfo の valid frames）で測ると書く案。Issue #36 に起票済み。
 
 検証中に見つけた別の問題（事実のみ）
 
-- `tauri://` のアセットは Range 要求に 206 を返さず、200 で全体を返す。mediabunny が警告する。1 文 30〜50KB のファイルでは問題は出なかった。長い音声ファイルでは、読み直しが失敗するおそれがある（mediabunny の警告の文言）。
-- WKWebView の `AudioContext.outputLatency` が、音を出す前は 1.7×10^14 のような壊れた値を返す（鳴らしたあとは 0.0207）。Remotion は `getAudioSyncAnchorTolerance` でこの値を使い、同期の許容量を決めている。今回の計測では、ずれは大きくならなかった。
+- `tauri://` のアセットは Range 要求に 206 を返さず、200 で全体を返す。mediabunny が警告する。1 文 30〜50KB のファイルでは問題は出なかった。長い音声ファイルでは、読み直しが失敗するおそれがある（mediabunny の警告の文言）。Issue #35 に起票済み。
+- WKWebView の `AudioContext.outputLatency` が、音を出す前は 1.7×10^14 のような壊れた値を返す（鳴らしたあとは 0.0207）。Remotion は `getAudioSyncAnchorTolerance` でこの値を使い、`@remotion/media` の同期の許容量を決めている。今回の計測では、ずれは大きくならなかった。
 - `@remotion/media` では、Player が文ごとに `waiting` イベントを出す（[Issue #1 の検証結果](issue-1-remotion-player-webview.md)「残った事項」）。
