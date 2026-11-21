@@ -22,7 +22,7 @@ export default {
 - シーンの中の現在の位置は、Remotion の `useCurrentFrame()` で得る（シーンの先頭が 0）。シーンの長さは、`useVideoConfig()` の `durationInFrames` で得る。
 - 絵は、現在のフレームだけから決まるように書く。同じフレームは、通して再生したときも、再生位置を移した直後も、同じ絵になる。CSS のアニメーションとトランジション、タイマー、乱数は使わない。
 - 見た目は、動画のデザインシステムのトークン（CSS 変数）と部品のクラス（`callout`・`mark` など）で指定する。
-- レッスン専用の部品と CSS を、`video/` の中に作ってよい。
+- レッスン専用の部品と CSS を、`video/` の中に作ってよい。CSS は普通の CSS で書く。CSS の効く範囲は [動画を構成するファイル](structure.md) に定める。
 - 画像は、レッスンの `assets/` か全レッスン共通の `content/assets/` に置いたファイルを import して使う。
 - 図（SVG）には `role="img"` と、図の要点を表す `aria-label` を付ける。画像には `alt` を付ける。
 
