@@ -34,7 +34,7 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
   "events": [
     { "type": "chat", "at": "...", "context": "video:m5",
       "question": "ムーブ後に使えないのはなぜ？", "answer_summary": null },
-    { "type": "run", "at": "...",
+    { "type": "run", "at": "...", "mode": "main",
       "files": { "src/main.rs": "..." },
       "result": { "status": "compile_error", "error_codes": ["E0382"],
                   "stdout": "", "stderr": "...", "exit_code": 1, "stdin": "" } },
@@ -58,7 +58,7 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
 | type | 記録タイミング | 主な内容 |
 |---|---|---|
 | `chat` | 質問を送信したとき | `context`（`video:{文の ID}` / `explanation`）、質問文。`answer_summary` は将来の拡張用で、現在は常に `null` |
-| `run` | 実行が終わったとき | 全ファイルのスナップショット、実行結果、学習者が入力した標準入力（`stdin`） |
+| `run` | 実行・テスト実行が終わったとき | `mode`（実行は `main`、テスト実行は `test`。[コードの実行（run）](../exercise-runner/run.md)「テスト実行」）、全ファイルのスナップショット、実行結果、学習者が入力した標準入力（`stdin`） |
 | `submit` | 提出の判定が終わったとき | 全ファイルのスナップショット、判定結果（`failed_cases` は失敗したテストケースの表示名） |
 
 - 動画の視聴（再生・一時停止・シークなど）は試行ログに記録しない。

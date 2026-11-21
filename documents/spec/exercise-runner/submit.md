@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "コードの提出（submit）"
-description: "`stdout` 方式と `test` 方式それぞれの判定手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容を定める。"
+description: "`stdout` 方式と `test` 方式それぞれの判定手順、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容を定める。"
 ---
 
 提出中はコンソールにビルドの診断と判定の進み具合だけを表示し、プログラムの出力は表示しない。
@@ -39,6 +39,25 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、出�
    | `timeout` | テスト全体の制限時間（[実行・判定の制限値](limits.md)）で止めた、または起動する前に制限時間に達した |
 
 7. `fail` の panic メッセージは、`failures:` の行より後で最後の `thread '{名前}' ... panicked at` の行の、次の行から取り出す。`note: run with` で始まる行と、次の節の見出し（`failures:` など）の前で終える。
+8. `exercise.judge.min_learner_tests`（[レッスン定義の形式（lesson.json）](../content-format/lesson-json.md)）がある演習では、続けて「学習者のテストの判定」を行う。無い演習では、学習者が書いたテストを判定に含めない。
+
+### 学習者のテストの判定
+
+学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）を、テストケース 1 件として判定する。
+
+1. 3 でビルドした `project/` で、`cargo test --offline --no-fail-fast -- --skip progrust_judge::` を新しいプロセスグループで起動する。隠しテストは `--skip` で除く。
+2. 標準出力から、行頭が `test ` で、行末が ` ... ok` または ` ... FAILED` の行を、学習者のテストの結果の行として数える。` ... ignored` の行は数えない。
+3. 次のとおり結果を決める。
+
+   | 結果 | 条件 |
+   |---|---|
+   | `pass` | cargo が終了コード 0 で終わり、` ... ok` の行が `min_learner_tests` 件以上ある |
+   | `fail` | ` ... FAILED` の行がある、または ` ... ok` の行が `min_learner_tests` 件より少ない |
+   | `runtime_error` | 上のどちらでもなく、cargo が終了コード 0 以外で終わった |
+   | `timeout` | 学習者のテスト全体の制限時間（[実行・判定の制限値](limits.md)）で止めた |
+
+- このテストケースの表示名は「自分で書いたテスト（{min_learner_tests} 件以上）」とし、`cases[]` の最後に置く。
+- `fail` の `detail` には、通ったテストの件数と必要な件数、失敗したテストの名前（` ... FAILED` の行の `test ` と ` ... FAILED` の間）を入れる。失敗の詳しい内容は、テスト実行（[コードの実行（run）](run.md)「テスト実行」）で確かめる。
 
 ## 判定結果
 
@@ -51,7 +70,7 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、出�
 `detail` の内容:
 
 - stdout 方式の `fail`: 入力・期待する出力・実際の出力
-- test 方式の `fail`: panic メッセージ（`assert_eq!` の左辺・右辺を含む）
+- test 方式の `fail`: panic メッセージ（`assert_eq!` の左辺・右辺を含む）。学習者のテストの判定の `fail` は「学習者のテストの判定」に従う
 - `timeout` / `runtime_error`: 標準エラー出力の先頭
 
 画面には、通過数と失敗したテストケースの名前をすべて表示し、最初に失敗したテストケースの `detail` を表示する。表示する場所と、詳細の開閉は [演習画面](../screens/exercise-screen.md) に従う。

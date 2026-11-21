@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "画面の見た目とテーマ"
-description: "画面の見た目と動画の中身の見た目が従うデザインシステム（「Progrust」「Progrust Video」）、章カラーの使い方、ライト・ダークのテーマの切り替えを定める。"
+description: "画面の見た目と動画の中身の見た目が従うデザインシステム（「Progrust」「Progrust Video」）、書体のファイルの同梱のしかた、章カラーの使い方、ライト・ダークのテーマの切り替えを定める。"
 ---
 
 ## デザインシステム
@@ -13,6 +13,18 @@ description: "画面の見た目と動画の中身の見た目が従うデザイ
   - 値は動画のデザインシステムを唯一の定義とし、仕様書には書かない。使い方のルールはその README（「動画の原則」など）、部品ごとの使い方は各部品の README に従う。
   - 書体・基本の色・章カラーなど、画面と共通の値は「Progrust」を正とし、動画のデザインシステムはその写しを持つ。値を変えるときは「Progrust」を変えてから写しを合わせる。
   - 動画で章カラーを使う範囲と、章に属さずに表示するときの色は、動画のデザインシステムの README「章カラーとの連動」に従う。
+
+## 書体のファイル
+
+- 書体（Murecho、Red Hat Mono）のファイルはアプリに同梱し、画面と動画の両方で使う。
+- 同梱するのは、それぞれの配布元が配っている可変フォントのファイルで、形式の変換やサブセット化をせず、そのまま使う。
+
+  | 書体 | 配布元 | ファイル |
+  |---|---|---|
+  | Murecho | https://github.com/positype/Murecho-Project | `fonts/variable/Murecho[wght].ttf` |
+  | Red Hat Mono | https://github.com/RedHatOfficial/RedHatFont | `fonts/Mono/RedHatMono/variable/RedHatMono-VF.ttf` |
+
+- それぞれの書体のライセンスの本文（配布元の `OFL.txt`。著作権表示を含む）も同梱する。
 
 ## テーマ
 

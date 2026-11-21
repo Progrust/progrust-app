@@ -3,9 +3,9 @@
 * [コード実行・判定の目的とスコープ](scope.md) - コード実行・判定の仕様が扱う範囲と、判定方式とテストケースの形式の参照先を定める。
 * [コード実行・判定の概要](overview.md) - `cargo` を使ったビルドと実行の前提、edition 2024 と dev プロファイル、実行・提出を同時に 1 つだけ行う制約、サンドボックスを使わないことを定める。
 * [許可クレートと作業領域](crates-and-workspace.md) - 許可クレートの一覧（`runner/allowed-crates.toml`）と同梱の `Cargo.lock`、`workspace/` のディレクトリ構成とビルド先の分け方、アプリ起動時の初回準備の条件・手順・準備中や失敗時の動作、演習のビルドの失敗から初回準備のやり直しを判定する方法を定める。
-* [実行・提出時のプロジェクトの組み立て](project-assembly.md) - 実行・提出のたびに作る `project/`（と生成問題の検証の `validate/`）の `Cargo.toml`・`Cargo.lock`・`src/**` の内容と、受け付けるファイルパスの条件、`--offline` やビルド先などのビルド条件を定める。
-* [コードの実行（run）](run.md) - 実行の手順、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`）を定める。
-* [コードの提出（submit）](submit.md) - `stdout` 方式と `test` 方式それぞれの判定手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容を定める。
-* [実行・判定の制限値](limits.md) - ビルド時間、実行時間、出力量、テストケースごとの実行時間と出力量などの制限値と、超えた場合の扱いを定める。
-* [実行・提出の試行ログへの記録](attempt-log.md) - 実行・提出が終わるたびに試行ログへ `run` / `submit` イベントを追記するときの、`error_codes`、`stdout`、`stderr`、`stdin` の記録のしかたを定める。
+* [実行・提出時のプロジェクトの組み立て](project-assembly.md) - 実行・提出のたびに作る `project/`（と生成問題の検証の `validate/`）の `Cargo.toml`・`Cargo.lock`・`src/**`・`tests/**` の内容と、受け付けるファイルパスの条件、`--offline` やビルド先などのビルド条件を定める。
+* [コードの実行（run）](run.md) - 実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`）を定める。
+* [コードの提出（submit）](submit.md) - `stdout` 方式と `test` 方式それぞれの判定手順、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容を定める。
+* [実行・判定の制限値](limits.md) - ビルド時間、実行時間（テスト実行を含む）、出力量、テストケースごとの実行時間と出力量、学習者のテストの判定の実行時間などの制限値と、超えた場合の扱いを定める。
+* [実行・提出の試行ログへの記録](attempt-log.md) - 実行（テスト実行を含む）・提出が終わるたびに試行ログへ `run` / `submit` イベントを追記するときの、`error_codes`、`stdout`、`stderr`、`stdin` の記録のしかたを定める。
 * [コード実行・判定の受け入れ条件](acceptance.md) - コード実行・判定の仕様を満たしたと判断する条件を定める。

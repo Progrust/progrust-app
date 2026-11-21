@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "レッスン定義の形式（lesson.json）"
-description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elements`・`secondary_elements`・`estimated_minutes`・`exercise.judge` など）と、`kind` ごとの `tags` の要否を定める。"
+description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elements`・`secondary_elements`・`estimated_minutes`・`exercise.judge`（`min_learner_tests` を含む）など）と、`kind` ごとの `tags` の要否を定める。"
 ---
 
 ```json
@@ -37,6 +37,7 @@ description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elem
 | `exercise.layout` | `single`（`src/main.rs` の 1 ファイルのみ）/ `multi`（複数ファイル） |
 | `exercise.judge.mode` | `stdout` / `test`（[演習のファイル形式](exercise.md)「判定方式」） |
 | `exercise.judge.target` | `test` 方式で隠しテストを組み込むファイル（`src/main.rs` または `src/lib.rs`）。`stdout` 方式では `src/main.rs` 固定 |
+| `exercise.judge.min_learner_tests` | `test` 方式で、学習者が書いたテストを判定に含めるときの、必要なテストの件数（1 以上の整数）。省略時は学習者が書いたテストを判定に含めない（[コードの提出（submit）](../exercise-runner/submit.md)「学習者のテストの判定」）。`stdout` 方式では書けない |
 | `exercise.dependencies` | 使用する許可クレートの名前（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「許可クレート」 の一覧にあるもの） |
 | `exercise.readonly_files` | 学習者が編集できないファイルのパス（`multi` のみ） |
 | `exercise.case_labels` | `test` 方式でテスト関数名に付ける表示名（例: `{"empty_input": "空の入力"}`）。省略時は関数名を表示する |

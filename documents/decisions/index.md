@@ -10,6 +10,7 @@
 * [ADR 0017](0017-search-default-tool-locations.md) - 外部ツールを PATH 以外の既定のインストール先からも探す
 * [ADR 0084](0084-keep-record-templates-as-assets.md) - 学習記録・分析のテンプレートを、`.md.tmpl` の asset としてバンドルに置く
 * [ADR 0111](0111-bundle-monaco-and-set-csp.md) - Monaco Editor を CDN を使わずに同梱し、アプリに CSP を設定して読み込み先を自身と Tauri の IPC に限り（Monaco のため style-src に 'unsafe-inline' を許す）、演習画面のショートカットを Monaco のコマンドとキャプチャの keydown で受ける
+* [ADR 0117](0117-raise-min-rustc-only-when-author-decides.md) - rustc の最低バージョンはアプリのリリースに合わせて上げず、作者が決めたときに上げる。バージョンが足りないときは rustup update stable を案内する
 
 # 教材データ形式
 
@@ -68,6 +69,9 @@
 * [ADR 0101](0101-run-each-hidden-test-in-own-process.md) - test 方式の隠しテストを、テストごとに別のプロセスで実行し、終了コードと結果の行で判定する
 * [ADR 0102](0102-stop-learner-process-group-and-batch-output.md) - 学習者のプログラムをプロセスグループごとに止め、実行中の出力を一定時間ごとにまとめて画面に送る
 * [ADR 0105](0105-detect-lost-crates-from-offline-build-errors.md) - 演習の --offline のビルドの失敗の文から、許可クレートのソースやビルド結果が失われたことを判定し、初回準備を自動でやり直す。cargo の自動削除への対策として、アプリ専用の CARGO_HOME は使わない
+* [ADR 0112](0112-run-learner-tests-with-test-button.md) - 演習画面に、学習者が書いたテストを cargo test で動かす「テスト」ボタンをどの演習でも置き、cargo の出力をそのまま表示する
+* [ADR 0113](0113-judge-learner-tests-by-count-and-pass.md) - 学習者が書いたテストを、演習ごとに指定した件数以上あってすべて通ることで判定し、テストが実装の誤りを見つけられるかまでは判定しない
+* [ADR 0114](0114-allow-integration-and-doc-tests.md) - 学習者が tests/ の統合テストを書けるようにし、ドキュメントテストも実行して、ch11-05 と ch11-06 のレッスンを残す
 
 # レッスン進行・進捗管理
 
@@ -127,12 +131,14 @@
 * [ADR 0073](0073-search-lessons-by-tags-and-title.md) - 検索の対象を、レッスンに設定した検索ワード（タグ）とタイトルにする
 * [ADR 0075](0075-video-design-system-progrust-video.md) - 動画の見た目を、スライドのデザインシステムを改めた「Progrust Video」に定める
 * [ADR 0103](0103-keep-console-output-tail.md) - 演習画面のコンソールに残す出力を末尾の 64K 文字までとし、超えた分は古いほうから消す
+* [ADR 0116](0116-bundle-upstream-variable-fonts-unmodified.md) - 書体のファイルを、配布元が配っている可変フォントのまま、変換もサブセット化もせずにアプリに同梱する
 
 # 非機能要件
 
 * [ADR 0014](0014-run-learner-code-without-sandbox.md) - 学習者のコードをサンドボックスに入れずに実行する
 * [ADR 0090](0090-support-only-authors-mac-until-completion.md) - アプリの完成までは、対応環境を作者の Mac だけとし、一般公開しない前提で開発する
 * [ADR 0091](0091-no-distribution-or-auto-update-until-publication.md) - アプリの完成までは配布と更新の仕組みを作らず、作者の Mac でビルドして使い、教材はアプリに同梱する
+* [ADR 0115](0115-minimum-rustc-1-100.md) - 学習者の環境に必要な rustc の最低バージョンを 1.100.0 にする
 
 # ドキュメントの運用ルール
 

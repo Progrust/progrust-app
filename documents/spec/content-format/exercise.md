@@ -70,3 +70,5 @@ fn empty_input() {
 - `judge.target` のファイルの子モジュールとして組み込まれるため、`use super::*;` で学習者のコードを参照する。
 - テスト関数名は snake_case の英語とし、表示名は `lesson.json` の `case_labels` で与える。
 - 比較方法・組み込み方法・制限時間は [コードの提出（submit）](../exercise-runner/submit.md) に定める。
+- `lesson.json` の `exercise.judge.min_learner_tests` を書いた演習では、隠しテストに加えて、学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）がすべて通り、その件数が指定以上であることも判定する（[コードの提出（submit）](../exercise-runner/submit.md)「学習者のテストの判定」）。
+- 統合テストとドキュメントテストを書かせる演習では、`starter/` に `src/lib.rs` を含め、`judge.target` を `src/lib.rs` にする。統合テストのファイルは `tests/` に置き、`progrust_exercise` クレートとして `src/lib.rs` の公開アイテムを使う。

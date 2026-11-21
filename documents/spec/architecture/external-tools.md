@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "外部ツール（cargo・claude）への依存"
-description: "cargo と claude の検出方法と必要条件、見つからない場合の動作、許可クレートの初回準備を定める。"
+description: "cargo と claude の検出方法と必要条件、見つからない場合の動作、rustc のバージョンが足りない場合の案内、許可クレートの初回準備を定める。"
 ---
 
 ## 検出
@@ -10,7 +10,7 @@ description: "cargo と claude の検出方法と必要条件、見つからな�
 
 | ツール | 探索順 | 必要条件 |
 |---|---|---|
-| `cargo` / `rustc` | 設定で指定したパス → `PATH` → `~/.cargo/bin` | `rustc --version` が 1.85 以上（edition 2024 が使えること） |
+| `cargo` / `rustc` | 設定で指定したパス → `PATH` → `~/.cargo/bin` | `rustc --version` が 1.100.0 以上 |
 | `claude` | 設定で指定したパス → `PATH` → `~/.local/bin` → `~/.claude/local` → npm のグローバルインストール先 | `claude --version` が成功すること |
 
 - `PATH` に見つかった場合も見つからなかった場合も、表の既定のインストール先を探索する（macOS で Finder から起動した場合を含む）。
@@ -20,8 +20,13 @@ description: "cargo と claude の検出方法と必要条件、見つからな�
 
 | ツール | 動作 |
 |---|---|
-| `cargo` | 実行・提出ボタンを無効にし、演習画面とトップページに rustup の導入手順を案内する。動画の視聴などは利用できる |
+| `cargo` | 実行・テスト・提出のボタンを無効にし、演習画面とトップページに rustup の導入手順を案内する。動画の視聴などは利用できる |
 | `claude` | AI 機能（質疑応答・問題生成）を無効にし、Claude Code の導入手順を案内する。学習記録・分析のジョブは登録だけ行い、`claude` が使えるようになってから実行する（[claude が使えない場合の動作](../claude-integration/unavailable.md)） |
+
+## バージョンが足りない場合
+
+- `rustc` は見つかったが、バージョンが必要条件（「検出」）に満たない場合は、演習画面とトップページに、今のバージョンと必要なバージョンを示し、`rustup update stable` で更新する手順を案内する。
+- 実行・テスト・提出のボタンは無効にしない。
 
 アプリから Rust や Claude Code を自動でインストールすることはしない。
 
