@@ -1,26 +1,26 @@
 ---
 type: Specification
 title: "コードの実行（run）"
-description: "実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`、`crates_unavailable`）を定める。"
+description: "実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、ビルドの出力（コンパイラの診断と cargo 自身の標準エラー出力）の表示、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`、`crates_unavailable`）を定める。"
 ---
 
 ## 手順
 
-1. `cargo build --offline --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
-2. ビルドに失敗したら、コンパイラの診断を表示して終了する（`compile_error`）。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、診断を表示せずに終了する（`crates_unavailable`）。
+1. `cargo build --offline --quiet --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
+2. ビルドに失敗したら、ビルドの出力（「ビルドの出力の表示」）を表示して終了する（`compile_error`）。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、ビルドの出力を表示せずに終了する（`crates_unavailable`）。
 3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。
 4. 標準出力・標準エラー出力を、「出力の送り方」のとおり `run_output` イベントで送る。
 5. 学習者のプログラム（3 で起動したプロセス）が終了したら、同じプロセスグループに残ったプロセスを止める（「停止」）。その後に届く出力は最大 300ms だけ待って受け取り、実行を終える。パイプの終わり（EOF）は待たない。
 6. `run_finished` イベントで結果を送り、試行ログに `run` イベントを追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。`crates_unavailable` のときは、`run_finished` イベントは送るが、試行ログには追記しない。
 
 - 演習には必ず `src/main.rs` があるものとする（[演習のファイル形式](../content-format/exercise.md)「ファイル」）。
-- コンパイラの警告も表示する。cargo 自身の進捗メッセージ（`Compiling ...` など）は表示しない。
+- ビルドに成功したときも、ビルドの出力を表示する（コンパイラの警告など）。
 
 ## テスト実行
 
 学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）を、演習画面の「テスト」ボタンで実行する。どの演習でも使える。隠しテストは組み込まない。
 
-1. `cargo test --offline --no-run --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
+1. `cargo test --offline --quiet --no-run --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
 2. ビルドに失敗したら、実行の手順の 2 と同じく終了する（`compile_error` または `crates_unavailable`）。
 3. 成功したら、`cargo test --offline --no-fail-fast` を、`project/` を作業ディレクトリとし、環境変数 `CARGO_TERM_COLOR=always` を付けて、新しいプロセスグループで起動する。
 4. 3 の cargo の標準出力・標準エラー出力を、そのまま `run_output` イベントで送る。cargo が出す `Running ...`・`Doc-tests ...` などの行と、テストごとの結果の行（`test {名前} ... ok` など）も表示する。
@@ -30,6 +30,13 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 - 出力の送り方と停止は、実行と同じにする（「出力の送り方」「停止」）。制限値も実行と同じにする（[実行・判定の制限値](limits.md)）。
 - 標準入力は、3 で起動した直後に閉じる。入力欄は表示しない。
 - 結果の状態は「結果の状態」の表に従う。テストが 1 件でも失敗すると、cargo の終了コードが 0 以外になるので `runtime_error` になる。ドキュメントテストのコンパイルエラーは、1 では見つからず、3 でそのテストの失敗として出る。
+
+## ビルドの出力の表示
+
+ビルドの出力として、次の 2 つを表示する。
+
+- コンパイラの診断: cargo の標準出力の JSON のうち、`compiler-message` の診断。エラーも警告も表示する。
+- cargo 自身の標準エラー出力: そのまま表示する。`--quiet` を付けているので、cargo は進捗メッセージ（`Compiling ...`・`Finished ...` など）と、`Cargo.toml` の読み込みについての警告を出さない。cargo 自身のエラー（`error: could not compile ...` の行、cargo の設定ファイルを読み込めないときのエラーなど）と、cargo の lint の警告は出る。
 
 ## 出力の送り方
 

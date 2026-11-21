@@ -4,7 +4,7 @@ title: "コードの提出（submit）"
 description: "`stdout` 方式と `test` 方式それぞれの判定手順、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）の扱いを定める。"
 ---
 
-提出中はコンソールにビルドの診断と判定の進み具合だけを表示し、プログラムの出力は表示しない。
+提出中はコンソールにビルドの出力（[コードの実行（run）](run.md)「ビルドの出力の表示」）と判定の進み具合だけを表示し、プログラムの出力は表示しない。
 
 ## stdout 方式
 
@@ -26,7 +26,7 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
    mod progrust_judge;
    ```
 
-3. `cargo test --offline --no-run --message-format=json-diagnostic-rendered-ansi` でビルドする。失敗したら `compile_error` で終了する。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、`crates_unavailable` で終了する。隠しテストの側でエラーが出た場合は、「問題文で指定された関数名・型・シグネチャを確認してください」と併せて表示する。
+3. `cargo test --offline --quiet --no-run --message-format=json-diagnostic-rendered-ansi` でビルドする。失敗したら `compile_error` で終了する。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、`crates_unavailable` で終了する。隠しテストの側でエラーが出た場合は、「問題文で指定された関数名・型・シグネチャを確認してください」と併せて表示する。
 4. テスト実行ファイルを引数 `--list progrust_judge::` で起動し、出力の `{名前}: test` の行から隠しテストの名前を得る（学習者自身が書いたテストは判定に含めない）。名前の `progrust_judge::` より後の部分を、テストケースの関数名とする。
 5. 得た名前ごとに、テスト実行ファイルを引数 `--exact {名前} --test-threads=1` で別々のプロセスとして起動する。同時に起動するのは CPU の論理コア数までとする。`--nocapture` は付けない。
 6. プロセスごとに、次のとおりテストケースの結果を決める。結果の行は、行末が ` ... ok` または ` ... FAILED` で、その直前に `test {名前}` がある行とする（行頭に学習者の出力が付いていてもよい）。
