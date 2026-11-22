@@ -4,7 +4,7 @@
 <head><meta charset="utf-8"><title>Lists</title></head>
 <body>
 <div data-chapter="5">
-<section class="video-stage" data-layout="two-column" data-lesson-label="5-2 可変参照">
+<section class="video-stage" data-layout="two-column" data-lesson-label="5-3 借用の規則">
   <h1>参照のルールは 2 つだけ</h1>
   <div class="col">
     <h2>どちらか一方だけ</h2>
@@ -24,9 +24,9 @@
   <div class="col">
     <h2>コンパイラが確かめること</h2>
     <ol>
-      <li>参照は、値より長く生きない</li>
       <li>可変参照があるあいだ、ほかの参照を作らない</li>
-      <li>参照を通して所有権を移さない</li>
+      <li>不変参照があるあいだ、値を書き換えない</li>
+      <li>参照は、最後に使われたところで終わる</li>
     </ol>
   </div>
 </section>

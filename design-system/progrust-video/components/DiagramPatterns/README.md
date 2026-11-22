@@ -8,7 +8,7 @@ Rust の学習でよく使う図の定型（ムーブ、借用）で、同じ概
 - 変数は箱、ヒープのデータはセル。所有者の箱は主役（`fill-primary`）、ヒープのデータは補助（`fill-accent stroke-accent`）。
 - 所有者からデータへの矢印は `stroke-primary`（線 3）。
 - ムーブされた元の変数は無効の箱（`fill-surface stroke-muted` の破線）で、「使えない」と書く。元の矢印は `stroke-muted` の破線で残す。
-- 見本: LayoutDiagram（ムーブ）、FigureCaption（Box）、Camera（コードと並べたムーブ）。
+- 見本: LayoutDiagram（ムーブ）、FigureCaption（String）、Camera（コードと並べたムーブ）。
 
 ### 借用（参照）
 

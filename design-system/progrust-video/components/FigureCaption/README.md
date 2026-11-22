@@ -5,7 +5,7 @@
 ```tsx
 <figure className="diagram">
   <svg …>…</svg>
-  <figcaption>図: <code>let b = Box::new(5);</code> のあとのメモリ</figcaption>
+  <figcaption>図: <code>let s = String::from("hi");</code> のあとのメモリ</figcaption>
 </figure>
 ```
 

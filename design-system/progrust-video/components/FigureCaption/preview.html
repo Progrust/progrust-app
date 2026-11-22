@@ -3,26 +3,28 @@
 <html lang="ja">
 <head><meta charset="utf-8"><title>FigureCaption</title></head>
 <body>
-<div data-chapter="7">
-<section class="video-stage" data-layout="diagram" data-lesson-label="7-1 Box">
-  <h1>Box は、値をヒープに置く</h1>
+<div data-chapter="4">
+<section class="video-stage" data-layout="diagram" data-lesson-label="4-3 String 型">
+  <h1>String は、文字列をヒープに置く</h1>
   <figure class="diagram">
-    <svg viewBox="0 0 760 240" width="760" height="240" role="img" aria-label="スタックの b がヒープ上の 5 を指す">
+    <svg viewBox="0 0 760 240" width="760" height="240" role="img" aria-label="スタックの s がヒープ上の hi を指す">
       <rect class="fill-muted" x="0" y="0" width="320" height="240" rx="20" stroke="none"/>
       <rect class="fill-muted" x="440" y="0" width="320" height="240" rx="20" stroke="none"/>
       <text class="fill-muted" x="28" y="40" font-size="18">スタック</text>
       <text class="fill-muted" x="468" y="40" font-size="18">ヒープ</text>
       <rect class="fill-primary" x="40" y="104" width="240" height="80" rx="12" stroke="none"/>
-      <text class="code fill-on" x="72" y="144" dominant-baseline="central">b</text>
-      <text class="fill-on" x="256" y="144" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">Box</text>
+      <text class="code fill-on" x="72" y="144" dominant-baseline="central">s</text>
+      <text class="fill-on" x="256" y="144" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">String</text>
       <path class="stroke-primary" d="M280 144 H 534" stroke-width="3"/>
       <path class="stroke-primary" d="M526 136 L 536 144 L 526 152" stroke-width="3"/>
       <rect class="fill-accent stroke-accent" x="548" y="112" width="64" height="64" rx="8"/>
-      <text class="code fill-accent" x="580" y="144" text-anchor="middle" dominant-baseline="central">5</text>
+      <rect class="fill-accent stroke-accent" x="624" y="112" width="64" height="64" rx="8"/>
+      <text class="code fill-accent" x="580" y="144" text-anchor="middle" dominant-baseline="central">h</text>
+      <text class="code fill-accent" x="656" y="144" text-anchor="middle" dominant-baseline="central">i</text>
     </svg>
-    <figcaption>図: <code>let b = Box::new(5);</code> のあとのメモリ</figcaption>
+    <figcaption>図: <code>let s = String::from("hi");</code> のあとのメモリ</figcaption>
   </figure>
-  <p>b がスコープを抜けると、ヒープ上の 5 も一緒に破棄されます。</p>
+  <p>s がスコープを抜けると、ヒープ上の hi も一緒に破棄されます。</p>
 </section>
 </div>
 </body>

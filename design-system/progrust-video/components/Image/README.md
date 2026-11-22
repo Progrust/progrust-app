@@ -3,9 +3,9 @@
 ## 書き方
 
 ```tsx
-import cargoNew from "../assets/cargo-new.png";
+import cargoRun from "../assets/cargo-run.png";
 
-<img src={cargoNew} width={880} height={340} alt="cargo new hello と cargo run を実行したターミナル" />
+<img src={cargoRun} width={880} height={256} alt="cargo run を実行したターミナル" />
 ```
 
 - 画像の置き場所（レッスンの `assets/` か、全レッスン共通の `content/assets/`）と、import して使うこと、`alt` を付けることは仕様の `content-format/video/scenes.md` に従う。外部の URL は参照できない（仕様の `content-format/video/prohibited-code.md`）。

@@ -135,6 +135,7 @@
 * [ADR 0035](0035-single-difficulty-scale.md) - 問題生成の難易度と複雑さを、1 つの 5 段階の「難易度」にまとめる
 * [ADR 0109](0109-generated-exercise-layout-and-starter-rules.md) - 生成問題の複数ファイルを ch10-04 の完了後に限り、初期コードがビルドできることを検証に加え、判定方式の制約と修正の依頼の入力を生成の仕様に定める
 * [ADR 0126](0126-redo-validation-after-crates-are-prepared-again.md) - 生成問題の検証のビルドが初回準備のやり直しが要る失敗になったときは、検証の失敗とせず、初回準備が終わってから同じ出力の検証をやり直す
+* [ADR 0159](0159-validate-generated-primary-element-count.md) - 生成問題の主要素の件数（1〜2 件）を出力の検証で確かめ、外れたら修正を依頼する
 
 # 画面仕様
 

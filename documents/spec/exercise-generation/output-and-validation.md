@@ -33,7 +33,7 @@ JSON オブジェクト 1 つを出力させる（コードフェンスで囲ま
 ## 検証
 
 1. JSON として解析でき、必須フィールドがそろっている。
-2. 要素 ID が要素マスタに存在し、選択した要素がすべて `primary_elements` か `secondary_elements` に含まれている。
+2. 要素 ID が要素マスタに存在し、`primary_elements` が 1〜2 件で（[レッスン定義の形式（lesson.json）](../content-format/lesson-json.md)）、選択した要素がすべて `primary_elements` か `secondary_elements` に含まれている。
 3. `dependencies` が許可クレートの一覧にある。
 4. ファイルパスが [実行・提出時のプロジェクトの組み立て](../exercise-runner/project-assembly.md) の条件を満たし、`src/main.rs` がある。
 5. 問題文・解説に必須の見出し（[演習のファイル形式](../content-format/exercise.md)「問題文（problem.md）」・[演習のファイル形式](../content-format/exercise.md)「解説（explanation.md）」）がある。

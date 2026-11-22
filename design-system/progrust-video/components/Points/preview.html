@@ -5,7 +5,7 @@
 <body>
 <!-- コードブロックは、共通部品が出力する HTML の形で書いている（見本は動かない）。指定のしかたは README を見る -->
 <div data-chapter="5">
-<section class="video-stage" data-layout="two-column" data-lesson-label="5-1 &amp; で値を貸す">
+<section class="video-stage" data-layout="two-column" data-lesson-label="5-1 不変の参照">
   <h1>&amp; を付けると、所有権を渡さずに貸せる</h1>
   <div class="col">
     <pre><code class="language-rust"><span class="line"><span class="tk-k">fn</span> <span class="tk-f">len</span>(s: &amp;<span class="tk-t">String</span>) -&gt; <span class="tk-t">usize</span> {</span><span class="line">    s.<span class="tk-f">len</span>()</span><span class="line">}</span><span class="line"><span class="tk-k">let</span> s = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hello"</span>);</span><span class="line"><span class="tk-k">let</span> n = <span class="tk-f">len</span>(<span class="mark">&amp;s</span>);</span><span class="line"><span class="tk-m">println!</span>(<span class="tk-s">"{s} {n}"</span>);</span></code></pre>

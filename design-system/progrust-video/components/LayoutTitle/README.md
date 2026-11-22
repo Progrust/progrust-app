@@ -5,7 +5,7 @@
 ```tsx
 <div className="video-stage" data-layout="title">
   <LessonTitle />
-  <p>代入や関数呼び出しで、値の持ち主が移る仕組み</p>
+  <p>代入で、値の持ち主が移る仕組み</p>
 </div>
 ```
 
@@ -27,7 +27,7 @@
     <span className="title-deco-bar" /><span className="title-deco-bar" /><span className="title-deco-bar" />
   </div>
   <LessonTitle />
-  <p>代入や関数呼び出しで、値の持ち主が移る仕組み</p>
+  <p>代入で、値の持ち主が移る仕組み</p>
 </div>
 ```
 

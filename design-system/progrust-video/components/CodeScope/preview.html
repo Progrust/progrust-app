@@ -5,15 +5,15 @@
 <body>
 <!-- コードブロックは、共通部品が出力する HTML の形で書いている（見本は動かない）。指定のしかたは README を見る。上: ライト　下: ダーク -->
 <div class="vd-stack">
-<div data-theme="light" class="vd-theme"><div data-chapter="9">
-<section class="video-stage" data-layout="code" data-lesson-label="9-2 ライフタイム（ライト）">
+<div data-theme="light" class="vd-theme"><div data-chapter="5">
+<section class="video-stage" data-layout="code" data-lesson-label="5-4 ダングリング参照（ライト）">
   <h1>参照は、指す値より長く生きられない</h1>
   <pre><code class="language-rust" data-scopes><span class="scope" data-label="r" data-depth="0" style="--from:2;--to:7"></span><span class="scope" data-label="x" data-depth="1" style="--from:4;--to:6"></span><span class="line"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line">    <span class="tk-k">let</span> r;</span><span class="line">    {</span><span class="line">        <span class="tk-k">let</span> x = <span class="tk-n">5</span>;</span><span class="line">        r = <span class="error">&amp;x</span>;</span><span class="line">    }</span><span class="line">    <span class="tk-m">println!</span>(<span class="tk-s">"{<span class="mark">r</span>}"</span>);</span><span class="line">}</span></code></pre>
   <div class="callout ng">x の枠は 6 行目で終わるのに、r の枠は 7 行目まで続きます。7 行目で、破棄された x を r が指すので、借用している値が先に破棄されるエラー（E0597）になります。</div>
 </section>
 </div></div>
-<div data-theme="dark" class="vd-theme"><div data-chapter="9">
-<section class="video-stage" data-layout="code" data-lesson-label="9-2 ライフタイム（ダーク）">
+<div data-theme="dark" class="vd-theme"><div data-chapter="5">
+<section class="video-stage" data-layout="code" data-lesson-label="5-4 ダングリング参照（ダーク）">
   <h1>参照は、指す値より長く生きられない</h1>
   <pre><code class="language-rust" data-scopes><span class="scope" data-label="r" data-depth="0" style="--from:2;--to:7"></span><span class="scope" data-label="x" data-depth="1" style="--from:4;--to:6"></span><span class="line"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line">    <span class="tk-k">let</span> r;</span><span class="line">    {</span><span class="line">        <span class="tk-k">let</span> x = <span class="tk-n">5</span>;</span><span class="line">        r = <span class="error">&amp;x</span>;</span><span class="line">    }</span><span class="line">    <span class="tk-m">println!</span>(<span class="tk-s">"{<span class="mark">r</span>}"</span>);</span><span class="line">}</span></code></pre>
   <div class="callout ng">x の枠は 6 行目で終わるのに、r の枠は 7 行目まで続きます。7 行目で、破棄された x を r が指すので、借用している値が先に破棄されるエラー（E0597）になります。</div>
