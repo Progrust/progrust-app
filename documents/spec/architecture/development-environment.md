@@ -79,7 +79,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 
 - 動画のコードの禁止事項の検査は、教材チェックツールの lint で行う（[動画のコードの禁止事項](../content-format/video/prohibited-code.md)）。アプリの lint と同じ ESLint・stylelint の版を使う。
 - Clippy と rustfmt は、Rust ツールチェーンに付いているものを使う。
-- デザインシステムの写し（[画面の見た目とテーマ](../screens/appearance.md)「デザインシステムの写し」）は、lint と整形の対象から外す。
+- デザインシステムのファイル（`design-system/`。[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)）は、lint と整形の対象から外す。
 
 ## 開発で使うコマンド
 

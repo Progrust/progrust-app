@@ -1,0 +1,39 @@
+<!-- @dsCard group="色" height=1680 width=1280 subtitle="配置の基本形の見本をダークテーマで並べたもの（各部品の preview を読み込む）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>DarkTheme</title></head>
+<body>
+<div id="root" data-theme="dark" class="vd-theme"></div>
+<script>
+  var BASE = '../../components/';
+  var items = ['LayoutTitle', 'LayoutContent', 'LayoutTwoColumn', 'LayoutCode', 'LayoutDiagram', 'LayoutSummary', 'Callout', 'LayoutStatement'];
+  var root = document.getElementById('root');
+  var wrap = document.createElement('div');
+  wrap.style.display = 'grid';
+  wrap.style.gridTemplateColumns = '628px 628px';
+  wrap.style.gap = '24px';
+  root.appendChild(wrap);
+  items.forEach(function (name) {
+    var cell = document.createElement('div');
+    var cap = document.createElement('p');
+    cap.className = 'vd-cap';
+    cap.textContent = name;
+    var half = document.createElement('div');
+    half.className = 'vd-half';
+    cell.appendChild(cap);
+    cell.appendChild(half);
+    wrap.appendChild(cell);
+    fetch(BASE + name + '/preview.html').then(function (r) { return r.text(); }).then(function (html) {
+      var doc = new DOMParser().parseFromString(html, 'text/html');
+      var stage = doc.querySelector('.video-stage');
+      if (!stage) return;
+      var holder = stage.closest('[data-chapter]');
+      var scope = document.createElement('div');
+      if (holder) scope.setAttribute('data-chapter', holder.getAttribute('data-chapter'));
+      scope.appendChild(document.importNode(stage, true));
+      half.appendChild(scope);
+    }).catch(function () { cap.textContent = name + '（読み込めませんでした）'; });
+  });
+</script>
+</body>
+</html>

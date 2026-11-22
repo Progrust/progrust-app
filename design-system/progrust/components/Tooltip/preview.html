@@ -1,0 +1,13 @@
+<!-- @dsCard group="入力" height=170 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Tooltip</title></head>
+<body>
+<div class="pg-demo" style="align-items:flex-start;padding-bottom:110px">
+  <div style="position:relative">
+    <label class="pg-check"><input type="checkbox"><span class="pg-el-name" aria-describedby="tip1">可変参照と不変参照</span></label>
+    <div class="pg-tip" id="tip1" role="tooltip" style="top:calc(100% + 8px);left:0"><b>可変参照と不変参照</b>&amp;mut の参照がある間は、ほかの参照を持てない。データ競合をコンパイル時に防ぐための決まり。<br><code>borrow.mutable</code></div>
+  </div>
+</div>
+</body>
+</html>

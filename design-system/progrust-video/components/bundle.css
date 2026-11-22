@@ -1,0 +1,341 @@
+@import url("https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&family=Red+Hat+Mono:wght@400;500;600&display=swap");
+
+/* =====================================================================
+   Progrust Video — 動画のテーマ CSS（見本）
+   - 1. 章カラーの切り替え: アプリ側「Progrust」の bundle.css と同じ規則の写し
+   - 2〜10. 動画の部品（.video-stage の中だけに効く）
+   - 11. 動きの状態（共通部品が style で渡す CSS 変数から、その瞬間の見た目を決める）
+   - 0. 見本の表示用（vd- で始まる。アプリでは使わない）
+   値は tokens.css の変数だけを参照し、色や長さを直接書かない。
+   長さは 1280×720 の基準サイズでの px。
+   CSS のアニメーションとトランジションは使わない（絵は現在のフレームだけから決める。content-format.md §5.5）。
+   ===================================================================== */
+
+/* ===== 0. 見本の表示用（アプリでは使わない） ===== */
+html, body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+.vd-theme { background: var(--bg); color: var(--ink); }
+.vd-stack { display: flex; flex-direction: column; gap: 24px; }
+.vd-grid { display: grid; grid-template-columns: repeat(4, 320px); gap: 24px 16px; padding: 16px; }
+.vd-thumb { width: 320px; height: 180px; overflow: hidden; border-radius: 8px; box-shadow: 0 0 0 1px var(--line); }
+.vd-thumb .video-stage { transform: scale(.25); transform-origin: 0 0; }
+.vd-half { width: 628px; height: 353px; overflow: hidden; border-radius: 10px; box-shadow: 0 0 0 1px var(--line); }
+.vd-half .video-stage { transform: scale(.490625); transform-origin: 0 0; }
+.vd-pair { display: flex; gap: 24px; }
+.vd-cap { margin: 0 0 8px; font-size: 13px; font-weight: 700; line-height: 1.4; color: var(--muted); }
+.vd-band { padding: 16px; }
+.vd-grow { flex: 1; min-width: 0; }
+.vd-src { margin: 0; padding: 16px 20px; border-radius: 12px; background: var(--panel); color: var(--ink); font-family: var(--font-mono); font-size: 13px; line-height: 1.6; white-space: pre-wrap; }
+.vd-h { margin: 0 0 12px; font-size: 18px; font-weight: 800; color: var(--ink); }
+/* 寄せの見本: .vd-frame は動画の枠（1280×720）。中に .video-camera > .video-stage を置く */
+.vd-frame { position: relative; width: 1280px; height: 720px; overflow: hidden; background: var(--bg); }
+.vd-half .vd-frame { transform: scale(.490625); transform-origin: 0 0; }
+.vd-half .vd-frame .video-stage { transform: none; }
+/* 映す範囲の枠（見本の印） */
+.vd-range { position: absolute; box-sizing: border-box; border: 6px solid var(--ink-3); border-radius: 4px; pointer-events: none; }
+
+/* ===== 1. 章カラーの切り替え（アプリ側 bundle.css の写し） =====
+   [data-chapter="N"] の中では accent 系が第N章の色になる。data-theme は data-chapter の祖先に置く。 */
+[data-chapter="1"] { --accent: var(--chapter-1); --accent-soft: var(--chapter-1-soft); --accent-ink: var(--chapter-1-ink); --accent-line: var(--chapter-1-line); --on-accent: var(--on-chapter); }
+[data-chapter="2"] { --accent: var(--chapter-2); --accent-soft: var(--chapter-2-soft); --accent-ink: var(--chapter-2-ink); --accent-line: var(--chapter-2-line); --on-accent: var(--on-chapter); }
+[data-chapter="3"] { --accent: var(--chapter-3); --accent-soft: var(--chapter-3-soft); --accent-ink: var(--chapter-3-ink); --accent-line: var(--chapter-3-line); --on-accent: var(--on-chapter); }
+[data-chapter="4"] { --accent: var(--chapter-4); --accent-soft: var(--chapter-4-soft); --accent-ink: var(--chapter-4-ink); --accent-line: var(--chapter-4-line); --on-accent: var(--on-chapter); }
+[data-chapter="5"] { --accent: var(--chapter-5); --accent-soft: var(--chapter-5-soft); --accent-ink: var(--chapter-5-ink); --accent-line: var(--chapter-5-line); --on-accent: var(--on-chapter); }
+[data-chapter="6"] { --accent: var(--chapter-6); --accent-soft: var(--chapter-6-soft); --accent-ink: var(--chapter-6-ink); --accent-line: var(--chapter-6-line); --on-accent: var(--on-chapter); }
+[data-chapter="7"] { --accent: var(--chapter-7); --accent-soft: var(--chapter-7-soft); --accent-ink: var(--chapter-7-ink); --accent-line: var(--chapter-7-line); --on-accent: var(--on-chapter); }
+[data-chapter="8"] { --accent: var(--chapter-8); --accent-soft: var(--chapter-8-soft); --accent-ink: var(--chapter-8-ink); --accent-line: var(--chapter-8-line); --on-accent: var(--on-chapter); }
+[data-chapter="9"] { --accent: var(--chapter-9); --accent-soft: var(--chapter-9-soft); --accent-ink: var(--chapter-9-ink); --accent-line: var(--chapter-9-line); --on-accent: var(--on-chapter); }
+[data-chapter="10"] { --accent: var(--chapter-10); --accent-soft: var(--chapter-10-soft); --accent-ink: var(--chapter-10-ink); --accent-line: var(--chapter-10-line); --on-accent: var(--on-chapter); }
+[data-chapter="11"] { --accent: var(--chapter-11); --accent-soft: var(--chapter-11-soft); --accent-ink: var(--chapter-11-ink); --accent-line: var(--chapter-11-line); --on-accent: var(--on-chapter); }
+[data-chapter="12"] { --accent: var(--chapter-12); --accent-soft: var(--chapter-12-soft); --accent-ink: var(--chapter-12-ink); --accent-line: var(--chapter-12-line); --on-accent: var(--on-chapter); }
+
+/* ===== 2. ステージ（動画の土台。1280×720） ===== */
+.video-stage {
+  /* 主役・補助の色。既定（章外）は第4章の色。章の中（data-chapter="1"〜"12"）では下の規則で accent 系に切り替える。
+     .video-stage の上で宣言するのは、:root で解決した値には [data-chapter] の差し替えが届かないため */
+  --video-primary: var(--chapter-4);
+  --video-primary-ink: var(--chapter-4-ink);
+  --video-on-primary: var(--on-chapter);
+  --video-accent-fill: var(--chapter-4-soft);
+  --video-accent-ink: var(--chapter-4-ink);
+
+  position: relative;
+  box-sizing: border-box;
+  width: var(--video-width);
+  height: var(--video-height);
+  padding: var(--video-space-64) var(--video-space-72) var(--video-space-48);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: var(--video-space-24);
+  background: var(--video-bg);
+  color: var(--video-text);
+  font-family: var(--font-sans);
+  font-size: 24px;
+  line-height: 1.7;
+  font-weight: 400;
+  text-align: left;
+  -webkit-font-smoothing: antialiased;
+  line-break: strict;
+}
+.video-stage > * { margin: 0; flex: none; min-width: 0; }
+/* 章の中: data-chapter の値が 1〜12 のときだけ accent 系（開いている章の色）にする。
+   属性がない・値が 1〜12 以外（"none"・"13" など）のときは章外で、上の既定（第4章）のまま */
+[data-chapter="1"] .video-stage, .video-stage[data-chapter="1"],
+[data-chapter="2"] .video-stage, .video-stage[data-chapter="2"],
+[data-chapter="3"] .video-stage, .video-stage[data-chapter="3"],
+[data-chapter="4"] .video-stage, .video-stage[data-chapter="4"],
+[data-chapter="5"] .video-stage, .video-stage[data-chapter="5"],
+[data-chapter="6"] .video-stage, .video-stage[data-chapter="6"],
+[data-chapter="7"] .video-stage, .video-stage[data-chapter="7"],
+[data-chapter="8"] .video-stage, .video-stage[data-chapter="8"],
+[data-chapter="9"] .video-stage, .video-stage[data-chapter="9"],
+[data-chapter="10"] .video-stage, .video-stage[data-chapter="10"],
+[data-chapter="11"] .video-stage, .video-stage[data-chapter="11"],
+[data-chapter="12"] .video-stage, .video-stage[data-chapter="12"] {
+  --video-primary: var(--accent);
+  --video-primary-ink: var(--accent-ink);
+  --video-on-primary: var(--on-accent);
+  --video-accent-fill: var(--accent-soft);
+  --video-accent-ink: var(--accent-ink);
+}
+.video-stage aside.ai-note { display: none !important; }
+
+/* ===== 3. 文章 ===== */
+.video-stage h1 { margin: 0 0 4px; font-size: 44px; line-height: 1.3; font-weight: 800; letter-spacing: 0.01em; color: var(--video-heading); }
+.video-stage h2 { margin: 0; font-size: 30px; line-height: 1.45; font-weight: 800; color: var(--video-heading); }
+.video-stage * + h2 { margin-top: 8px; }
+.video-stage p { margin: 0; max-width: var(--video-measure); }
+.video-stage strong { font-weight: 700; color: var(--video-heading); }
+.video-stage em { font-style: normal; -webkit-text-emphasis: filled sesame var(--video-primary); text-emphasis: filled sesame var(--video-primary); -webkit-text-emphasis-position: over right; text-emphasis-position: over right; }
+.video-stage ul, .video-stage ol { margin: 0; padding: 0 0 0 1.25em; max-width: var(--video-measure); display: flex; flex-direction: column; gap: var(--video-space-12); line-height: 1.6; }
+.video-stage li { padding-left: .1em; }
+.video-stage ul > li::marker { color: var(--video-primary); }
+.video-stage ol > li::marker { color: var(--video-primary-ink); font-weight: 800; }
+.video-stage li > ul, .video-stage li > ol { margin-top: var(--video-space-8); gap: var(--video-space-8); font-size: 22px; }
+.video-stage li ul { list-style-type: "– "; }
+.video-stage li ul > li::marker { color: var(--video-muted); }
+
+/* インラインコード */
+.video-stage :not(pre) > code { font-family: var(--font-mono); font-size: .88em; font-weight: 500; padding: .06em .32em; border-radius: var(--video-radius-inline); background: var(--video-inline-code-bg); color: var(--video-heading); white-space: nowrap; }
+
+/* マーカー（蛍光ペン）: 文字の下 42% に帯 */
+.video-stage .mark { background: linear-gradient(transparent 58%, var(--video-mark) 58%); padding: 0 .1em; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* ===== 4. 色クラス（HTML の文字） ===== */
+.video-stage .c-primary { color: var(--video-primary-ink); font-weight: 700; }
+.video-stage .c-accent { color: var(--video-accent-ink); font-weight: 500; }
+.video-stage .c-ok { color: var(--video-ok-ink); font-weight: 700; }
+.video-stage .c-ng { color: var(--video-ng-ink); font-weight: 700; }
+.video-stage .c-muted { color: var(--video-muted); font-weight: 400; }
+/* 成功と誤りは色だけで伝えない: 先頭に Lucide の check / x を付ける */
+.video-stage .c-ok::before, .video-stage .c-ng::before { content: ""; display: inline-block; width: .82em; height: .82em; margin: 0 .22em 0 .04em; vertical-align: -.06em; background-color: currentColor; -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / contain no-repeat; }
+.video-stage .c-ng::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 6 6 18'/%3E%3Cpath d='m6 6 12 12'/%3E%3C/svg%3E"); }
+
+/* ===== 5. コードブロック（pre > code.language-rust ほか、language-text 以外） ===== */
+.video-stage pre { margin: 0; max-width: 100%; font-family: var(--font-mono); }
+.video-stage pre > code { display: block; box-sizing: border-box; font-family: var(--font-mono); font-size: 20px; line-height: 1.6; font-weight: 400; color: var(--video-code-text); white-space: pre; tab-size: 4; overflow: hidden; border-radius: var(--video-radius-block); }
+.video-stage pre > code:not(.language-text) { padding: 20px var(--video-space-28); counter-reset: video-ln; background: linear-gradient(to right, transparent calc(var(--video-code-gutter) - 2px), var(--video-code-rule) calc(var(--video-code-gutter) - 2px), var(--video-code-rule) var(--video-code-gutter), transparent var(--video-code-gutter)), var(--video-code-bg); }
+/* Rust 以外の言語（language-python など）も、色付けなしでコードブロックとして表示する */
+/* 共通部品 CodeBlock が 1 行ずつ span.line に分けて描く */
+.video-stage pre .line { position: relative; display: block; margin: 0 calc(-1 * var(--video-space-28)); padding: 0 var(--video-space-28); min-height: 1.6em; }
+/* 行番号: language-text 以外のコードブロックの全行。.line に CSS のカウンタで番号を付ける（::before は Diff の記号が使う）。
+   欄は左端から video-code-gutter（52px、右端の 2px が区切り線）、番号は右寄せ、本文は video-code-text-x（68px）から */
+.video-stage pre > code:not(.language-text) > .line { counter-increment: video-ln; padding-left: var(--video-code-text-x); }
+.video-stage pre > code:not(.language-text) > .line::after { content: counter(video-ln); position: absolute; top: 0; left: 0; box-sizing: border-box; width: var(--video-code-gutter); padding-right: var(--video-code-num-pad); text-align: right; font-family: var(--font-mono); font-size: 18px; line-height: 32px; font-weight: 400; font-style: normal; color: var(--video-line-number); pointer-events: none; }
+/* 共通部品 CodeBlock は、番号を持つ行に data-ln（表示する番号＝ファイルの行番号）を付ける。カウンタは data-ln がないときの予備 */
+.video-stage pre > code:not(.language-text) > .line[data-ln]::after { content: attr(data-ln); }
+/* シンタックスハイライト（アプリ側のトークンと同じ色） */
+.video-stage .tk-k { color: var(--code-keyword); }
+.video-stage .tk-s { color: var(--code-string); }
+.video-stage .tk-m { color: var(--code-macro); font-weight: 600; }
+.video-stage .tk-a { color: var(--code-macro); }
+.video-stage .tk-c { color: var(--video-code-comment); }
+.video-stage .tk-t { color: var(--code-type); }
+.video-stage .tk-n { color: var(--code-type); }
+.video-stage .tk-l { color: var(--code-type); font-style: italic; }
+.video-stage .tk-f { color: var(--code-function); }
+/* コードの中の mark: 文中と同じ黄の帯。帯の上では字句の色をやめて墨（video-code-text）・太さ 600 にする
+   （黄の帯の上では code-type などが 4.5:1 に届かないため） */
+.video-stage pre .mark { background: linear-gradient(transparent 58%, var(--video-mark) 58%); padding: 0; -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+.video-stage pre .mark, .video-stage pre .mark * { color: var(--video-code-text); font-weight: 600; font-style: normal; }
+/* コードの中のエラーの箇所: 赤い波線（波長 6px・振幅 2.5px・線 2px のタイルを横に並べる。1 文字＝12px で 2 つの山） */
+.video-stage pre .error { position: relative; }
+.video-stage pre .error::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 5px; background-color: var(--video-ng); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 5'%3E%3Cpath d='M0 3.6 C1.5 3.6 1.5 1.1 3 1.1 S4.5 3.6 6 3.6' fill='none' stroke='black' stroke-width='1.8'/%3E%3C/svg%3E") left top / 6px 5px repeat-x; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 6 5'%3E%3Cpath d='M0 3.6 C1.5 3.6 1.5 1.1 3 1.1 S4.5 3.6 6 3.6' fill='none' stroke='black' stroke-width='1.8'/%3E%3C/svg%3E") left top / 6px 5px repeat-x; pointer-events: none; }
+/* 生きている範囲・スコープの枠（共通部品 CodeBlock が code に data-scopes を付け、span.scope を差し込む）。
+   --from / --to は載せた何行目か、data-depth は入れ子の深さ（0 = 外側、1 = 内側） */
+.video-stage pre > code[data-scopes] { position: relative; }
+.video-stage pre > code:not(.language-text)[data-scopes] > .line { padding-left: var(--video-code-scope-text-x); }
+.video-stage pre .scope { position: absolute; box-sizing: border-box; pointer-events: none; left: var(--video-code-scope-x); right: 10px; top: calc(20px + (var(--from) - 1) * 32px); height: calc((var(--to) - var(--from) + 1) * 32px); border: 2px dashed var(--video-accent-ink); border-radius: 12px; }
+.video-stage pre .scope[data-depth="1"] { left: var(--video-code-scope-inner-x); right: 26px; top: calc(20px + (var(--from) - 1) * 32px + 3px); height: calc((var(--to) - var(--from) + 1) * 32px - 6px); border: 3px solid var(--video-primary); border-radius: 10px; }
+.video-stage pre .scope::after { content: attr(data-label); position: absolute; top: 0; right: 20px; transform: translateY(-58%); padding: 0 8px; background: var(--video-code-bg); font-family: var(--font-mono); font-size: 18px; line-height: 1.2; font-weight: 600; color: var(--video-accent-ink); white-space: nowrap; }
+.video-stage pre .scope[data-depth="1"]::after { right: 36px; color: var(--video-primary-ink); }
+/* Diff: code[data-diff]。台本の code_blocks の各行の先頭の「+」「-」「 」を、共通部品 CodeBlock が取り除いて .line に is-add / is-del を付ける */
+/* Diff の行の帯と左の線は、行番号の欄（区切り線を含む）の右から始める。欄は地の色のまま、区切り線は全行で見える */
+.video-stage pre > code:not(.language-text)[data-diff] > .line { padding-left: var(--video-code-diff-text-x); }
+.video-stage pre .line.is-add { background: linear-gradient(to right, transparent calc(var(--video-code-gutter) + 2px), var(--video-diff-add) calc(var(--video-code-gutter) + 2px), var(--video-diff-add) calc(var(--video-code-gutter) + 6px), var(--video-diff-add-soft) calc(var(--video-code-gutter) + 6px)); }
+.video-stage pre .line.is-del { background: linear-gradient(to right, transparent calc(var(--video-code-gutter) + 2px), var(--video-muted-stroke) calc(var(--video-code-gutter) + 2px), var(--video-muted-stroke) calc(var(--video-code-gutter) + 6px), var(--video-diff-del-soft) calc(var(--video-code-gutter) + 6px)); color: var(--video-muted); }
+/* 削除行には番号を付けない（番号は変更後のファイルの行番号） */
+.video-stage pre > code:not(.language-text) > .line.is-del { counter-increment: none; }
+.video-stage pre > code:not(.language-text) > .line.is-del::after { content: none; }
+.video-stage pre .line.is-del * { color: var(--video-muted); }
+.video-stage pre .line.is-add::before, .video-stage pre .line.is-del::before { position: absolute; left: var(--video-code-diff-sign-x); top: 0; font-weight: 600; }
+.video-stage pre .line.is-add::before { content: "+"; color: var(--video-diff-add-ink); }
+.video-stage pre .line.is-del::before { content: "\2212"; color: var(--video-muted); }
+
+/* ===== 6. 出力（pre > code.language-text） ===== */
+.video-stage pre > code.language-text { background: var(--video-output-bg); box-shadow: inset 0 0 0 2px var(--video-rule); padding: 18px var(--video-space-28); font-size: 18px; line-height: 1.55; color: var(--video-text); white-space: pre; }
+.video-stage pre > code.language-text .line { margin: 0 calc(-1 * var(--video-space-28)); padding: 0 var(--video-space-28); min-height: 1.55em; }
+/* rustc の出力の自動の色付け（共通部品 CodeBlock が行を解析して付ける） */
+.video-stage .out-error { color: var(--video-ng-ink); font-weight: 600; }
+.video-stage .out-warning { color: var(--video-warn); font-weight: 600; }
+.video-stage .out-caret { color: var(--video-ng-ink); font-weight: 600; }
+.video-stage .out-loc { color: var(--video-out-loc); font-weight: 600; }
+.video-stage .out-help { color: var(--video-out-help); font-weight: 600; }
+.video-stage .out-note { color: var(--video-heading); font-weight: 600; }
+
+/* ===== 7. 表 ===== */
+.video-stage table { align-self: flex-start; border-collapse: collapse; font-size: 20px; line-height: 1.5; color: var(--video-text); max-width: 100%; }
+.video-stage th { padding: 6px 20px 10px; text-align: left; vertical-align: bottom; font-size: 18px; line-height: 1.4; font-weight: 700; color: var(--ink-3); border-bottom: 2px solid var(--video-primary); white-space: nowrap; }
+.video-stage td { padding: 12px 20px; vertical-align: top; border-bottom: 1px solid var(--video-rule-soft); }
+.video-stage tbody tr:last-child td { border-bottom: 2px solid var(--video-rule); }
+.video-stage th:first-child, .video-stage td:first-child { padding-left: 0; }
+.video-stage th:last-child, .video-stage td:last-child { padding-right: 0; }
+
+/* ===== 8. 強調ボックス（div.callout） ===== */
+.video-stage .callout { position: relative; box-sizing: border-box; width: fit-content; max-width: 100%; padding: var(--video-space-16) var(--video-space-24) var(--video-space-16) 64px; border-radius: var(--video-radius-block); background: var(--video-info-fill); color: var(--video-heading); font-size: 22px; line-height: 1.65; }
+.video-stage .callout::before { content: ""; position: absolute; left: var(--video-space-24); top: 21px; width: 26px; height: 26px; background-color: var(--video-info-icon); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='M12 16v-4'/%3E%3Cpath d='M12 8h.01'/%3E%3C/svg%3E") center / contain no-repeat; }
+.video-stage .callout :not(pre) > code { background: var(--video-bg); }
+.video-stage .callout.tip { background: var(--video-tip-fill); }
+.video-stage .callout.tip::before { background-color: var(--video-tip-icon); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5'/%3E%3Cpath d='M9 18h6'/%3E%3Cpath d='M10 22h4'/%3E%3C/svg%3E"); }
+.video-stage .callout.warn { background: var(--video-warn-soft); }
+.video-stage .callout.warn::before { background-color: var(--video-warn); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3'/%3E%3Cpath d='M12 9v4'/%3E%3Cpath d='M12 17h.01'/%3E%3C/svg%3E"); }
+.video-stage .callout.ng { background: var(--video-ng-soft); }
+.video-stage .callout.ng::before { background-color: var(--video-ng-ink); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m15 9-6 6'/%3E%3Cpath d='m9 9 6 6'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m15 9-6 6'/%3E%3Cpath d='m9 9 6 6'/%3E%3C/svg%3E"); }
+.video-stage .callout.ok { background: var(--video-ok-soft); }
+.video-stage .callout.ok::before { background-color: var(--video-ok); -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E"); }
+
+/* ===== 9. 図と画像 ===== */
+.video-stage figure { margin: 0; }
+.video-stage figure.diagram { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 0; }
+/* svg の上で既定を決め、子に継承させる（子の属性で上書きできるように、図形には直接指定しない） */
+.video-stage figure.diagram svg { display: block; max-width: 100%; height: auto; overflow: visible; fill: none; stroke: var(--video-diagram-line); stroke-width: var(--video-stroke); stroke-linecap: round; stroke-linejoin: round; font-family: var(--font-sans); font-size: 20px; font-weight: 700; }
+:where(.video-stage figure.diagram svg) :where(text) { fill: var(--video-diagram-text); stroke: none; white-space: pre; }
+.video-stage .fill-primary { fill: var(--video-primary); }
+.video-stage .fill-accent { fill: var(--video-accent-fill); }
+.video-stage .fill-ok { fill: var(--video-ok); }
+.video-stage .fill-ng { fill: var(--video-ng); }
+.video-stage .fill-muted { fill: var(--video-muted-fill); }
+.video-stage .stroke-primary { stroke: var(--video-primary); }
+.video-stage .stroke-accent { stroke: var(--video-accent-ink); }
+.video-stage .stroke-ok { stroke: var(--video-ok); }
+.video-stage .stroke-ng { stroke: var(--video-ng); }
+.video-stage .stroke-muted { stroke: var(--video-muted-stroke); }
+/* text に付けた fill-* は、地の上で読める「文字の色」になる */
+.video-stage text.fill-primary, .video-stage tspan.fill-primary { fill: var(--video-primary-ink); }
+.video-stage text.fill-accent, .video-stage tspan.fill-accent { fill: var(--video-accent-ink); }
+.video-stage text.fill-ok, .video-stage tspan.fill-ok { fill: var(--video-ok-ink); }
+.video-stage text.fill-ng, .video-stage tspan.fill-ng { fill: var(--video-ng-ink); }
+.video-stage text.fill-muted, .video-stage tspan.fill-muted { fill: var(--video-muted); }
+.video-stage img { display: block; max-width: 100%; height: auto; border-radius: var(--video-radius-block); box-shadow: 0 0 0 2px var(--video-rule); }
+
+/* ===== レイアウト ===== */
+/* content（既定）: 2 のステージのまま上から積む */
+
+/* two-column */
+.video-stage[data-layout="two-column"] { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr); column-gap: var(--video-space-48); row-gap: var(--video-space-28); align-content: start; }
+.video-stage[data-layout="two-column"] > h1 { grid-column: 1 / -1; margin: 0; }
+.video-stage[data-layout="two-column"] > .col { display: flex; flex-direction: column; gap: var(--video-space-24); min-height: 0; }
+.video-stage[data-layout="two-column"] > .col > * { margin: 0; flex: none; }
+
+/* code */
+.video-stage[data-layout="code"] > pre { width: 100%; }
+
+/* diagram */
+.video-stage[data-layout="diagram"] > figure.diagram { flex: 1 1 auto; }
+
+/* summary */
+.video-stage[data-layout="summary"] > ul { list-style: none; padding: 0; gap: 0; max-width: none; }
+.video-stage[data-layout="summary"] > ul > li { position: relative; padding: 18px 0 18px 56px; font-size: 26px; line-height: 1.5; font-weight: 700; color: var(--video-heading); border-bottom: 1px solid var(--video-rule-soft); }
+.video-stage[data-layout="summary"] > ul > li:last-child { border-bottom: 0; }
+.video-stage[data-layout="summary"] > ul > li::before { content: ""; position: absolute; left: 0; top: 21px; width: 32px; height: 32px; background-color: var(--video-primary); -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") center / contain no-repeat; mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='10'/%3E%3Cpath d='m9 12 2 2 4-4'/%3E%3C/svg%3E") center / contain no-repeat; }
+
+/* title */
+.video-stage[data-layout="title"] { justify-content: center; padding: 72px 72px 96px; gap: var(--video-space-24); }
+.video-stage[data-layout="title"] > h1 { margin: 0; max-width: 784px; font-size: 64px; line-height: 1.2; }
+.video-stage[data-layout="title"] > p { max-width: 760px; font-size: 28px; line-height: 1.6; font-weight: 500; color: var(--video-text); }
+.video-stage[data-layout="title"]::after { content: ""; position: absolute; right: 96px; top: -20px; width: 176px; height: 476px; border-radius: var(--video-radius-panel); background: linear-gradient(var(--video-on-primary), var(--video-on-primary)) 28px calc(100% - 36px) / 36px 6px no-repeat, linear-gradient(var(--video-on-primary), var(--video-on-primary)) 68px calc(100% - 36px) / 36px 6px no-repeat, linear-gradient(var(--video-on-primary), var(--video-on-primary)) 108px calc(100% - 36px) / 36px 6px no-repeat, var(--video-primary); box-shadow: -120px 140px 0 0 var(--video-accent-fill); }
+
+/* ===== 10. 柱・statement・ポイント欄・コードのラベル・figcaption・図の追加クラス ===== */
+/* 柱（.video-stage の data-lesson-label / data-chapter-label。値は共通部品 useLesson() から得る） */
+.video-stage[data-lesson-label]:not([data-layout="title"])::before { content: attr(data-lesson-label); position: absolute; left: var(--video-space-72); top: 24px; padding-left: 22px; font-size: 18px; line-height: 1.4; font-weight: 700; color: var(--video-primary-ink); background: linear-gradient(var(--video-primary), var(--video-primary)) left center / 12px 12px no-repeat; }
+.video-stage[data-layout="title"][data-chapter-label]::before { content: attr(data-chapter-label); order: -1; padding-left: 26px; font-size: 22px; line-height: 1.4; font-weight: 700; color: var(--video-primary-ink); background: linear-gradient(var(--video-primary), var(--video-primary)) left center / 14px 14px no-repeat; }
+
+/* statement レイアウト（1 文を大きく） */
+.video-stage[data-layout="statement"] { justify-content: center; padding: 72px 72px 96px; }
+.video-stage[data-layout="statement"] > h1 { max-width: 1000px; font-size: 56px; line-height: 1.35; }
+.video-stage[data-layout="statement"] > h1::before { content: ""; display: block; width: 72px; height: 8px; margin-bottom: 32px; border-radius: 4px; background: var(--video-primary); }
+.video-stage[data-layout="statement"] > p { max-width: 1000px; font-size: 26px; color: var(--video-text); }
+
+/* div.points（ポイント欄） */
+.video-stage .points { box-sizing: border-box; padding: var(--video-space-24) var(--video-space-28); border-radius: var(--video-radius-panel); background: var(--video-accent-fill); display: flex; flex-direction: column; gap: var(--video-space-12); }
+.video-stage .points > h2 { margin: 0; font-size: 20px; line-height: 1.4; color: var(--video-primary-ink); }
+.video-stage .points > ul { list-style: none; padding: 0; gap: var(--video-space-12); font-size: 22px; line-height: 1.5; font-weight: 500; color: var(--video-heading); }
+.video-stage .points > ul > li { position: relative; padding-left: 24px; }
+.video-stage .points > ul > li::before { content: ""; position: absolute; left: 0; top: .52em; width: 10px; height: 10px; border-radius: 5px; background: var(--video-primary); }
+.video-stage .points :not(pre) > code { background: var(--video-bg); }
+
+/* コードのラベル（pre[data-label]） */
+.video-stage pre[data-label]::before { content: attr(data-label); display: block; margin: 0 0 var(--video-space-8); font-family: var(--font-sans); font-size: 18px; line-height: 1.3; font-weight: 700; color: var(--video-text-sub); }
+
+
+/* figure.diagram > figcaption */
+.video-stage figure.diagram > figcaption { margin-top: var(--video-space-12); font-size: 18px; line-height: 1.6; color: var(--video-text-sub); text-align: center; }
+
+/* 図の追加クラス */
+.video-stage .fill-on, .video-stage text.fill-on { fill: var(--video-on-primary); }
+.video-stage .stroke-on { stroke: var(--video-on-primary); }
+.video-stage .fill-surface { fill: var(--video-bg); }
+.video-stage text.code, .video-stage tspan.code { font-family: var(--font-mono); font-weight: 600; }
+
+/* ===== 11. 動きの状態（動画） =====
+   絵は現在のフレームだけから決める（content-format.md §5.5）。CSS のアニメーションとトランジションは使わない。
+   共通部品が style で渡す CSS 変数（進み具合 0〜1）から、その瞬間の見た目を決める。
+   変数を渡さないときは、動き終わった状態になる（既定は 1。--line-dim だけ 0）。 */
+
+/* 寄せ（共通部品 Camera）: ステージ（1280×720）のうち、左上が (--camera-x, --camera-y) で幅が 1280 ÷ --camera-scale の範囲を、
+   動画の枠いっぱいに映す。.video-camera の中に .video-stage を置く。寸法・書体・色は変えず、映す範囲だけを変える */
+.video-camera { position: absolute; left: 0; top: 0; width: var(--video-width); height: var(--video-height); transform-origin: 0 0; scale: var(--camera-scale, 1); translate: calc(var(--camera-x, 0) * var(--camera-scale, 1) * -1px) calc(var(--camera-y, 0) * var(--camera-scale, 1) * -1px); }
+
+/* マーカーを左から引く（--mark-p: 0 → 1）。文中でもコードの中でも同じ */
+.video-stage .mark, .video-stage pre .mark { background-size: calc(var(--mark-p, 1) * 100%) 100%; background-repeat: no-repeat; }
+/* エラーの波線を左から描く（--error-p: 0 → 1） */
+.video-stage pre .error::after { clip-path: inset(-2px calc((1 - var(--error-p, 1)) * 100%) -2px 0); }
+/* 範囲の枠が現れる（--scope-p: 0 → 1） */
+.video-stage pre .scope { opacity: var(--scope-p, 1); }
+
+/* 行を差し込む（--line-open: 0 → 1）・行を淡くする（--line-dim: 0 → 1）。
+   淡くした行の不透明度は video-dim-opacity。差し込みの途中の行（is-opening）は、高さを 0 から 1 行分まで開ける */
+.video-stage pre .line { opacity: calc(min(1, var(--line-open, 1) * 1.5) * (1 - (1 - var(--video-dim-opacity)) * var(--line-dim, 0))); }
+.video-stage pre .line.is-opening { height: calc(1.6em * var(--line-open, 1)); min-height: 0; overflow: hidden; }
+.video-stage pre > code.language-text .line.is-opening { height: calc(1.55em * var(--line-open, 1)); min-height: 0; }
+/* 入力中のカーソル（入力の途中の行の末尾に置く span.caret） */
+.video-stage pre .caret { display: inline-block; width: 2px; height: 1.15em; margin-right: -2px; vertical-align: -0.2em; background: var(--video-code-text); }
+
+/* 入りきらない行の右端をぼかして消す（--fade-right: 0 → 1。既定は 1）。コードブロックを包む要素に fade-right を付ける。
+   行の右端から 96px〜28px をぼかす。マスクの黒は、映す・隠すの指定で、画面の色ではない */
+.video-stage .fade-right pre .line { -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 96px), rgb(0 0 0 / calc(1 - var(--fade-right, 1))) calc(100% - 28px)); mask-image: linear-gradient(to right, #000 calc(100% - 96px), rgb(0 0 0 / calc(1 - var(--fade-right, 1))) calc(100% - 28px)); }
+
+/* callout の折り返しを、語の途中で 1〜2 字だけ次の行に送らないようにそろえる */
+.video-stage .callout { text-wrap: balance; }
+
+/* 表紙の飾りを動かすときは、要素として描く: .video-stage に deco-as-elements を付けて ::after の飾りを消し、
+   .title-deco-soft と .title-deco（中に .title-deco-bar を 3 つ）を置く。位置と色は ::after の飾りと同じ。
+   動かすのは translate・opacity と、棒の伸び具合（--bar-p: 0 → 1） */
+.video-stage[data-layout="title"].deco-as-elements::after { content: none; }
+.video-stage[data-layout="title"] > .title-deco, .video-stage[data-layout="title"] > .title-deco-soft { position: absolute; width: 176px; height: 476px; border-radius: var(--video-radius-panel); }
+.video-stage[data-layout="title"] > .title-deco { right: 96px; top: -20px; background: var(--video-primary); }
+.video-stage[data-layout="title"] > .title-deco-soft { right: 216px; top: 120px; background: var(--video-accent-fill); }
+.video-stage[data-layout="title"] > .title-deco > .title-deco-bar { position: absolute; left: 28px; bottom: 36px; width: calc(36px * var(--bar-p, 1)); height: 6px; background: var(--video-on-primary); }
+.video-stage[data-layout="title"] > .title-deco > .title-deco-bar:nth-child(2) { left: 68px; }
+.video-stage[data-layout="title"] > .title-deco > .title-deco-bar:nth-child(3) { left: 108px; }

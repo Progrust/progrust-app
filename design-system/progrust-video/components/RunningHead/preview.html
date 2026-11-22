@@ -1,0 +1,27 @@
+<!-- @dsCard group="レイアウト" height=440 width=1280 subtitle="柱（data-lesson-label / data-chapter-label。値は useLesson() から得る）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>RunningHead</title></head>
+<body>
+<div class="vd-pair vd-band">
+  <div>
+    <p class="vd-cap">title 以外: data-lesson-label="4-2 所有権のムーブ"（左上の柱）</p>
+    <div class="vd-half"><div data-chapter="4">
+      <section class="video-stage" data-layout="content" data-lesson-label="4-2 所有権のムーブ">
+        <h1>代入すると、所有権が移る</h1>
+        <p>String を代入しても、データは複製されません。持ち主だけが替わり、元の変数は使えなくなります。</p>
+      </section>
+    </div></div>
+  </div>
+  <div>
+    <p class="vd-cap">title: data-chapter-label="第4章 所有権"（h1 の上）</p>
+    <div class="vd-half"><div data-chapter="4">
+      <section class="video-stage" data-layout="title" data-chapter-label="第4章 所有権">
+        <h1>所有権のムーブ</h1>
+        <p>代入や関数呼び出しで、値の持ち主が移る仕組み</p>
+      </section>
+    </div></div>
+  </div>
+</div>
+</body>
+</html>

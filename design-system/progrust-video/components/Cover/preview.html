@@ -1,0 +1,66 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Progrust Video</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--bg); color:var(--ink); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .code { fill:var(--video-code-bg); }
+  .mk { fill:var(--video-mark); }
+  .ch4 { fill:var(--chapter-4); }
+  .ch5 { fill:var(--chapter-5); }
+  .ch1 { fill:var(--chapter-1); }
+  .deep { fill:var(--ink); }
+  .bar { fill:var(--ink-3); }
+  .bar.k { fill:var(--code-keyword); }
+  .bar.on { fill:var(--ink); }
+  .blk { rx:var(--video-radius-block); }
+  .pill { rx:16px; }
+  .ln { rx:4px; }
+  .words { position:absolute; left:var(--video-space-24); bottom:var(--video-space-24); max-width:440px; }
+  .name { margin:0; font-size:84px; line-height:.95; font-weight:800; letter-spacing:0.01em; color:var(--ink); }
+  .tag { margin:var(--video-space-12) 0 0 4px; font-size:14px; line-height:20px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      video-code-bg 336x208 (the code block every lesson leans on, largest) · chapter-4 80x232 slab bled off the top (the chapter colour a video takes) · chapter-5 and chapter-1 pills 80x32 (the next chapters) · ink pill 200x32 bleeding off the bottom (ink, the colour outside chapters)
+  arrangement a code block with a tall chapter slab beside it, satellites under the slab, gutters video-space-16
+  pattern     code lines from "コードの中の字句だけを span.mark で強調する": seven 8px bars at a video-space-24 pitch, keywords in code-keyword, one token underlaid with the video-mark band (the yellow highlighter)
+  scales      gutters video-space-16; line pitch video-space-24; corners video-radius-block on the code block and slab, 16 (half of 32) on the pills, 4 (half of 8) on the bars
+-->
+<rect class="code blk" x="16" y="24" width="336" height="208" rx="16"/>
+<rect class="bar k ln" x="40" y="48" width="24" height="8" rx="4"/>
+<rect class="bar ln" x="72" y="48" width="160" height="8" rx="4"/>
+<rect class="bar ln" x="64" y="72" width="40" height="8" rx="4"/>
+<rect class="bar ln" x="112" y="72" width="120" height="8" rx="4"/>
+<rect class="bar k ln" x="64" y="96" width="24" height="8" rx="4"/>
+<rect class="bar ln" x="96" y="96" width="200" height="8" rx="4"/>
+<rect class="bar on ln" x="64" y="124" width="24" height="8" rx="4"/>
+<rect class="mk" x="92" y="126" width="144" height="12"/>
+<rect class="bar on ln" x="96" y="124" width="136" height="8" rx="4"/>
+<rect class="bar ln" x="64" y="152" width="96" height="8" rx="4"/>
+<rect class="bar ln" x="40" y="176" width="16" height="8" rx="4"/>
+<rect class="bar k ln" x="40" y="200" width="24" height="8" rx="4"/>
+<rect class="bar ln" x="72" y="200" width="112" height="8" rx="4"/>
+<rect class="ch4 blk" x="368" y="-16" width="96" height="248" rx="16"/>
+<rect class="ch5 pill" x="368" y="248" width="44" height="32" rx="16"/>
+<rect class="ch1 pill" x="420" y="248" width="44" height="32" rx="16"/>
+<rect class="deep pill" x="16" y="248" width="336" height="32" rx="16"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Progrust<br>Video</h1>
+<p class="tag">章の色で描く、Rust 学習動画の部品と配色</p>
+</div>
+</div>
+</body>
+</html>

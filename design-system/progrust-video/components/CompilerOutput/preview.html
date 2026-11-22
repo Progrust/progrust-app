@@ -1,0 +1,15 @@
+<!-- @dsCard group="コード" height=720 width=1280 subtitle="ターミナルの出力（code_blocks の language が text）と、rustc の出力の自動の色付け" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>CompilerOutput</title></head>
+<body>
+<!-- 共通部品が出力する HTML の形（見本は動かない）。作者は rustc の出力を、台本の code_blocks にそのまま書く（README を見る） -->
+<div data-chapter="4">
+<section class="video-stage" data-layout="code" data-lesson-label="4-2 所有権のムーブ">
+  <h1>ムーブのあとに使うと、エラーになる</h1>
+  <pre><code class="language-rust"><span class="line"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line">    <span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line">    <span class="tk-k">let</span> s2 = <span class="mark">s1</span>;</span><span class="line">    <span class="tk-m">println!</span>(<span class="tk-s">"{<span class="error">s1</span>}"</span>);</span><span class="line">}</span></code></pre>
+  <pre><code class="language-text"><span class="line"><span class="out-error">error[E0382]</span><span class="out-note">: borrow of moved value: `s1`</span></span><span class="line"> <span class="out-loc">--&gt;</span> src/main.rs:4:16</span><span class="line"><span class="out-loc">  |</span></span><span class="line"><span class="out-loc">2 |</span>     let s1 = String::from("hi");</span><span class="line"><span class="out-loc">  |         -- move occurs because `s1` has type `String`, which does not implement the `Copy` trait</span></span><span class="line"><span class="out-loc">3 |</span>     let s2 = s1;</span><span class="line"><span class="out-loc">  |              -- value moved here</span></span><span class="line"><span class="out-loc">4 |</span>     println!("{s1}");</span><span class="line"><span class="out-loc">  |</span>                <span class="out-caret">^^ value borrowed here after move</span></span></code></pre>
+</section>
+</div>
+</body>
+</html>

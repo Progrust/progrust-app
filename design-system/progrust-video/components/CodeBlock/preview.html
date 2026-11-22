@@ -1,0 +1,15 @@
+<!-- @dsCard group="コード" height=720 width=1280 subtitle="共通部品 CodeBlock の Rust のコード（強調はマーカー、エラーは波線、変更は Diff）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>CodeBlock</title></head>
+<body>
+<!-- コードブロックは、共通部品が出力する HTML の形で書いている（見本は動かない）。指定のしかたは README を見る -->
+<div data-chapter="5">
+<section class="video-stage" data-layout="code" data-lesson-label="5-1 &amp; で値を貸す">
+  <h1>&amp; を付けると、所有権を渡さずに貸せる</h1>
+  <pre><code class="language-rust"><span class="line"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line">    <span class="tk-k">let</span> s = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hello"</span>);</span><span class="line">    <span class="tk-k">let</span> len = <span class="tk-f">calculate_length</span>(<span class="mark">&amp;s</span>);</span><span class="line">    <span class="tk-m">println!</span>(<span class="tk-s">"{s} の長さは {len}"</span>); <span class="tk-c">// s はまだ使える</span></span><span class="line">}</span><span class="line"></span><span class="line"><span class="tk-k">fn</span> <span class="tk-f">calculate_length</span>(text: <span class="mark">&amp;<span class="tk-t">String</span></span>) -&gt; <span class="tk-t">usize</span> {</span><span class="line">    text.<span class="tk-f">len</span>()</span><span class="line">}</span></code></pre>
+  <div class="callout tip">引数の型 <code>&amp;String</code> は「String への参照」という意味です。</div>
+</section>
+</div>
+</body>
+</html>

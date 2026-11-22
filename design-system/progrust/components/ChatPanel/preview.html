@@ -1,0 +1,37 @@
+<!-- @dsCard group="質疑応答" height=470 width=1440 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>ChatPanel</title></head>
+<body>
+<div style="display:flex;justify-content:flex-end;gap:16px;background:var(--bg);padding:0 16px">
+<aside class="pg-chat" aria-label="質問" style="height:470px">
+  <div class="pg-chat-head"><h2>質問する</h2><button class="pg-icon-btn pg-icon-btn--md" aria-label="質問パネルを閉じる"><svg class="pg-icon " aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18" /> <path d="m6 6 12 12" /></svg></button></div>
+  <div class="pg-chat-log">
+    <div class="pg-bubble pg-bubble--me">s2 = s1 のとき、"hello" はコピーされないのですか？</div>
+    <div class="pg-bubble pg-bubble--ai"><p>されません。コピーされるのはスタック上のポインタ・長さ・容量だけで、ヒープの "hello" は 1 つのままです。</p><p class="pg-stopped">（停止しました）</p></div>
+    <div class="pg-bubble pg-bubble--me">では clone() を使うと？</div>
+    <div class="pg-bubble-error" role="alert"><div class="pg-bubble-error-title"><svg class="pg-icon " aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10" /> <line x1="12" x2="12" y1="8" y2="12" /> <line x1="12" x2="12.01" y1="16" y2="16" /></svg>Claude の利用上限に達しました</div><span>時間をおいて再試行してください。</span><div><button class="pg-btn pg-btn--sm pg-btn--outline">再試行</button></div></div>
+  </div>
+  <form class="pg-composer" onsubmit="return false"><div class="pg-inbox"><textarea class="pg-textarea" rows="2" placeholder="この動画について質問" aria-label="この動画について質問"></textarea><div class="pg-inbox-foot"><span class="pg-inbox-hint">⌘ Enter で送信・Enter で改行</span><button class="pg-icon-btn pg-icon-btn--ink pg-icon-btn--sm" type="submit" aria-label="送信"><svg class="pg-icon " aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /> <path d="m12 5 7 7-7 7" /></svg></button></div></div></form>
+</aside>
+<aside class="pg-chat" aria-label="質問" style="height:470px">
+  <div class="pg-chat-head"><h2>質問する</h2></div>
+  <div class="pg-chat-log">
+    <div class="pg-bubble pg-bubble--me">clone() を使うと？</div>
+    <div class="pg-bubble pg-bubble--ai pg-bubble--wait"><svg class="pg-icon pg-spin" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>回答を作成しています</div>
+  </div>
+  <div class="pg-composer"><span class="pg-composer-note">回答中は次の質問を送れません。</span><button class="pg-btn pg-btn--outline"><svg class="pg-icon" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>停止</button></div>
+</aside>
+<aside class="pg-chat" aria-label="解説について質問" style="height:470px">
+  <div class="pg-chat-head"><h2>解説について質問する</h2></div>
+  <div class="pg-chat-empty"><b>質問できるようになりました</b><p>解説の内容や、提出したコードと模範解答の違い、より Rust らしい書き方について質問できます。</p></div>
+  <form class="pg-composer" onsubmit="return false"><div class="pg-inbox"><textarea class="pg-textarea" rows="2" placeholder="解説について質問" aria-label="解説について質問"></textarea><div class="pg-inbox-foot"><span class="pg-inbox-hint">⌘ Enter で送信・Enter で改行</span><button class="pg-icon-btn pg-icon-btn--ink pg-icon-btn--sm" type="submit" aria-label="送信"><svg class="pg-icon " aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /> <path d="m12 5 7 7-7 7" /></svg></button></div></div></form>
+</aside>
+<aside class="pg-chat" aria-label="質問" style="height:470px">
+  <div class="pg-chat-head"><h2>質問する</h2></div>
+  <div class="pg-chat-empty"><b>質問は使えません</b><p>Claude Code を導入すると、動画の内容について質問できます。</p></div>
+  <div class="pg-chat-unavailable" role="note"><svg class="pg-icon " aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /> <path d="M12 9v4" /> <path d="M12 17h.01" /></svg><div>Claude Code が見つかりません。<br><a href="#">導入手順を見る</a></div></div>
+</aside>
+</div>
+</body>
+</html>

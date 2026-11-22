@@ -1,0 +1,75 @@
+<!-- @dsCard height=288 -->
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>Progrust</title>
+<style>
+  html, body { margin:0; height:100%; }
+  body { background:var(--bg); color:var(--ink); font-family:var(--font-sans); overflow:hidden; }
+  .cover { position:relative; height:288px; overflow:hidden; }
+  .art { position:absolute; top:0; left:480px; width:480px; height:288px; overflow:hidden; }
+  .art svg { display:block; width:480px; height:288px; }
+  .ch4 { fill:var(--chapter-4); }
+  .ch1 { fill:var(--chapter-1); }
+  .ch2 { fill:var(--chapter-2); }
+  .deep { fill:var(--ink); }
+  .tint { fill:var(--chapter-4-soft); }
+  .pill.on { fill:var(--chapter-4); }
+  .pill.cut { fill:var(--bg); }
+  .sec { rx:var(--radius-section); }
+  .emb { rx:var(--radius-emblem); }
+  .pill { rx:var(--radius-bar); }
+  .words { position:absolute; left:var(--space-28); bottom:var(--space-28); max-width:440px; }
+  .name { margin:0; font-size:88px; line-height:.92; font-weight:800; letter-spacing:0.01em; color:var(--ink); }
+  .tag { margin:var(--space-12) 0 0 4px; font-size:14px; line-height:20px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="cover">
+<div class="art" aria-hidden="true">
+<svg viewBox="0 0 480 288" width="480" height="288">
+<!--
+  blocks      chapter-4 168x232 slab bled off the top (the chapter colour people meet first, largest) · chapter-4-soft 248x160 (the tint, the "next lesson" panel) · chapter-1 80x40 and chapter-2 72x40 pills (the chapters before it) · ink 280x40 pill bleeding off the right (the ink of nav and submit) — about 40% of 960x288
+  arrangement one tall chapter slab with a tint panel beside it and a row of pills under both, bottoms on one line space-16 above the edge, space-16 gutters
+  pattern     the slide-progress segments (36x6, space-4 gap, radius-bar), from "章が進むたびに画面の色が変わる": four rows on the tint, filled in chapter-4 like a staircase of finished slides, the rest cut out in bg
+  scales      gutters space-16; segment pitch 40 (36 + space-4), row pitch space-20; corners radius-section on the slab and tint, radius-emblem (half of 40) on the pills, radius-bar on the segments
+-->
+<rect class="ch4 sec" x="24" y="-16" width="168" height="232" rx="16"/>
+<rect class="tint sec" x="208" y="56" width="248" height="160" rx="16"/>
+<rect class="pill on" x="214" y="104" width="36" height="6" rx="3"/>
+<rect class="pill on" x="254" y="104" width="36" height="6" rx="3"/>
+<rect class="pill on" x="294" y="104" width="36" height="6" rx="3"/>
+<rect class="pill on" x="334" y="104" width="36" height="6" rx="3"/>
+<rect class="pill on" x="374" y="104" width="36" height="6" rx="3"/>
+<rect class="pill on" x="414" y="104" width="36" height="6" rx="3"/>
+<rect class="pill on" x="214" y="124" width="36" height="6" rx="3"/>
+<rect class="pill on" x="254" y="124" width="36" height="6" rx="3"/>
+<rect class="pill on" x="294" y="124" width="36" height="6" rx="3"/>
+<rect class="pill on" x="334" y="124" width="36" height="6" rx="3"/>
+<rect class="pill on" x="374" y="124" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="414" y="124" width="36" height="6" rx="3"/>
+<rect class="pill on" x="214" y="144" width="36" height="6" rx="3"/>
+<rect class="pill on" x="254" y="144" width="36" height="6" rx="3"/>
+<rect class="pill on" x="294" y="144" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="334" y="144" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="374" y="144" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="414" y="144" width="36" height="6" rx="3"/>
+<rect class="pill on" x="214" y="164" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="254" y="164" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="294" y="164" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="334" y="164" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="374" y="164" width="36" height="6" rx="3"/>
+<rect class="pill cut" x="414" y="164" width="36" height="6" rx="3"/>
+<rect class="ch1 emb" x="24" y="232" width="80" height="40" rx="20"/>
+<rect class="ch2 emb" x="120" y="232" width="72" height="40" rx="20"/>
+<rect class="deep emb" x="208" y="232" width="296" height="40" rx="20"/>
+</svg>
+</div>
+<div class="words">
+<h1 class="name">Progrust</h1>
+<p class="tag">章ごとに色が変わる、Rust の学習アプリの画面</p>
+</div>
+</div>
+</body>
+</html>

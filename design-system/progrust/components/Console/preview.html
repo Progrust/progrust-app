@@ -1,0 +1,30 @@
+<!-- @dsCard group="演習" height=300 width=760 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Console</title></head>
+<body>
+<div class="pg-demo pg-demo--col" data-chapter="4">
+<div class="pg-console" style="height:268px">
+  <div class="pg-console-bar">
+    <span style="padding-left:10px;font-size:14px;font-weight:800">コンソール</span>
+    <div class="pg-console-actions">
+      <span class="pg-running"><svg class="pg-icon pg-spin" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56" /></svg>実行中</span>
+      <button class="pg-btn" disabled><svg class="pg-icon" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"></path></svg>実行</button>
+      <button class="pg-btn" disabled>提出</button>
+      <button class="pg-btn pg-btn--outline"><svg class="pg-icon" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>停止</button>
+    </div>
+  </div>
+  <div class="pg-console-body">
+<pre class="pg-console-out"><span class="ansi-red ansi-bold">3 件中 1 件のテストが失敗しました。</span>詳しくは左上の「判定結果」を見てください。
+<span style="color:var(--muted)">── 実行  14:36 ──</span>
+<span class="ansi-green ansi-bold">   Compiling</span> exercise v0.1.0
+<span class="ansi-yellow ansi-bold">warning</span><span class="ansi-bold">: unused variable: `count`</span>
+ <span class="ansi-blue ansi-bold">--&gt;</span> src/main.rs:3:9
+<span class="ansi-green ansi-bold">    Finished</span> `dev` profile in 0.42s
+名前を入力してください:</pre>
+    <label class="pg-stdin"><span>&gt;</span><input aria-label="標準入力" value="ferris"><button class="pg-btn pg-btn--sm">入力終了</button></label>
+  </div>
+</div>
+</div>
+</body>
+</html>

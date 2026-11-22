@@ -6,7 +6,7 @@
 * [コマンドとイベントの入力・出力](commands/index.md) - フロントエンドとバックエンドの間のコマンドとイベントについて、共通の決まり（名前、JSON の書き方、エラーの形、要求を見分ける ID）と、分類ごとの入力・出力の形を定める。
 * [外部ツール（cargo・claude）への依存](external-tools.md) - cargo と claude の検出方法と必要条件、見つからない場合の動作、rustc のバージョンが足りない場合の案内、許可クレートの初回準備を定める。
 * [データの保存場所](data-locations.md) - 学習者データ（`{app_data_dir}`）とアプリ同梱データ（`{app_resources}`）のディレクトリ構成と、ファイルの書き込みの規則を定める。
-* [リポジトリ構成](repository.md) - リポジトリ直下のディレクトリ（`.github/workflows/`、`documents/`、`content/`、`prompts/`、`runner/`、`tools/`、`src/`、`src-tauri/`）とファイル（`package.json`、`package-lock.json`）の役割を定める。
+* [リポジトリ構成](repository.md) - リポジトリ直下のディレクトリ（`.github/workflows/`、`documents/`、`design-system/`、`content/`、`prompts/`、`runner/`、`tools/`、`src/`、`src-tauri/`）とファイル（`package.json`、`package-lock.json`）の役割を定める。
 * [開発環境と依存の版](development-environment.md) - アプリの開発に要るもの（Node.js、npm、Rust ツールチェーン、Xcode Command Line Tools）、パッケージマネージャー（npm）、主な依存の版と版の固定のしかた（`package.json`・`package-lock.json`・`Cargo.lock`）、版を上げるときに確かめること、アプリの識別子（`com.progrust.desktop`）と開発時の識別子、lint と整形の道具、開発時の起動・本番ビルドなどの npm のコマンドの名前を定める。
 * [Tauri の権限](tauri-permissions.md) - フロントエンドに許可する Tauri の権限（capabilities）の範囲、アセットプロトコルで読める範囲、外部サイトをアプリ内で表示しないことを定める。
 * [アーキテクチャの受け入れ条件](acceptance.md) - アーキテクチャの仕様を満たしたと判断する条件を定める。

@@ -1,0 +1,15 @@
+<!-- @dsCard group="文章" height=720 width=1280 subtitle="マーカー（クラス mark。文中の蛍光ペン）と、コードの中での表示" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Mark</title></head>
+<body>
+<!-- コードブロックは、共通部品が出力する HTML の形で書いている（見本は動かない）。指定のしかたは README を見る -->
+<div data-chapter="4">
+<section class="video-stage" data-layout="code" data-lesson-label="4-3 clone で複製する">
+  <h1>clone() はヒープのデータまで複製する</h1>
+  <p>ムーブではなく複製したいときは、<code>clone()</code> を<span class="mark">自分で呼んで明示します</span>。Rust は高くつく複製を勝手には行いません。</p>
+  <pre><code class="language-rust"><span class="line"><span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line"><span class="tk-k">let</span> s2 = s1.<span class="mark"><span class="tk-f">clone</span>()</span>;</span><span class="line"><span class="tk-m">println!</span>(<span class="tk-s">"{s1} {s2}"</span>); <span class="tk-c">// どちらも使える</span></span></code></pre>
+</section>
+</div>
+</body>
+</html>

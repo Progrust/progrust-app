@@ -1,0 +1,30 @@
+<!-- @dsCard group="ブロック" height=1464 width=1280 subtitle="div.callout の 5 種類: info（青）/ tip（紫）/ warn（橙）/ ng（赤）/ ok（緑）。章によらない固定の色" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Callout</title></head>
+<body>
+<!-- 見本の HTML。TSX での書き方は README を見る。上: ライト　下: ダーク -->
+<div class="vd-stack">
+<div data-theme="light" class="vd-theme"><div data-chapter="4">
+<section class="video-stage" data-layout="content" data-lesson-label="callout の 5 種類（ライト）">
+  <h1>clone() で複製すると、両方使える</h1>
+  <div class="callout info">String はヒープに文字列のデータを持ちます。</div>
+  <div class="callout tip">所有権を渡したくないときは、参照（<code>&amp;s</code>）を渡す方法もあります。</div>
+  <div class="callout warn">大きなデータを何度も <code>clone()</code> すると、処理が遅くなります。</div>
+  <div class="callout ng">ムーブしたあとの変数を使うと、ムーブ済みの値を使ったエラー（E0382）になります。</div>
+  <div class="callout ok"><code>s1.clone()</code> を代入すれば、s1 も s2 も使えます。</div>
+</section>
+</div></div>
+<div data-theme="dark" class="vd-theme"><div data-chapter="4">
+<section class="video-stage" data-layout="content" data-lesson-label="callout の 5 種類（ダーク）">
+  <h1>clone() で複製すると、両方使える</h1>
+  <div class="callout info">String はヒープに文字列のデータを持ちます。</div>
+  <div class="callout tip">所有権を渡したくないときは、参照（<code>&amp;s</code>）を渡す方法もあります。</div>
+  <div class="callout warn">大きなデータを何度も <code>clone()</code> すると、処理が遅くなります。</div>
+  <div class="callout ng">ムーブしたあとの変数を使うと、ムーブ済みの値を使ったエラー（E0382）になります。</div>
+  <div class="callout ok"><code>s1.clone()</code> を代入すれば、s1 も s2 も使えます。</div>
+</section>
+</div></div>
+</div>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!-- @dsCard group="図" height=720 width=1280 subtitle="箱・セル・領域・矢印・破線・✓ と × の描き方（寸法つき）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>DiagramShapes</title></head>
+<body>
+<div data-chapter="7">
+<section class="video-stage" data-layout="diagram" data-lesson-label="図の形（見本）">
+  <h1>図の形と寸法</h1>
+  <figure class="diagram">
+    <svg viewBox="0 0 1136 500" width="1136" height="500" role="img" aria-label="図で使う形の見本">
+      <!-- 左: 箱・主役の箱・セル・領域 -->
+      <rect x="0" y="0" width="240" height="72" rx="12"/>
+      <text class="code" x="28" y="36" dominant-baseline="central">x</text>
+      <text class="fill-muted" x="264" y="24" font-size="18" font-weight="500">箱: 高さ 72〜80・角丸 12</text>
+      <text class="fill-muted" x="264" y="52" font-size="18" font-weight="500">線 2（既定）・名前は左 28</text>
+
+      <rect class="fill-primary" x="0" y="104" width="240" height="72" rx="12" stroke="none"/>
+      <text class="code fill-on" x="28" y="140" dominant-baseline="central">s</text>
+      <text class="fill-on" x="216" y="140" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">所有者</text>
+      <text class="fill-muted" x="264" y="128" font-size="18" font-weight="500">主役: fill-primary・線なし</text>
+      <text class="fill-muted" x="264" y="156" font-size="18" font-weight="500">中の文字は fill-on</text>
+
+      <rect class="fill-accent stroke-accent" x="0" y="216" width="56" height="56" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="64" y="216" width="56" height="56" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="128" y="216" width="56" height="56" rx="8"/>
+      <rect class="fill-muted stroke-muted" x="192" y="216" width="56" height="56" rx="8" stroke-dasharray="8 6"/>
+      <text class="code fill-accent" x="28" y="244" text-anchor="middle" dominant-baseline="central">1</text>
+      <text class="code fill-accent" x="92" y="244" text-anchor="middle" dominant-baseline="central">2</text>
+      <text class="code fill-accent" x="156" y="244" text-anchor="middle" dominant-baseline="central">3</text>
+      <text class="fill-muted" x="264" y="236" font-size="18" font-weight="500">セル: 56〜64 角・角丸 8</text>
+      <text class="fill-muted" x="264" y="264" font-size="18" font-weight="500">間 8・空きは muted の破線</text>
+
+      <rect class="fill-muted" x="0" y="312" width="240" height="160" rx="20" stroke="none"/>
+      <text class="fill-muted" x="24" y="344" font-size="18">スタック</text>
+      <rect class="fill-surface" x="24" y="368" width="192" height="72" rx="12"/>
+      <text class="code" x="48" y="404" dominant-baseline="central">v</text>
+      <text class="fill-muted" x="264" y="368" font-size="18" font-weight="500">領域: fill-muted・角丸 20・線なし</text>
+      <text class="fill-muted" x="264" y="396" font-size="18" font-weight="500">名前は左上（18px）</text>
+      <text class="fill-muted" x="264" y="424" font-size="18" font-weight="500">中の箱は fill-surface</text>
+
+      <!-- 右: 矢印・曲がる矢印・破線・✓ × -->
+      <path class="stroke-primary" d="M640 36 H 840" stroke-width="3"/>
+      <path class="stroke-primary" d="M830 26 L 842 36 L 830 46" stroke-width="3"/>
+      <text class="fill-muted" x="872" y="24" font-size="18" font-weight="500">矢印: 線 3</text>
+      <text class="fill-muted" x="872" y="52" font-size="18" font-weight="500">矢じりは開いた山形・辺 10</text>
+
+      <path class="stroke-accent" d="M640 112 C 720 112 760 176 840 176" stroke-width="3"/>
+      <path class="stroke-accent" d="M830 166 L 842 176 L 830 186" stroke-width="3"/>
+      <text class="fill-muted" x="872" y="132" font-size="18" font-weight="500">曲げるときは 3 次曲線</text>
+      <text class="fill-muted" x="872" y="160" font-size="18" font-weight="500">端は水平に入る</text>
+
+      <path class="stroke-muted" d="M640 244 H 842" stroke-dasharray="8 6"/>
+      <text class="fill-muted" x="872" y="236" font-size="18" font-weight="500">破線 8 6: 無効・</text>
+      <text class="fill-muted" x="872" y="264" font-size="18" font-weight="500">まだない・目安</text>
+
+      <path class="stroke-ok" d="M872 436 l7 7 l14 -14" stroke-width="3"/>
+      <text class="fill-ok" x="902" y="436" dominant-baseline="central" font-size="18">正しい</text>
+      <path class="stroke-ng" d="M1002 429 l14 14 M1016 429 l-14 14" stroke-width="3"/>
+      <text class="fill-ng" x="1028" y="436" dominant-baseline="central" font-size="18">誤り</text>
+      <text class="fill-muted" x="872" y="476" font-size="18" font-weight="500">✓ と × は 14 角・線 3・文字の左</text>
+    </svg>
+  </figure>
+</section>
+</div>
+</body>
+</html>

@@ -5,7 +5,7 @@ description: "依存の版を技術検証で動いた系列にそろえて仕様
 ---
 
 - 日付: 2026-11-22
-- 関連仕様: [開発環境と依存の版](../spec/architecture/development-environment.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)、[データの保存場所](../spec/architecture/data-locations.md)「学習者データ（`{app_data_dir}`）」、[画面の見た目とテーマ](../spec/screens/appearance.md)「デザインシステムの写し」
+- 関連仕様: [開発環境と依存の版](../spec/architecture/development-environment.md)、[アプリの技術構成](../spec/architecture/tech-stack.md)、[データの保存場所](../spec/architecture/data-locations.md)「学習者データ（`{app_data_dir}`）」、[画面の見た目とテーマ](../spec/screens/appearance.md)「デザインシステムの CSS とアイコン」
 - 置き換え: なし
 
 ## 背景
@@ -86,4 +86,4 @@ Remotion の公式の資料は、`remotion` と `@remotion/` で始まるパッ�
 - 作者の Mac では、本番ビルドのアプリの学習者データは `~/Library/Application Support/com.progrust.desktop/` に、開発時の起動のデータは `~/Library/Application Support/com.progrust.desktop.dev/` に置かれる。開発時の起動で本番のデータを使って確かめたいときは、データを写して使う。
 - 識別子を後から変えると、それまでの学習者データを読まなくなる。変えるときは、データを移す手順も決める。
 - 開発時の識別子は、Tauri CLI の `--config` で設定のファイルを重ねて変える。Tauri の公式の資料は、`dev` と `build` で `--config` に JSON のファイルを渡すと、元の設定に重ねる（JSON Merge Patch）と書いている。このプロジェクトでは試していないので、実装のときに、開発時の起動の `{app_data_dir}` が別の場所になることを確かめる。
-- デザインシステムの写しは編集しない決まり（[画面の見た目とテーマ](../spec/screens/appearance.md)「デザインシステムの写し」）なので、lint と整形の対象から外す。
+- デザインシステムの写しは編集しない決まり（[画面の見た目とテーマ](../spec/screens/appearance.md)「デザインシステムの CSS とアイコン」）なので、lint と整形の対象から外す。

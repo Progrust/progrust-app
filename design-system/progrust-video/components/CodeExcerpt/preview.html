@@ -1,0 +1,24 @@
+<!-- @dsCard group="コード" height=1464 width=1280 subtitle="ファイルの途中から載せたコード（code_blocks の start_line。上: 118 行目から・3 桁と範囲の枠　下: 12 行目からの Diff）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>CodeExcerpt</title></head>
+<body>
+<!-- 共通部品が出力する HTML の形（各行の data-ln が表示する番号。見本は動かない）。指定のしかたは README を見る -->
+<div class="vd-stack">
+<div data-chapter="9">
+<section class="video-stage" data-layout="code" data-lesson-label="9-2 ライフタイム">
+  <h1>参照は、指す値より長く生きられない</h1>
+  <pre data-label="src/main.rs"><code class="language-rust" data-scopes><span class="scope" data-label="r" data-depth="0" style="--from:2;--to:7"></span><span class="scope" data-label="x" data-depth="1" style="--from:4;--to:6"></span><span class="line" data-ln="118"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line" data-ln="119">    <span class="tk-k">let</span> r;</span><span class="line" data-ln="120">    {</span><span class="line" data-ln="121">        <span class="tk-k">let</span> x = <span class="tk-n">5</span>;</span><span class="line" data-ln="122">        r = <span class="error">&amp;x</span>;</span><span class="line" data-ln="123">    }</span><span class="line" data-ln="124">    <span class="tk-m">println!</span>(<span class="tk-s">"{<span class="mark">r</span>}"</span>);</span><span class="line" data-ln="125">}</span></code></pre>
+  <div class="callout ng">x の枠は 123 行目で終わるのに、r の枠は 124 行目まで続きます。124 行目で、破棄された x を r が指すので、借用している値が先に破棄されるエラー（E0597）になります。</div>
+</section>
+</div>
+<div data-chapter="4">
+<section class="video-stage" data-layout="code" data-lesson-label="4-3 clone で複製する">
+  <h1>clone() を足すと、s1 も使い続けられる</h1>
+  <pre data-label="src/main.rs の変更"><code class="language-rust" data-diff><span class="line" data-ln="12">    <span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line is-del">    <span class="tk-k">let</span> s2 = s1;</span><span class="line is-add" data-ln="13">    <span class="tk-k">let</span> s2 = s1.<span class="mark"><span class="tk-f">clone</span>()</span>;</span><span class="line" data-ln="14">    <span class="tk-m">println!</span>(<span class="tk-s">"{s1} {s2}"</span>);</span></code></pre>
+  <div class="callout ok">13 行目のように <code>s1.clone()</code> を代入すると、ムーブ済みの値を使ったエラー（E0382）が出なくなります。</div>
+</section>
+</div>
+</div>
+</body>
+</html>

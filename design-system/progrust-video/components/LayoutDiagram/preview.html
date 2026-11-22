@@ -1,0 +1,45 @@
+<!-- @dsCard group="レイアウト" height=720 width=1280 subtitle="data-layout=&quot;diagram&quot; 図中心" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>LayoutDiagram</title></head>
+<body>
+<div data-chapter="4">
+<section class="video-stage" data-layout="diagram" data-lesson-label="4-2 所有権のムーブ">
+  <h1>代入すると、所有権が移る</h1>
+  <figure class="diagram">
+    <svg viewBox="0 0 1000 360" width="1000" height="360" role="img" aria-label="s1 は使えなくなり、s2 がヒープ上の hello を指す">
+      <!-- 領域: fill-muted・角丸 20・線なし -->
+      <rect class="fill-muted" x="0" y="0" width="400" height="360" rx="20" stroke="none"/>
+      <rect class="fill-muted" x="560" y="0" width="440" height="360" rx="20" stroke="none"/>
+      <text class="fill-muted" x="28" y="40" font-size="18">スタック</text>
+      <text class="fill-muted" x="588" y="40" font-size="18">ヒープ</text>
+      <!-- s1: ムーブ済み（無効）= fill-surface + stroke-muted の破線 -->
+      <rect class="fill-surface stroke-muted" x="40" y="72" width="320" height="80" rx="12" stroke-dasharray="8 6"/>
+      <text class="code fill-muted" x="72" y="112" dominant-baseline="central">s1</text>
+      <text class="fill-muted" x="336" y="112" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">使えない</text>
+      <path class="stroke-muted" d="M360 112 C 470 112 500 206 590 226" stroke-dasharray="8 6"/>
+      <!-- s2: 主役 = fill-primary、中の文字は fill-on -->
+      <rect class="fill-primary" x="40" y="216" width="320" height="80" rx="12" stroke="none"/>
+      <text class="code fill-on" x="72" y="256" dominant-baseline="central">s2</text>
+      <text class="fill-on" x="336" y="256" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">所有者</text>
+      <!-- 矢印: 線 3、矢じりは開いた山形（辺 10） -->
+      <path class="stroke-primary" d="M360 256 H 586" stroke-width="3"/>
+      <path class="stroke-primary" d="M578 248 L 588 256 L 578 264" stroke-width="3"/>
+      <!-- ヒープのデータ: 補助 = fill-accent + stroke-accent、文字は fill-accent -->
+      <rect class="fill-accent stroke-accent" x="600" y="224" width="64" height="64" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="676" y="224" width="64" height="64" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="752" y="224" width="64" height="64" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="828" y="224" width="64" height="64" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="904" y="224" width="64" height="64" rx="8"/>
+      <text class="code fill-accent" x="632" y="256" text-anchor="middle" dominant-baseline="central">h</text>
+      <text class="code fill-accent" x="708" y="256" text-anchor="middle" dominant-baseline="central">e</text>
+      <text class="code fill-accent" x="784" y="256" text-anchor="middle" dominant-baseline="central">l</text>
+      <text class="code fill-accent" x="860" y="256" text-anchor="middle" dominant-baseline="central">l</text>
+      <text class="code fill-accent" x="936" y="256" text-anchor="middle" dominant-baseline="central">o</text>
+    </svg>
+  </figure>
+  <p>String を代入しても、ヒープ上のデータは複製されません。持ち主だけが s2 に替わり、s1 は使えなくなります。</p>
+</section>
+</div>
+</body>
+</html>

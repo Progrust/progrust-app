@@ -1,0 +1,20 @@
+<!-- @dsCard group="ブロック" height=720 width=1280 subtitle="table・thead・tbody・tr・th・td" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Table</title></head>
+<body>
+<div data-chapter="5">
+<section class="video-stage" data-layout="content" data-lesson-label="5-2 可変参照">
+  <h1>参照には、不変と可変の 2 種類がある</h1>
+  <table>
+    <thead><tr><th>種類</th><th>書き方</th><th>同時に作れる数</th><th>値の書き換え</th></tr></thead>
+    <tbody>
+      <tr><td>不変参照</td><td><code>&amp;T</code></td><td>いくつでも</td><td><strong class="c-ng">できない</strong></td></tr>
+      <tr><td>可変参照</td><td><code>&amp;mut T</code></td><td>1 つだけ</td><td><strong class="c-ok">できる</strong></td></tr>
+    </tbody>
+  </table>
+  <p>不変参照と可変参照は、同じ値に対して同時には作れません。</p>
+</section>
+</div>
+</body>
+</html>

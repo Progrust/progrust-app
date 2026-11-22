@@ -1,0 +1,19 @@
+<!-- @dsCard group="レイアウト" height=720 width=1280 subtitle="data-layout=&quot;content&quot;（既定） 文章・箇条書き中心" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>LayoutContent</title></head>
+<body>
+<div data-chapter="4">
+<section class="video-stage" data-layout="content" data-lesson-label="4-1 所有権とは">
+  <h1>所有権には 3 つのルールがある</h1>
+  <p>Rust はガベージコレクタを使わず、次のルールでメモリを管理します。ルールを守っているかは、コンパイラがコンパイル時に検査します。</p>
+  <ol>
+    <li>値には、<strong>所有者</strong>と呼ばれる変数が 1 つだけある</li>
+    <li>所有者は、同時に 2 つ以上存在しない</li>
+    <li>所有者がスコープを抜けると、値は<span class="mark">自動で破棄される</span></li>
+  </ol>
+  <div class="callout info">Java や Python のように、実行中に不要なメモリを探して回収する仕組みはありません。</div>
+</section>
+</div>
+</body>
+</html>

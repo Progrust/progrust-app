@@ -1,0 +1,35 @@
+<!-- @dsCard group="文章" height=720 width=1280 subtitle="ul・ol・li（2 段まで）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Lists</title></head>
+<body>
+<div data-chapter="5">
+<section class="video-stage" data-layout="two-column" data-lesson-label="5-2 可変参照">
+  <h1>参照のルールは 2 つだけ</h1>
+  <div class="col">
+    <h2>どちらか一方だけ</h2>
+    <ul>
+      <li>不変参照（<code>&amp;T</code>）をいくつでも
+        <ul>
+          <li>読むだけなら同時に何人でも</li>
+        </ul>
+      </li>
+      <li>可変参照（<code>&amp;mut T</code>）を 1 つだけ
+        <ul>
+          <li>書き換えるのは 1 人だけ</li>
+        </ul>
+      </li>
+    </ul>
+  </div>
+  <div class="col">
+    <h2>コンパイラが確かめること</h2>
+    <ol>
+      <li>参照は、値より長く生きない</li>
+      <li>可変参照があるあいだ、ほかの参照を作らない</li>
+      <li>参照を通して所有権を移さない</li>
+    </ol>
+  </div>
+</section>
+</div>
+</body>
+</html>

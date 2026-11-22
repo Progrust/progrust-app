@@ -155,7 +155,8 @@
 * [ADR 0143](0143-no-lesson-list-button-in-video-only-controls.md) - 動画のみのレッスンの動画画面に「レッスン一覧へ」を置かず、「演習へ」の位置には「次のレッスンへ」だけを置く
 * [ADR 0144](0144-top-page-shows-nine-chapters.md) - トップページの章ごとの完了率を、次にやるべきレッスンの章を含む 9 章ぶんだけ表示する
 * [ADR 0150](0150-screen-layouts-follow-ui-design-until-implemented.md) - 各画面のレイアウトは画面デザイン「Progrust UIデザイン」に従い、画面を実装した後は実装を正とする
-* [ADR 0151](0151-copy-design-system-css-into-repository.md) - デザインシステムの CSS とアイコンをリポジトリに写して使い、写しは編集せず、デザインシステムを変えてから取り直す
+* [ADR 0152](0152-keep-design-system-files-in-repository.md) - デザインシステム「Progrust」「Progrust Video」のファイルをリポジトリの `design-system/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは読み取り専用の表示用として残し、変えるときはリポジトリを直してからアーティファクトへ送り、画面デザインの中の写しを取り直して、中身を確かめる
+* [ADR 0153](0153-load-design-system-css-directly-from-repository.md) - アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す
 
 # 非機能要件
 
@@ -193,3 +194,4 @@
 * [ADR 0037](0037-bundle-content-and-auto-update.md) - 教材をアプリに同梱し、GitHub Releases と Tauri の自動更新でアプリごと配布する
 * [ADR 0038](0038-no-os-code-signing-for-now.md) - OS のコード署名を当面行わない
 * [ADR 0047](0047-separate-slide-design-system.md) - スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める
+* [ADR 0151](0151-copy-design-system-css-into-repository.md) - デザインシステムの CSS とアイコンをリポジトリに写して使い、写しは編集せず、デザインシステムを変えてから取り直す

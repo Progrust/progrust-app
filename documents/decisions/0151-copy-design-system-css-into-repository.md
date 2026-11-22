@@ -2,6 +2,8 @@
 type: Decision
 title: "ADR 0151"
 description: "デザインシステムの CSS とアイコンをリポジトリに写して使い、写しは編集せず、デザインシステムを変えてから取り直す"
+status: deprecated
+superseded_by: /decisions/0153-load-design-system-css-directly-from-repository.md
 ---
 
 - 日付: 2026-11-22

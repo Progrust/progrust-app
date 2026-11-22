@@ -1,0 +1,65 @@
+<!-- @dsCard group="動き" height=1180 width=1280 subtitle="寄せ（共通部品 Camera）。上: 1.16 倍で映った動画の枠　下: 寄せる前のステージ（1 倍）と、映す範囲" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>Camera</title></head>
+<body>
+<!-- 見本は動かない（ムーブを説明している 1 フレーム）。コードブロックは、共通部品が出力する HTML の形で書いている。
+     位置を決めて組んだ画面: 見出しは上 64、コードは左 72・上 149・幅 480、図は左 584・上 149・幅 492、callout は左 584・上 453 -->
+<div class="vd-stack">
+  <div data-chapter="4"><div class="vd-frame" id="zoomed"></div></div>
+  <div class="vd-band">
+    <p class="vd-cap">寄せる前のステージ（1 倍）。枠の線が、(22, 0) から 1.16 倍で映す範囲（1103×621）</p>
+    <div class="vd-half"><div data-chapter="4" id="whole"></div></div>
+  </div>
+</div>
+<template id="tpl">
+<section class="video-stage" data-lesson-label="4-3 所有権のムーブ">
+  <h1>代入すると、所有権が移る</h1>
+  <pre style="position:absolute;left:72px;top:149px;width:480px"><code class="language-rust"><span class="line" data-ln="1"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line" data-ln="2">    <span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line" data-ln="3">    <span class="tk-k">let</span> s2 = <span class="mark">s1</span>;</span><span class="line" data-ln="4">}</span></code></pre>
+  <figure class="diagram" style="position:absolute;left:584px;top:149px;width:492px">
+    <svg viewBox="0 0 492 280" width="492" height="280" role="img" aria-label="s1 が持っていた文字列の所有権が、s2 に移った図">
+      <rect class="fill-muted" x="0" y="0" width="232" height="280" rx="20" stroke="none"/>
+      <rect class="fill-muted" x="296" y="0" width="196" height="280" rx="20" stroke="none"/>
+      <text class="fill-muted" x="28" y="40" font-size="18">スタック</text>
+      <text class="fill-muted" x="324" y="40" font-size="18">ヒープ</text>
+      <rect class="fill-accent stroke-accent" x="324" y="116" width="64" height="64" rx="8"/>
+      <rect class="fill-accent stroke-accent" x="400" y="116" width="64" height="64" rx="8"/>
+      <text class="code fill-accent" x="356" y="148" text-anchor="middle" dominant-baseline="central">h</text>
+      <text class="code fill-accent" x="432" y="148" text-anchor="middle" dominant-baseline="central">i</text>
+      <rect class="fill-surface stroke-muted" x="24" y="64" width="184" height="72" rx="12" stroke-dasharray="8 6"/>
+      <rect class="fill-primary" x="24" y="160" width="184" height="72" rx="12" stroke="none"/>
+      <path class="stroke-muted" d="M208 100 C 256 100, 264 140, 310 140" stroke-dasharray="8 6"/>
+      <path class="stroke-primary" d="M208 196 C 256 196, 264 156, 310 156" stroke-width="3"/>
+      <path class="stroke-primary" d="M302 148 L 312 156 L 302 164" stroke-width="3"/>
+      <text class="code fill-muted" x="52" y="100" dominant-baseline="central">s1</text>
+      <text class="fill-muted" x="188" y="100" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">使えない</text>
+      <text class="code fill-on" x="52" y="196" dominant-baseline="central">s2</text>
+      <text class="fill-on" x="188" y="196" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">所有者</text>
+    </svg>
+  </figure>
+  <div class="callout info" style="position:absolute;left:584px;top:453px;max-width:492px">所有権が移ることを、<span class="mark">ムーブ</span>と呼びます。</div>
+</section>
+</template>
+<script>
+  var tpl = document.getElementById('tpl');
+  // 上: Camera が出力する形（.video-camera に、映す範囲を CSS 変数で渡す）
+  var camera = document.createElement('div');
+  camera.className = 'video-camera';
+  camera.style.setProperty('--camera-x', '22');
+  camera.style.setProperty('--camera-y', '0');
+  camera.style.setProperty('--camera-scale', '1.16');
+  camera.appendChild(tpl.content.firstElementChild.cloneNode(true));
+  document.getElementById('zoomed').appendChild(camera);
+  // 下: 寄せる前のステージと、映す範囲の枠（見本用の印）
+  var whole = tpl.content.firstElementChild.cloneNode(true);
+  var range = document.createElement('div');
+  range.className = 'vd-range';
+  range.style.left = '22px';
+  range.style.top = '0px';
+  range.style.width = (1280 / 1.16) + 'px';
+  range.style.height = (720 / 1.16) + 'px';
+  whole.appendChild(range);
+  document.getElementById('whole').appendChild(whole);
+</script>
+</body>
+</html>

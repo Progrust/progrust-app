@@ -1,0 +1,20 @@
+<!-- @dsCard group="コード" height=720 width=1280 subtitle="コードのラベル（code_blocks の label。ファイル名・言語名）と、Rust 以外の言語のコード" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>CodeLabel</title></head>
+<body>
+<div data-chapter="4">
+<section class="video-stage" data-layout="two-column" data-lesson-label="4-2 所有権のムーブ">
+  <h1>Python と Rust で、代入の意味が違う</h1>
+  <div class="col">
+    <pre data-label="Python"><code class="language-python"><span class="line">s1 = "hi"</span><span class="line">s2 = s1</span><span class="line">print(s1)  # hi と表示される</span></code></pre>
+    <div class="callout info">2 つの変数が同じ値を指します</div>
+  </div>
+  <div class="col">
+    <pre data-label="Rust（src/main.rs）"><code class="language-rust"><span class="line"><span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line"><span class="tk-k">let</span> s2 = s1;</span><span class="line"><span class="tk-m">println!</span>(<span class="tk-s">"{<span class="error">s1</span>}"</span>); <span class="tk-c">// s1 はムーブ済み</span></span></code></pre>
+    <div class="callout ng">値の持ち主が s2 に移り、s1 は使えません</div>
+  </div>
+</section>
+</div>
+</body>
+</html>

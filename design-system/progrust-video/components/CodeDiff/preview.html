@@ -1,0 +1,24 @@
+<!-- @dsCard group="コード" height=1464 width=1280 subtitle="Diff（code_blocks の diff。行の先頭に + / - を書く。章によらない固定の色と + / − の記号。番号は変更後の行番号）" -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>CodeDiff</title></head>
+<body>
+<!-- コードブロックは、共通部品が出力する HTML の形で書いている（見本は動かない）。指定のしかたは README を見る。上: ライト　下: ダーク -->
+<div class="vd-stack">
+<div data-theme="light" class="vd-theme"><div data-chapter="4">
+<section class="video-stage" data-layout="code" data-lesson-label="Diff（ライト）">
+  <h1>clone() を足すと、s1 も使い続けられる</h1>
+  <pre data-label="src/main.rs の変更"><code class="language-rust" data-diff><span class="line" data-ln="1"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line" data-ln="2">    <span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line is-del">    <span class="tk-k">let</span> s2 = s1;</span><span class="line is-add" data-ln="3">    <span class="tk-k">let</span> s2 = s1.<span class="mark"><span class="tk-f">clone</span>()</span>;</span><span class="line" data-ln="4">    <span class="tk-m">println!</span>(<span class="tk-s">"{s1} {s2}"</span>);</span><span class="line" data-ln="5">}</span></code></pre>
+  <div class="callout ok">3 行目のように <code>s1.clone()</code> を代入すると、ムーブ済みの値を使ったエラー（E0382）が出なくなります。</div>
+</section>
+</div></div>
+<div data-theme="dark" class="vd-theme"><div data-chapter="4">
+<section class="video-stage" data-layout="code" data-lesson-label="Diff（ダーク）">
+  <h1>clone() を足すと、s1 も使い続けられる</h1>
+  <pre data-label="src/main.rs の変更"><code class="language-rust" data-diff><span class="line" data-ln="1"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line" data-ln="2">    <span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line is-del">    <span class="tk-k">let</span> s2 = s1;</span><span class="line is-add" data-ln="3">    <span class="tk-k">let</span> s2 = s1.<span class="mark"><span class="tk-f">clone</span>()</span>;</span><span class="line" data-ln="4">    <span class="tk-m">println!</span>(<span class="tk-s">"{s1} {s2}"</span>);</span><span class="line" data-ln="5">}</span></code></pre>
+  <div class="callout ok">3 行目のように <code>s1.clone()</code> を代入すると、ムーブ済みの値を使ったエラー（E0382）が出なくなります。</div>
+</section>
+</div></div>
+</div>
+</body>
+</html>

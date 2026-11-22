@@ -1,0 +1,36 @@
+<!-- @dsCard group="演習" height=330 width=760 -->
+<!doctype html>
+<html lang="ja">
+<head><meta charset="utf-8"><title>EditorFrame</title></head>
+<body>
+<div class="pg-demo pg-demo--col">
+<div class="pg-editor">
+  <div class="pg-editor-bar" role="tablist">
+    <button class="pg-filetab" role="tab" aria-selected="true">src/main.rs</button>
+    <button class="pg-filetab" role="tab" aria-selected="false">src/geo.rs</button>
+    <button class="pg-icon-btn pg-icon-btn--sm" aria-label="ファイルを追加"><svg class="pg-icon " aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /> <path d="M12 5v14" /></svg></button>
+    <button class="pg-btn pg-btn--sm pg-btn--text">初期コードに戻す</button>
+  </div>
+  <div class="pg-editor-code"><div class="pg-ln">1
+2
+3
+4
+5
+6
+7
+8
+9
+10</div><div><span class="tk-k">fn</span> <span class="tk-f">main</span>() {
+    <span class="tk-k">let</span> name = <span class="tk-t">String</span>::from(<span class="tk-s">"ferris"</span>);
+    <span class="tk-k">let</span> name = <span class="tk-f">add_suffix</span>(name);
+    <span class="tk-m">println!</span>(<span class="tk-s">"{name}"</span>);
+}
+
+<span class="tk-k">fn</span> <span class="tk-f">add_suffix</span>(<span class="tk-k">mut</span> s: <span class="tk-t">String</span>) -&gt; <span class="tk-t">String</span> {
+    s.push_str(<span class="tk-s">"_the_crab"</span>);  <span class="tk-c">// 末尾に付け足す</span>
+    s
+}</div></div>
+</div>
+</div>
+</body>
+</html>
