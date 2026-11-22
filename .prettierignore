@@ -1,0 +1,2 @@
+# design-system/ はデザインシステムのファイルで、整形の対象から外す（ADR 0153）。
+design-system/

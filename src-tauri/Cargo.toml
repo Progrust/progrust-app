@@ -1,0 +1,28 @@
+[package]
+name = "progrust"
+version = "0.1.0"
+description = "Rust プログラミング学習アプリ"
+edition = "2024"
+rust-version = "1.100.0"
+publish = false
+
+[lib]
+# バイナリ（main.rs）と名前が重ならないように、ライブラリの名前に `_lib` を付ける。
+name = "progrust_lib"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "~2.12.7", features = [] }
+
+[dev-dependencies]
+serde_json = "1"
+
+# Tauri の資料の推奨に合わせる: https://tauri.app/concept/size/#cargo-configuration
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "abort"
+strip = true

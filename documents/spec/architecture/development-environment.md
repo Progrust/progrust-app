@@ -47,6 +47,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 - `remotion` と `@remotion/` で始まるパッケージは、すべて同じ版にし、パッチまで固定する。`package.json` には、範囲の記号（`^`・`~`）を付けずに表の版を書く。
 - `tauri` の crate と `@tauri-apps/api`・`@tauri-apps/cli` は、同じ系列にそろえる。Tauri のプラグインを使うときは、`tauri-plugin-{名前}` の crate と `@tauri-apps/plugin-{名前}` を、互いに同じ系列にそろえる。
 - 表にない依存（ほかのライブラリ、テストと整形の道具、間接の依存）は、入れたときの版をロックファイルで固定する。`package.json` と `Cargo.toml` の範囲は、npm と cargo の既定の書き方（`^`）でよい。
+- 表にない依存を入れるときは、`engines` が上の表の Node.js の系列を含み、表の依存の版と peer 依存が合う版を選ぶ。
 - 許可クレート（`runner/`）の版は、この文書の対象にしない（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)）。
 
 ## 版を上げるとき

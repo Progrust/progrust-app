@@ -6,3 +6,9 @@ work
 
 # Python
 __pycache__/
+
+# 依存とビルドの出力
+node_modules/
+dist/
+src-tauri/target/
+src-tauri/gen/
