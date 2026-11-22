@@ -1,0 +1,18 @@
+#!/bin/sh
+# テスト用の偽の rustc（spec/non-functional/testing.md「偽の claude と偽の cargo」）。
+#
+# テストでは、この原本を指すシンボリックリンクを一時ディレクトリに置いて使う
+# （tests/fake_tools/mod.rs）。`--version` が返す版は、実行ファイル（リンク）と同じ
+# ディレクトリの rust-version に書く。ほかの引数には対応しない。
+
+dir=${0%/*}
+if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+  IFS= read -r version < "$dir/rust-version" || [ -n "$version" ] || {
+    echo "fake rustc: $dir/rust-version を読めない" >&2
+    exit 1
+  }
+  echo "rustc $version (0123456789 2026-01-01)"
+  exit 0
+fi
+echo "fake rustc: 対応していない引数: $*" >&2
+exit 1
