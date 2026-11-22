@@ -90,7 +90,7 @@
 * [ADR 0018](0018-no-lesson-order-lock.md) - レッスンの受講順を制限せず、推奨レッスンを示す
 * [ADR 0019](0019-autosave-drafts.md) - 編集中のコードを自動保存し、正解した後は初期コードから始める
 * [ADR 0071](0071-save-playback-position-by-sentence.md) - 動画の再生位置を文の単位で保存し、開き直したら続きから見られるようにする
-* [ADR 0119](0119-video-only-lessons-for-background-knowledge.md) - 周辺知識だけを扱うレッスンを演習のない動画のみのレッスンにし、動画を最後まで再生したら完了とする
+* [ADR 0119](0119-video-only-lessons-for-background-knowledge.md) - 周辺知識だけを扱うレッスンを演習のない動画のみのレッスンにし、動画を最後まで再生したら完了とする（ADR 0143 で、動画画面に「レッスン一覧へ」を表示しないことにした）
 
 # Claude Code 連携
 
@@ -148,6 +148,7 @@
 * [ADR 0103](0103-keep-console-output-tail.md) - 演習画面のコンソールに残す出力を末尾の 64K 文字までとし、超えた分は古いほうから消す
 * [ADR 0116](0116-bundle-upstream-variable-fonts-unmodified.md) - 書体のファイルを、配布元が配っている可変フォントのまま、変換もサブセット化もせずにアプリに同梱する
 * [ADR 0142](0142-remove-sentence-jump-from-video-controls.md) - 動画の再生操作から、前後の文への移動をなくす
+* [ADR 0143](0143-no-lesson-list-button-in-video-only-controls.md) - 動画のみのレッスンの動画画面に「レッスン一覧へ」を置かず、「演習へ」の位置には「次のレッスンへ」だけを置く
 
 # 非機能要件
 
