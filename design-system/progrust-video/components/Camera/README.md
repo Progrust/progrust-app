@@ -26,7 +26,7 @@
 
 ```html
 <div class="video-camera" style="--camera-x:22; --camera-y:0; --camera-scale:1.16">
-  <div class="video-stage" data-lesson-label="4-3 所有権のムーブ">…</div>
+  <div class="video-stage" data-lesson-label="4-4 所有権のムーブ">…</div>
 </div>
 ```
 

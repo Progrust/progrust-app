@@ -1,7 +1,7 @@
 ---
 type: Convention
 title: "ドキュメントの検査"
-description: "`documents/` を変更したときに `python3 tools/check-documents.py` を実行すること、出力と終了コードの読み方、検査する項目と規則名、指摘の直し方、公式の validator（`tools/okf/validate.py`）の置き場所を定める。"
+description: "`documents/` を変更したときに `python3 tools/check-documents.py` を実行すること、仕様の文書を移したり名前や小見出しを変えたりしたときに `python3 tools/design-system.py check` も実行すること、出力と終了コードの読み方、検査する項目と規則名、指摘の直し方、公式の validator（`tools/okf/validate.py`）の置き場所を定める。"
 ---
 
 ## 実行
@@ -12,6 +12,7 @@ description: "`documents/` を変更したときに `python3 tools/check-documen
 python3 tools/check-documents.py
 ```
 
+- `documents/spec/` の文書を移したり、名前や小見出しを変えたりしたときは、`python3 tools/design-system.py check` も実行し、指摘をすべて直す。デザインシステムの README などからの、仕様への参照を確かめるためである（[デザインシステムのファイルと変更の手順](../spec/screens/design-system-files.md)「検査」）。この検査は `documents/` の外のファイルを見るので、`check-documents.py` では見つからない。
 - 引数を省略すると、リポジトリの `documents/` を検査する。引数にバンドルのルートを渡すと、そのディレクトリを検査する。
 - 標準ライブラリだけで動く（Python 3.9 以降）。
 - Claude Code では、応答を終えるときに、リポジトリの `.claude/settings.json` の hook が `--hook` を付けてこの検査を実行する。指摘があると、応答を終える前に指摘が示されるので、すべて直す。hook は、同じ応答の中で2回目以降は検査しない。指摘が残っていないことは、上のコマンドを自分で実行して確かめる。

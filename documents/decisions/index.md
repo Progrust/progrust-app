@@ -157,6 +157,8 @@
 * [ADR 0150](0150-screen-layouts-follow-ui-design-until-implemented.md) - 各画面のレイアウトは画面デザイン「Progrust UIデザイン」に従い、画面を実装した後は実装を正とする
 * [ADR 0152](0152-keep-design-system-files-in-repository.md) - デザインシステム「Progrust」「Progrust Video」のファイルをリポジトリの `design-system/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは読み取り専用の表示用として残し、変えるときはリポジトリを直してからアーティファクトへ送り、画面デザインの中の写しを取り直して、中身を確かめる
 * [ADR 0153](0153-load-design-system-css-directly-from-repository.md) - アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す
+* [ADR 0154](0154-check-spec-references-in-design-systems.md) - デザインシステムの検査で、README などからインラインコードのパスで書いた仕様とデザインシステムの文書への参照が、実在する文書と小見出しを指すことを確かめる
+* [ADR 0155](0155-check-video-design-system-copied-tokens.md) - デザインシステムの検査で、「Progrust Video」の `video-` で始まらないトークンと書体の族が、「Progrust」と同じ名前・同じ値であることを確かめる
 
 # 非機能要件
 

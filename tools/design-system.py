@@ -7,6 +7,8 @@
     check [<名前> ...]
         規則どおりに置かれているかを検査する。名前を省くと、design-system/ の直下で
         design-system.json を持つディレクトリをすべて検査する。
+        README などから仕様への参照（`screens/appearance.md`「見出し」の形）は、
+        --spec-root（既定: リポジトリの documents/spec/）の文書と照らす。
     tokens-css <名前> [--write]
         tokens.json から tokens.css の内容を作り、標準出力に出す。--write で tokens.css に書く。
     files <名前>
@@ -42,6 +44,7 @@ import sys
 from typing import Dict, List, Optional, Tuple
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DEFAULT_SPEC_ROOT = os.path.join(REPO_ROOT, "documents", "spec")
 
 INDEX_NAME = "design-system.json"
 # アーティファクトの仕組み上、assets/<Group>/ の下でもテキストは普通の公開ファイルで、
@@ -248,12 +251,138 @@ class Finding:
         return "%s: %s: %s" % (self.path, self.rule, self.message)
 
 
-def check_system(root: str, name: str) -> List[Finding]:
+# --- spec-ref: README などから仕様の文書への参照 ---
+# 参照は、インラインコードのパスに「小見出し」を続けた形で書く（例: 仕様の `screens/appearance.md`「書体のファイル」）。
+# `/` を含むパスは documents/spec/ からのパスとする。ただし、デザインシステムの中のディレクトリ
+# （LOCAL_DIRS）で始まるパスと、`/` を含まないパス（`chapter-colors.md`）は、デザインシステムの中のファイルとする。
+
+SPEC_REF_RE = re.compile(r"`([A-Za-z0-9_./-]+\.md)`((?:「[^」]+」)*)")
+SPEC_HEADING_RE = re.compile(r"「([^」]+)」")
+LOCAL_DIRS = ("components/", "assets/")
+FENCE_RE = re.compile(r"^\s*(```|~~~)")
+# 仕様の小見出しは、`## 見出し` か、1 行だけの太字（`**見出し**`）で書かれている
+MD_HEADING_RE = re.compile(r"^#{1,6}\s+(.+?)\s*#*\s*$")
+BOLD_HEADING_RE = re.compile(r"^\*\*(.+?)\*\*\s*$")
+
+
+def headings_of(path: str) -> set:
+    found = set()
+    in_fence = False
+    with open(path, encoding="utf-8") as f:
+        for line in f:
+            if FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            m = MD_HEADING_RE.match(line) or BOLD_HEADING_RE.match(line)
+            if m:
+                found.add(m.group(1).strip())
+    return found
+
+
+def check_spec_refs(ds_dir: str, spec_root: str, add) -> None:
+    """規則 spec-ref: 仕様とデザインシステムの文書への参照が、実在する文書と小見出しを指すこと。"""
+    cache: Dict[str, set] = {}
+    for rel in walk(ds_dir):
+        if not rel.endswith(".md"):
+            continue
+        in_fence = False
+        with open(os.path.join(ds_dir, rel), encoding="utf-8") as f:
+            lines = f.read().split("\n")
+        for number, line in enumerate(lines, 1):
+            if FENCE_RE.match(line):
+                in_fence = not in_fence
+                continue
+            if in_fence:
+                continue
+            for m in SPEC_REF_RE.finditer(line):
+                target = m.group(1)
+                where = "%s:%d" % (rel, number)
+                if ".." in target.split("/") or target.startswith("/"):
+                    add(where, "spec-ref", "参照 `%s` に `..` か先頭の `/` があります。仕様は `documents/spec/` からのパス、デザインシステムの中のファイルはこのディレクトリからのパスで書いてください" % target)
+                    continue
+                local = "/" not in target or target.startswith(LOCAL_DIRS)
+                base = ds_dir if local else spec_root
+                path = os.path.join(base, *target.split("/"))
+                if not os.path.isfile(path):
+                    if local:
+                        add(where, "spec-ref", "参照 `%s` のファイルが、このデザインシステムの中にありません。実在するファイルを指すように直してください" % target)
+                    else:
+                        add(where, "spec-ref", "参照 `%s` の仕様の文書が `documents/spec/` にありません。仕様のファイルを移したり名前を変えたりしたときは、参照も直してください" % target)
+                    continue
+                if path not in cache:
+                    cache[path] = headings_of(path)
+                for heading in SPEC_HEADING_RE.findall(m.group(2)):
+                    if heading not in cache[path]:
+                        add(where, "spec-ref", "参照 `%s`「%s」の小見出しが、その文書にありません。小見出しを変えたときは、参照も直してください" % (target, heading))
+
+
+# --- copied-token: 動画のデザインシステムが持つ、画面のデザインシステムの値の写し ---
+# 写しを持つデザインシステムの名前 -> (写しの元の名前, 写しでないトークンの名前の接頭辞)
+# 写しの元を正とし、写しの側は、接頭辞の無いトークンと書体の族（type.families）を、元と同じ名前・同じ値で持つ。
+COPIES = {"progrust-video": ("progrust", "video-")}
+
+
+def token_values(d: dict) -> Dict[str, object]:
+    """tokens.json の、type 以外の族のトークンを {名前: 値} にする。"""
+    out: Dict[str, object] = {}
+    for key, fam in d.items():
+        if key in ("name", "version", "type"):
+            continue
+        if isinstance(fam, dict) and isinstance(fam.get("tokens"), list):
+            for t in fam["tokens"]:
+                if isinstance(t, dict) and isinstance(t.get("name"), str):
+                    out[t["name"]] = t.get("value")
+    return out
+
+
+def check_copied_tokens(root: str, name: str, add) -> None:
+    """規則 copied-token: 写しのトークンと書体の族が、写しの元と同じ値であること。"""
+    if name not in COPIES:
+        return
+    source, own_prefix = COPIES[name]
+    try:
+        with open(os.path.join(root, name, "tokens.json"), encoding="utf-8") as f:
+            copy = json.load(f)
+    except (OSError, ValueError):
+        return  # tokens-css の規則が指摘する
+    if not isinstance(copy, dict):
+        return  # tokens-css の規則が指摘する
+    try:
+        with open(os.path.join(root, source, "tokens.json"), encoding="utf-8") as f:
+            orig = json.load(f)
+        if not isinstance(orig, dict):
+            raise ValueError("最上位が JSON のオブジェクトではありません")
+    except (OSError, ValueError) as e:
+        add("tokens.json", "copied-token", "写しの元の「%s」の tokens.json が読めないので、写しを確かめられません（%s）。写しの元を直してください" % (source, e))
+        return
+    src_tokens = token_values(orig)
+    for tname, value in sorted(token_values(copy).items()):
+        if tname.startswith(own_prefix):
+            continue
+        if tname not in src_tokens:
+            add("tokens.json", "copied-token", "トークン `%s` は「%s」の写しのはずですが、「%s」にありません。このシステムだけで決める値なら名前を `%s` で始め、写しなら「%s」に足してから合わせてください" % (tname, source, source, own_prefix, source))
+        elif value != src_tokens[tname]:
+            add("tokens.json", "copied-token", "トークン `%s` の値が、写しの元の「%s」と違います（ここ: %s、元: %s）。「%s」を正として、ここの値を合わせてください" % (tname, source, json.dumps(value, ensure_ascii=False), json.dumps(src_tokens[tname], ensure_ascii=False), source))
+    src_fam = (orig.get("type") or {}).get("families") or {}
+    for fam, stack in sorted(((copy.get("type") or {}).get("families") or {}).items()):
+        if fam not in src_fam:
+            add("tokens.json", "copied-token", "書体の族 `%s` が、写しの元の「%s」にありません。書体は「%s」の写しです。「%s」に足してから合わせてください" % (fam, source, source, source))
+        elif stack != src_fam[fam]:
+            add("tokens.json", "copied-token", "書体の族 `%s` の値が、写しの元の「%s」と違います（ここ: %s、元: %s）。「%s」を正として、ここの値を合わせてください" % (fam, source, json.dumps(stack, ensure_ascii=False), json.dumps(src_fam[fam], ensure_ascii=False), source))
+
+
+def check_system(root: str, name: str, spec_root: str = "") -> List[Finding]:
     ds_dir = os.path.join(root, name)
     findings: List[Finding] = []
+    spec_root = spec_root or DEFAULT_SPEC_ROOT
 
     def add(rel: str, rule: str, message: str) -> None:
         findings.append(Finding(display(os.path.join(ds_dir, rel)), rule, message))
+
+    check_spec_refs(ds_dir, spec_root, add)
+    check_copied_tokens(root, name, add)
 
     # tokens-css
     css_path = os.path.join(ds_dir, "tokens.css")
@@ -372,13 +501,16 @@ def find_systems(root: str) -> List[str]:
     )
 
 
-def cmd_check(root: str, names: List[str]) -> int:
+def cmd_check(root: str, names: List[str], spec_root: str = "") -> int:
     if not names:
         names = find_systems(root)
+    spec_root = spec_root or DEFAULT_SPEC_ROOT
+    if not os.path.isdir(spec_root):
+        raise UsageError("仕様のディレクトリ `%s` がありません。" % spec_root)
     all_findings: List[Finding] = []
     for name in names:
         require_system(root, name)
-        all_findings.extend(check_system(root, name))
+        all_findings.extend(check_system(root, name, spec_root))
     all_findings.sort(key=lambda f: (f.path, f.rule, f.message))
     for f in all_findings:
         print(f.format())
@@ -536,6 +668,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.required = True
     c = sub.add_parser("check", help="規則どおりに置かれているかを検査する（名前を省くと、索引を持つ全部）")
     c.add_argument("names", nargs="*", metavar="名前")
+    c.add_argument("--spec-root", default=DEFAULT_SPEC_ROOT, metavar="DIR", help="仕様への参照を照らす仕様のディレクトリ（既定: リポジトリの documents/spec/）")
     t = sub.add_parser("tokens-css", help="tokens.json から tokens.css の内容を作って標準出力に出す")
     t.add_argument("name", metavar="名前")
     t.add_argument("--write", action="store_true", help="標準出力ではなく tokens.css に書く")
@@ -557,7 +690,7 @@ def main(argv: List[str]) -> int:
         if not os.path.isdir(root):
             raise UsageError("design-system のディレクトリ `%s` がありません。" % root)
         if args.cmd == "check":
-            return cmd_check(root, args.names)
+            return cmd_check(root, args.names, args.spec_root)
         if args.cmd == "tokens-css":
             return cmd_tokens_css(root, args.name, args.write)
         if args.cmd == "files":

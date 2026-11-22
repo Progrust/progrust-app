@@ -418,7 +418,7 @@ Progrust Video は、Progrust のレッスンの動画（仕様書 `content-form
 <div data-theme="light">                                   <!-- アプリ -->
   <div data-chapter="4">                                   <!-- アプリ（章外では data-chapter を付けない） -->
     <div class="video-camera" style="--camera-x:22; --camera-y:0; --camera-scale:1.16">  <!-- Camera -->
-      <div class="video-stage" data-lesson-label="4-3 所有権のムーブ">…</div>             <!-- シーン -->
+      <div class="video-stage" data-lesson-label="4-4 所有権のムーブ">…</div>             <!-- シーン -->
     </div>
   </div>
 </div>
@@ -433,10 +433,10 @@ Progrust Video は、Progrust のレッスンの動画（仕様書 `content-form
    - 入力（`typed`）: その行の文字を、先頭から進み具合の分だけ出力する。入力の途中（0 より大きく 1 未満）は、末尾に `<span class="caret"></span>` を置く。
    - 淡くする（`dim`）: `span.line` に `style="--line-dim:1"` を渡す。
 8. **出力**（`language` が `text`）: `pre > code.language-text`。1 行ずつ `span.line` に入れる。rustc の出力は行を解析して `out-*` の `span` で囲む（CompilerOutput）。行の動き（7）は同じ。長い行がブロックに入りきらないときは、コードブロックを包む要素にクラス `fade-right` を付けると、行の右端（右から 96px〜28px）をぼかして消せる（`--fade-right` が 0 で消さない、1 で消す。既定は 1。CompilerOutput）。
-9. **柱**: `.video-stage` に `data-lesson-label`（例「4-2 所有権のムーブ」）を付けると、左上に柱が出る。表紙（`title`）では `data-chapter-label`（例「第4章 所有権」）を付けると、レッスン名の上に章名が出る。値は `useLesson()` から得る（動画のコードに書き写さない。仕様の `content-format/video/scenes.md`「共通部品」）。
+9. **柱**: `.video-stage` に `data-lesson-label`（例「4-4 所有権のムーブ」）を付けると、左上に柱が出る。表紙（`title`）では `data-chapter-label`（例「第4章 所有権」）を付けると、レッスン名の上に章名が出る。値は `useLesson()` から得る（動画のコードに書き写さない。仕様の `content-format/video/scenes.md`「共通部品」）。
 10. **表紙**: `LessonTitle` は、表紙のステージの `h1` としてレッスン名を出力する。章カラーの飾りは、CSS が `::after` で描く。飾りを動かすときは、ステージに `deco-as-elements` を付けて `::after` を消し、`div.title-deco-soft` と `div.title-deco`（中に `span.title-deco-bar` を 3 つ）を置く（LayoutTitle）。
 11. **CSS の注意**: `accent` に依存する `video-*`（`video-primary` など）は `.video-stage` の上で宣言し直している。CSS のカスタムプロパティは宣言した要素で解決されるので、`:root` だけで宣言すると `[data-chapter]` の差し替えが届かない。
-12. **書体**: 見本の `bundle.css` は Murecho と Red Hat Mono を Google Fonts から読み込んでいる。アプリでは書体を同梱する（アプリ側の未決事項と同じ）。動画のコードから外部の URL は参照できない（仕様の `content-format/video/prohibited-code.md`）。
+12. **書体**: 見本の `bundle.css` は Murecho と Red Hat Mono を Google Fonts から読み込んでいる。アプリでは書体を同梱する（仕様の `screens/appearance.md`「書体のファイル」）。動画のコードから外部の URL は参照できない（仕様の `content-format/video/prohibited-code.md`）。
 
 ## 未決事項
 

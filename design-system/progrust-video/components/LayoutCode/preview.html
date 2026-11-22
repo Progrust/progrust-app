@@ -5,7 +5,7 @@
 <body>
 <!-- コードブロックは、共通部品が出力する HTML の形で書いている（見本は動かない）。指定のしかたは README を見る -->
 <div data-chapter="4">
-<section class="video-stage" data-layout="code" data-lesson-label="4-2 所有権のムーブ">
+<section class="video-stage" data-layout="code" data-lesson-label="4-6 関数と所有権">
   <h1>関数に渡すと、所有権が移る</h1>
   <pre><code class="language-rust"><span class="line"><span class="tk-k">fn</span> <span class="tk-f">takes_ownership</span>(text: <span class="tk-t">String</span>) {</span><span class="line">    <span class="tk-m">println!</span>(<span class="tk-s">"{text}"</span>);</span><span class="line">} <span class="tk-c">// ここで text が破棄される</span></span><span class="line"></span><span class="line"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line">    <span class="tk-k">let</span> s = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hello"</span>);</span><span class="line">    <span class="tk-f">takes_ownership</span>(<span class="mark">s</span>);</span><span class="line">    <span class="tk-c">// println!("{s}"); ← s はもう使えない</span></span><span class="line">}</span></code></pre>
   <p><code>takes_ownership(s)</code> を呼んだ時点で、s の所有権は引数の text に移ります。関数が終わると text と一緒に値も破棄されます。</p>
