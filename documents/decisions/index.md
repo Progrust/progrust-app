@@ -142,11 +142,12 @@
 * [ADR 0046](0046-explanation-in-pass-modal.md) - 正解したら、解説・質疑応答・次へ進むボタンをまとめたモーダルを開く
 * [ADR 0052](0052-chapter-8-sky-blue-no-gray.md) - 第8章の章カラーを鉄灰から空色に変え、章カラーに灰色を使わない
 * [ADR 0067](0067-captions-as-app-feature.md) - 字幕を動画の中に置かず、アプリの機能として表示できるようにする
-* [ADR 0070](0070-video-controls-sentence-jump-and-5s-skip.md) - 動画の再生操作に、文ごとの移動と 5 秒のスキップを持たせる
+* [ADR 0070](0070-video-controls-sentence-jump-and-5s-skip.md) - 動画の再生操作に、文ごとの移動と 5 秒のスキップを持たせる（ADR 0142 で文ごとの移動をなくした）
 * [ADR 0073](0073-search-lessons-by-tags-and-title.md) - 検索の対象を、レッスンに設定した検索ワード（タグ）とタイトルにする
 * [ADR 0075](0075-video-design-system-progrust-video.md) - 動画の見た目を、スライドのデザインシステムを改めた「Progrust Video」に定める
 * [ADR 0103](0103-keep-console-output-tail.md) - 演習画面のコンソールに残す出力を末尾の 64K 文字までとし、超えた分は古いほうから消す
 * [ADR 0116](0116-bundle-upstream-variable-fonts-unmodified.md) - 書体のファイルを、配布元が配っている可変フォントのまま、変換もサブセット化もせずにアプリに同梱する
+* [ADR 0142](0142-remove-sentence-jump-from-video-controls.md) - 動画の再生操作から、前後の文への移動をなくす
 
 # 非機能要件
 
