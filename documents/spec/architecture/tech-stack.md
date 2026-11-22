@@ -15,6 +15,8 @@ description: "層ごとの採用技術（Tauri 2、React + TypeScript、Monaco E
 | AI 連携 | 学習者の環境にインストールされた Claude Code（`claude -p`） |
 | ナレーションの音声の作成（教材の作成時のみ） | VOICEPEAK（教材の作者の環境で使う。アプリには含めない。[動画の音声](../content-format/video/voice.md)） |
 
+各技術の版、開発に要るもの、アプリの識別子は [開発環境と依存の版](development-environment.md) に定める。
+
 ```
 ┌─────────────────────── Tauri アプリ ──────────────────────┐
 │  フロントエンド (React)                                   │

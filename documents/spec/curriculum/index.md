@@ -6,4 +6,4 @@
 * [カリキュラムで扱わない内容](out-of-scope.md) - どの章でも扱わない内容（Rust のインストールと rustup、crates.io への公開・ワークスペース・`cargo install`・リリースプロファイル、手続き的マクロ、FFI、ファイルの読み書き・環境変数・コマンドライン引数）を定める。
 * [レッスンの演習を作るときの注意](exercise-constraints.md) - 判定方式から来る制約で注意が必要な箇所（ch01〜ch02、ch03〜ch08 の標準入力、ch09-01 の panic、main から Err を返す演習、HashMap・HashSet の走査の順序、ch10-06 の rand、パッケージ名 `progrust_exercise`、ch20・ch21 の出力の順序、ch11 の学習者のテスト）ごとに、制約と対応を定める。
 * [カリキュラムの受け入れ条件](acceptance.md) - `content/chapters.json` と各レッスンの `lesson.json` の `title` が章とレッスンの一覧と一致すること、動画のみのレッスンが一覧の定めと一致すること、扱わない内容を主要素とするレッスンがないことを、カリキュラムの仕様を満たしたと判断する条件として定める。
-* [カリキュラムの未決事項](open-questions.md) - カリキュラムの仕様でまだ決まっていない事項（許可クレートの追加（`thiserror`・`anyhow`・`tokio`・`futures`・`tokio-stream`）、ch01〜ch02 のテストケースの件数、標準入力のおまじないの定型）を記す。
+* [カリキュラムの未決事項](open-questions.md) - カリキュラムの仕様でまだ決まっていない事項（許可クレートの追加（`thiserror`・`anyhow`・`tokio`・`futures`・`tokio-stream`）、標準入力のおまじないの定型）を記す。

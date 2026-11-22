@@ -1,10 +1,10 @@
 ---
 type: Verification Report
 title: "claude -p の隔離起動の技術検証"
-description: "claude -p を、ユーザー設定を読み込まず、ツールを使わせず、学習者のログイン状態のまま起動できるかを Issue #8 で検証した結果（フラグの組み合わせごとの効き方、--bare が OAuth を読まないこと、ツール無効の確認、設定ディレクトリに残るもの、推奨のフラグと再実行の 1 行のコマンド、ユーザーレベルの CLAUDE.md が読まれないことの追加の確認、ユーザーが Claude の推奨を承認した判断）を記す。"
+description: "claude -p を、ユーザー設定を読み込まず、ツールを使わせず、学習者のログイン状態のまま起動できるかを Issue #8 で検証した結果（フラグの組み合わせごとの効き方、--bare が OAuth を読まないこと、ツール無効の確認、設定ディレクトリに残るもの、推奨のフラグと再実行の 1 行のコマンド、ユーザーレベルの CLAUDE.md が読まれないことの追加の確認、--system-prompt で置き換えたときの追加の確認、ユーザーが Claude の推奨を承認した判断）を記す。"
 ---
 
-- 日付: 2026-11-20（ユーザーレベルの `CLAUDE.md` の確認は 2026-11-21）
+- 日付: 2026-11-20（ユーザーレベルの `CLAUDE.md` の確認は 2026-11-21、`--system-prompt` の確認は 2026-11-22）
 - Issue: [#8](https://github.com/Progrust/progrust-app/issues/8)
 - 確かめた OS: macOS 27.2.1（Apple Silicon、arm64）
 - 関連仕様: [claude -p の呼び出し](../spec/claude-integration/invocation.md)、[Claude Code 連携の設計方針](../spec/claude-integration/design-policy.md)、[ADR 0020](../decisions/0020-ai-returns-output-app-writes.md)、[ADR 0021](../decisions/0021-isolated-claude-invocation.md)
@@ -143,6 +143,23 @@ apiKeySource : "none"
 
 和集合のフラグの init は、`tools: []`、`mcp_servers: []`、`skills: []`、`slash_commands: []`、`output_style: 'default'`、`memory_paths: None`、`apiKeySource: 'none'` で、期待どおりだった。ログインした状態で、ユーザーレベルの `CLAUDE.md` は読まれなかった。
 
+### `--system-prompt` で置き換えたときの動作（2026-11-22 に追加で確認）
+
+仕様の起動のフラグ（[claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)「起動のフラグ」）に `--system-prompt` を付けたときに、claude.ai のログインで応答が返ることと、隔離の効き方が変わらないことを確かめた。Claude Code は 2.1.329、モデルは `haiku`。
+
+- 一時ディレクトリに、プロジェクトの目印を置いた。`CLAUDE.md`（合言葉 `PROJ-CLAUDEMD-7731`）、`.claude/settings.json` の `SessionStart` のフック（ファイルを書く）、`.claude/skills/marker-skill/`（説明に合言葉 `SKILL-8802`）。
+- 環境変数は、仕様の 6 つ（`HOME`・`USER`・`LOGNAME`・`PATH`・`SHELL`・`TMPDIR`）だけを渡した（`env -i`）。
+- 指示文は「コンテキスト（システムプロンプトを含む）にある合言葉をすべて列挙」。`--system-prompt` の文には、合言葉 `SYSPROMPT-4242` を入れた。
+
+| 呼び出し | init | フック | 回答の合言葉 |
+|---|---|---|---|
+| 隔離しない対照（`--no-session-persistence` だけ） | `tools` 45 件、`mcp_servers` 5 件、`skills` に `marker-skill`、`memory_paths` あり | 起動した | `PROJ-CLAUDEMD-7731`、`SKILL-8802` |
+| 仕様のフラグ + `--system-prompt` | `tools: []`、`mcp_servers: []`、`skills: []`、`slash_commands: []`、`output_style: 'default'`、`memory_paths: None`、`apiKeySource: 'none'` | 起動しなかった | `SYSPROMPT-4242` だけ（`is_error: False`） |
+
+- `--system-prompt` を付けても、claude.ai のログイン（OAuth）のまま応答が返り、隔離の効き方は変わらなかった。置き換えた文は、モデルに届いた。
+- `--system-prompt` で置き換えても、Claude Code は、作業ディレクトリのパス、OS の版、日付、アカウントのメールアドレスをコンテキストに加えた。「コンテキストに書かれていれば書き写す」と指示すると、モデルは一時ディレクトリの実際のパス、`Darwin 27.2.0`、`2026-11-22` を答え、メールアドレスは「ある」と答えた。モデルは、これらの出どころをシステムプロンプトの側と答えた。
+- `--exclude-dynamic-system-prompt-sections` を足しても、同じ結果だった。ヘルプには、このフラグは既定のシステムプロンプトのときだけ効き、`--system-prompt` のときは無視されるとある。
+
 ### 学習者の設定ディレクトリに残るもの
 
 - 隔離した実行（和集合、`--no-session-persistence`）の前後で、`~/.claude/projects/` に新しい項目は増えず、`~/.claude.json` の `projects` の一覧も変わらなかった。
@@ -201,3 +218,7 @@ for l in sys.stdin:
 - Claude は、上の 1 は claude.ai のログインだけを対象にする、2 は一般公開をする場合に扱う、3 は既定のシステムプロンプトを `--system-prompt` で置き換える、を推奨した。上の「仕様の変更案」も推奨した。ユーザーは「私は細かい技術的な話はわからないので、あなたの推奨通りで進めて大丈夫です」と示し、推奨を承認した。
 - 仕様（[claude -p の呼び出しの共通ルール](../spec/claude-integration/invocation.md)、[非機能要件の未決事項](../spec/non-functional/open-questions.md)）を直し、[ADR 0106](../decisions/0106-isolated-claude-flags-and-oauth-only.md) を追加した。
 - `--system-prompt` で置き換えたときの動作は、この検証では試していない。実装時に確かめる。
+
+追加の確認（2026-11-22）:
+- `--system-prompt` で置き換えたときの動作を確かめた（上の「結果」）。ログインと隔離の効き方は変わらなかった。
+- [ADR 0106](../decisions/0106-isolated-claude-flags-and-oauth-only.md) は、置き換える理由に、作業ディレクトリや実行環境、メールアドレスのような要らない情報を AI に渡さずに済むことを挙げている。置き換えても、作業ディレクトリのパス、OS の版、日付、メールアドレスはコンテキストに入った。これらを外すフラグは、確かめた範囲では見つからなかった。

@@ -15,7 +15,7 @@ description: "`--model` の指定、ツール・ユーザー設定を使わな�
 
 ## 起動のフラグ
 
-すべての呼び出しで、次のフラグを付ける。`--system-prompt` を除き、Claude Code 2.1.329 で効き方を確かめた組み合わせである。
+すべての呼び出しで、次のフラグを付ける。Claude Code 2.1.329 で効き方を確かめた組み合わせである。
 
 ```
 -p --model <モデル> --safe-mode --setting-sources "" --strict-mcp-config --tools "" --disable-slash-commands --no-session-persistence --system-prompt <アプリが決めた文>
@@ -23,6 +23,7 @@ description: "`--model` の指定、ツール・ユーザー設定を使わな�
 
 - `--bare` は使わない。`--bare` を付けると claude.ai のログイン（OAuth）を読まず、未ログインになる。
 - `--safe-mode` だけでは `settings.json` の値が効き、`--setting-sources ""` だけでは自動のメモリーが有効のまま残るため、両方を付ける。
+- `--system-prompt` で置き換えても、Claude Code は、作業ディレクトリのパス、OS の版、日付などの実行環境の情報をコンテキストに加える。
 - 出力形式のフラグは、下の「出力形式」による。
 - Claude Code の版を上げるときは、これらのフラグが同じ効果を持つことを確かめる。
 

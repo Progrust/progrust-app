@@ -5,24 +5,29 @@ description: "`jobs.json` の項目、ジョブの種類・状態・実行順・
 ---
 
 ```json
-[
-  {
-    "job_id": "job_20261031T133100_001",
-    "type": "record",
-    "session_id": "20261031T130200_ch04-04",
-    "record_id": null,
-    "generation_id": null,
-    "status": "pending",
-    "attempts": 0,
-    "last_error": null,
-    "created_at": "...",
-    "updated_at": "..."
-  }
-]
+{
+  "schema_version": 1,
+  "jobs": [
+    {
+      "job_id": "job_20261031T133100_001",
+      "type": "record",
+      "session_id": "20261031T130200_ch04-04",
+      "record_id": null,
+      "generation_id": null,
+      "status": "pending",
+      "attempts": 0,
+      "last_error": null,
+      "created_at": "...",
+      "updated_at": "..."
+    }
+  ]
+}
 ```
 
 | 項目 | 仕様 |
 |---|---|
+| `schema_version` | ファイルの形式のバージョン（[データの保存場所](../architecture/data-locations.md)「書き込みの規則」） |
+| `jobs` | ジョブの配列。以下は、ジョブごとの項目と決まり |
 | `type` | `record` / `analysis` / `rebuild` / `generate` |
 | 対象 | `record` は `session_id`、`analysis` は `record_id`、`generate` は `generation_id` を持つ |
 | `status` | `pending` / `running` / `done` / `failed` |
@@ -32,6 +37,6 @@ description: "`jobs.json` の項目、ジョブの種類・状態・実行順・
 | `claude` 未検出時 | 実行せず `pending` のまま残す。`attempts` は増やさない |
 | 起動時 | `running` のまま残っているジョブは `pending` に戻す |
 | 保持 | `done` のジョブは 7 日後に削除 |
-| UI | 状態が変わるたびに `job_updated` イベントを送る。ヘッダーに実行中のジョブを表示し、`failed` のジョブは設定画面に一覧表示して手動で再実行できる（[画面仕様](../screens/index.md)） |
+| UI | ジョブを登録したときと、状態が変わるたびに `job_updated` イベントを送る。ヘッダーに実行中のジョブを表示し、`failed` のジョブは設定画面に一覧表示して手動で再実行できる（[画面仕様](../screens/index.md)） |
 
 - 質疑応答はジョブキューを通さず、ジョブの実行中でも並行して呼び出せる。

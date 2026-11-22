@@ -9,3 +9,4 @@
 * [AI モデルの選択](model-selection.md) - 設定画面で用途ごとに選ぶモデルの設定、既定値、選択肢、設定の保存先を定める。
 * [AI 呼び出しのエラーの分類と表示](errors.md) - エラーかどうかの判定（`is_error`）、未検出、未ログイン、利用上限、タイムアウト、出力不正、その他のエラーの判定条件（`assistant` の行の `error` の値）と、表示・動作、`last_error` への保存を定める。
 * [Claude Code 連携の受け入れ条件](acceptance.md) - Claude Code 連携の仕様を満たしたと判断する条件を定める。
+* [Claude Code 連携の未決事項](open-questions.md) - Claude Code 連携の仕様でまだ決まっていない事項（ジョブのリトライの回数と間隔、待ち時間の持ち方、手動の再実行での `attempts` の扱い、`failed` のジョブの保持期間、制限時間を超えたときや中断のときの `claude` のプロセスの止め方）を記す。

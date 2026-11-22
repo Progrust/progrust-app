@@ -1,10 +1,15 @@
 ---
 type: Open Questions
 title: "非機能要件の未決事項"
-description: "非機能要件の仕様でまだ決まっていない事項（一般公開をする場合に決めること: 公開するかどうか、配布と更新の方法、コード署名、Remotion・VOICEPEAK の音声・書体のライセンス、Anthropic の利用規約、claude.ai のログイン以外の認証と管理者の設定への対応。一般公開した後に決めること: macOS の他のバージョンと他の OS への対応）を記す。"
+description: "非機能要件の仕様でまだ決まっていない事項（実装のときに決めること: ログの形式、`schema_version` を持つファイルの範囲。一般公開をする場合に決めること: 公開するかどうか、配布と更新の方法、コード署名、Remotion・VOICEPEAK の音声・書体のライセンス、Anthropic の利用規約、claude.ai のログイン以外の認証と管理者の設定への対応。一般公開した後に決めること: macOS の他のバージョンと他の OS への対応）を記す。"
 ---
 
-アプリの完成までは、どれも決めない（[公開範囲と配布](distribution.md)、[対応環境](environments.md)）。
+「一般公開をする場合に決めること」「一般公開した後に決めること」は、アプリの完成までは、どれも決めない（[公開範囲と配布](distribution.md)、[対応環境](environments.md)）。
+
+## 実装のときに決めること
+
+- ログ（[アプリのログ](logging.md)）のファイル名、1 行の形式、日付の変わり目の決め方。
+- `schema_version` を持つファイルの範囲。[データの互換性](data-compatibility.md) は「アプリが管理するファイルはすべて `schema_version` を持つ」とするが、下書き、試行ログ、生成問題の `meta.json`、`prepared.json` の形式には `schema_version` が無い。
 
 ## 一般公開をする場合に決めること
 

@@ -1,7 +1,7 @@
 ---
 type: Open Questions
 title: "カリキュラムの未決事項"
-description: "カリキュラムの仕様でまだ決まっていない事項（許可クレートの追加（`thiserror`・`anyhow`・`tokio`・`futures`・`tokio-stream`）、ch01〜ch02 のテストケースの件数、標準入力のおまじないの定型）を記す。"
+description: "カリキュラムの仕様でまだ決まっていない事項（許可クレートの追加（`thiserror`・`anyhow`・`tokio`・`futures`・`tokio-stream`）、標準入力のおまじないの定型）を記す。"
 ---
 
 - **許可クレートの追加**: レッスンで使う外部クレートはすべて許可クレート（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「許可クレート」）に入れる方針だが、ch19・ch21 で使う次のクレートはまだ一覧になく、固定するバージョンも決まっていない。`tokio` を加えると、初回準備の時間とディスク使用量が増える。
@@ -14,5 +14,4 @@ description: "カリキュラムの仕様でまだ決まっていない事項（
   | `futures` | ch21-03・ch21-07 | `join_all`、ストリーム |
   | `tokio-stream` | ch21-07 | ストリーム（紹介程度） |
 
-- **ch01〜ch02 のテストケースの件数**: [レッスンの演習を作るときの注意](exercise-constraints.md) のとおり出力が固定の演習になるため、テストケースを 1 件でよい例外にする方針だが、例外を章（ch01〜ch02）で決めるか、「関数が未習のレッスン」のような条件で決めるかが決まっておらず、[演習の作成ルール](../content-guidelines/exercise.md)「テストケース」・[教材チェックツール](../content-guidelines/check-tool.md)（3 件以上）には未反映である。
 - **標準入力のおまじないの定型**: ch03〜ch08 で `stdout` 方式の演習に入力が要る場合に決める（ch01〜ch02 では使わない）。

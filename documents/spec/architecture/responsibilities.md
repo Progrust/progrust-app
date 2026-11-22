@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "フロントエンドとバックエンドの役割分担"
-description: "フロントエンドがファイルシステムや子プロセスに直接触れないこと、動画のコードをフロントエンドのビルドに含め、動画の音声をアプリ同梱データからアセットプロトコルで読むことなど両者の役割分担と、コマンド・イベントの名前と担当仕様を定める。"
+description: "フロントエンドがファイルシステムや子プロセスに直接触れないこと、動画のコードをフロントエンドのビルドに含め、動画の音声をアプリ同梱データからアセットプロトコルで読むことなど両者の役割分担と、コマンド・イベントの名前と担当仕様、入力・出力の形を定める文書（`commands/`）の参照先を定める。"
 ---
 
 - フロントエンドはファイルシステムや子プロセスに直接アクセスしない。すべてバックエンドのコマンドを経由する。
@@ -15,28 +15,29 @@ description: "フロントエンドがファイルシステムや子プロセス
 
 ## コマンドとイベント
 
-コマンド・イベントの名前と担当範囲を以下に定める。入力・出力の詳細と動作は「担当仕様」の仕様書に従う。
+コマンド・イベントの名前と担当範囲を以下に定める。引数・戻り値・イベントの内容の形は [コマンドとイベント](commands/index.md) に、動作は「担当仕様」の仕様書に従う。
 
 **コマンド（フロントエンド → バックエンド）**
 
-| 分類 | コマンド | 担当仕様 |
-|---|---|---|
-| 環境 | `get_environment_status`（cargo・claude の検出結果、初回準備の状態）、`redetect_tools` | 本書 [外部ツール（cargo・claude）への依存](external-tools.md) |
-| 教材 | `list_chapters`、`get_lesson`（台本と、音声のディレクトリのパスを含む）、`search_lessons` | [教材データ形式](../content-format/index.md)、[画面仕様](../screens/index.md) |
-| 進捗 | `get_progress`、`open_lesson`、`save_draft`、`reset_draft`、`get_passed_code`、`save_video_position` | [レッスン進行・進捗管理](../lesson-flow/index.md) |
-| 実行 | `run_code`、`send_stdin`、`close_stdin`、`stop_run`、`submit_code` | [コード実行・判定](../exercise-runner/index.md) |
-| 質疑応答 | `send_chat`、`cancel_chat` | [質疑応答](../qa-chat/index.md) |
-| 問題生成 | `list_generated`、`request_generation`、`delete_generated` | [演習問題生成](../exercise-generation/index.md) |
-| 学習記録・分析 | `get_dashboard`、`rebuild_analysis`、`reset_analysis`、`reset_all` | [学習記録・分析](../learning-record-and-analysis/index.md)、[画面仕様](../screens/index.md) |
-| ジョブ | `list_jobs`、`retry_job` | [Claude Code 連携](../claude-integration/index.md) |
-| 設定 | `get_settings`、`update_settings`、`open_in_os`、`test_claude_connection` | [画面仕様](../screens/index.md)、[Claude Code 連携](../claude-integration/index.md) |
+| 分類 | コマンド | 形 | 担当仕様 |
+|---|---|---|---|
+| 環境 | `get_environment_status`（cargo・claude の検出結果、初回準備の状態）、`redetect_tools`、`retry_crate_preparation`（初回準備の再試行） | [環境のコマンドとイベント](commands/environment.md) | 本書 [外部ツール（cargo・claude）への依存](external-tools.md)、[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md) |
+| 教材 | `list_chapters`、`get_lesson`（台本と、音声のディレクトリのパスを含む）、`search_lessons` | [教材のコマンド](commands/content.md) | [教材データ形式](../content-format/index.md)、[画面仕様](../screens/index.md) |
+| 進捗 | `get_progress`、`open_lesson`、`end_session`（画面の操作による試行セッションの終了）、`save_draft`、`reset_draft`、`get_passed_code`、`save_video_position` | [進捗のコマンド](commands/progress.md) | [レッスン進行・進捗管理](../lesson-flow/index.md)、[学習記録・分析](../learning-record-and-analysis/index.md) |
+| 実行 | `run_code`（実行とテスト実行）、`send_stdin`、`close_stdin`、`stop_run`、`submit_code` | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
+| 質疑応答 | `send_chat`、`cancel_chat` | [質疑応答のコマンドとイベント](commands/chat.md) | [質疑応答](../qa-chat/index.md) |
+| 問題生成 | `list_generated`、`get_generation_options`（生成設定画面の要素と初期値の材料）、`request_generation`、`delete_generated` | [問題生成のコマンド](commands/generation.md) | [演習問題生成](../exercise-generation/index.md) |
+| 学習記録・分析 | `get_dashboard`、`list_unreadable_records`、`rebuild_analysis`、`reset_analysis`、`reset_all` | [学習記録・分析のコマンド](commands/learning-record.md) | [学習記録・分析](../learning-record-and-analysis/index.md)、[画面仕様](../screens/index.md) |
+| ジョブ | `list_jobs`、`retry_job` | [ジョブのコマンドとイベント](commands/jobs.md) | [Claude Code 連携](../claude-integration/index.md) |
+| 設定 | `get_settings`、`update_settings`、`open_in_os`、`test_claude_connection`、`get_app_version` | [設定のコマンド](commands/settings.md) | [画面仕様](../screens/index.md)、[Claude Code 連携](../claude-integration/index.md) |
 
 **イベント（バックエンド → フロントエンド）**
 
-| イベント | 内容 | 担当仕様 |
-|---|---|---|
-| `run_output` | 実行中の出力。1 つのイベントに、stdout / stderr / system の断片を受け取った順に複数入れる | [コード実行・判定](../exercise-runner/index.md) |
-| `run_finished` | 実行・提出の結果 | [コード実行・判定](../exercise-runner/index.md) |
-| `chat_delta` / `chat_finished` | 質疑応答の回答（ストリーミング） | [質疑応答](../qa-chat/index.md) |
-| `job_updated` | ジョブの状態変化 | [Claude Code 連携](../claude-integration/index.md) |
-| `environment_updated` | ツール検出結果・初回準備の状態変化 | 本書 [外部ツール（cargo・claude）への依存](external-tools.md) |
+| イベント | 内容 | 形 | 担当仕様 |
+|---|---|---|---|
+| `run_output` | 実行中の出力。1 つのイベントに、stdout / stderr / system の断片を受け取った順に複数入れる | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
+| `submit_progress` | 提出の判定の進み具合 | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
+| `run_finished` | 実行・提出の結果 | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
+| `chat_delta` / `chat_finished` | 質疑応答の回答（ストリーミング） | [質疑応答のコマンドとイベント](commands/chat.md) | [質疑応答](../qa-chat/index.md) |
+| `job_updated` | ジョブの状態変化 | [ジョブのコマンドとイベント](commands/jobs.md) | [Claude Code 連携](../claude-integration/index.md) |
+| `environment_updated` | ツール検出結果・初回準備の状態変化 | [環境のコマンドとイベント](commands/environment.md) | 本書 [外部ツール（cargo・claude）への依存](external-tools.md)、[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md) |
