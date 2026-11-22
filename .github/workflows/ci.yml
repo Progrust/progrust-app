@@ -1,0 +1,76 @@
+# push と pull request のたびに、コミット前の確認とデザインシステムの検査を実行する
+# （documents/spec/non-functional/testing.md「CI」）。
+# 実行環境は ubuntu-latest で、対応環境（作者の Mac）ではない。本番ビルドは作らない。
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      # Node.js と npm は development-environment.md の系列（package.json の engines）に合わせる。
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "25.9"
+          cache: npm
+
+      # Rust は rustup の stable を使う（rust-toolchain.toml は置かない）。
+      - name: Rust ツールチェーン（stable）
+        run: |
+          rustup toolchain install stable --profile minimal --component clippy,rustfmt --no-self-update
+          rustup default stable
+
+      # Tauri が Linux でのビルドに要るライブラリ（https://v2.tauri.app/start/prerequisites/）。
+      - name: Tauri のビルドに要るライブラリ
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev
+
+      - name: 版の表示
+        run: |
+          node --version
+          npm --version
+          rustc --version
+          cargo --version
+          python3 --version
+
+      # 依存の取り直しとビルドの時間を減らす。キーに Cargo.lock と rustc の版を含める。
+      - name: cargo の依存とビルドの結果のキャッシュの準備
+        id: rust-version
+        run: echo "rustc=$(rustc --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/git/db
+            src-tauri/target
+          key: cargo-${{ runner.os }}-${{ steps.rust-version.outputs.rustc }}-${{ hashFiles('src-tauri/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-${{ steps.rust-version.outputs.rustc }}-
+
+      - run: npm ci
+
+      # cargo のコマンドは、package.json のスクリプトが --locked で実行する。
+      - run: npm run check
+
+      - run: python3 tools/design-system.py check
