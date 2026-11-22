@@ -28,6 +28,7 @@ description: "章、レッスン、動画、台本、演習、要素、判定方
 | 生成問題 | generated exercise | AI が生成した演習。ID は `gen-{生成 ID}` |
 | 要素 | element | Rust の文法・概念の単位（例: 所有権のムーブ）。要素 ID（例: `ownership.move`）で参照する |
 | 要素マスタ | element master | 全要素の定義（`elements.json`） |
+| 分類 | category | 要素 ID の `.` より前の部分。Rust の機能のまとまりを表す（[要素の分け方と要素 ID の付け方](../content-guidelines/elements.md)「要素 ID」） |
 | 主要素 | primary elements | そのレッスン・演習の学習対象の要素 |
 | 副要素 | secondary elements | 学習対象ではないが演習に登場する既習の要素 |
 | 学習順 | learning order | 全レッスンを章・レッスンの順に一列に並べた順序（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)） |

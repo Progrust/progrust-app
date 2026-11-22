@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "レッスン定義の形式（lesson.json）"
-description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elements`・`secondary_elements`・`estimated_minutes`・`exercise.judge`（`min_learner_tests` を含む）など）と、`kind` ごとの `tags`・要素・`exercise` の要否を定める。"
+description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elements`・`secondary_elements`・`estimated_minutes`・`exercise.judge`（`min_learner_tests` を含む）など）と、`kind` ごとの `tags`・要素・`exercise` の要否と主要素の件数を定める。"
 ---
 
 ```json
@@ -31,7 +31,7 @@ description: "`lesson.json` のフィールド（`kind`・`tags`・`primary_elem
 | `kind` | `lesson` / `video_only`（動画のみのレッスン）/ `chapter_review` / `generated`（生成問題のみ） |
 | `title` / `summary` | 表示名と、レッスン一覧に表示する 1 行の説明 |
 | `tags` | 検索ワード（string[]）。レッスン検索の対象にする語（[レッスン検索](../screens/lesson-search.md)）。`kind` が `lesson`・`video_only` のレッスンでは必須で、1 件以上を書く。空の文字列と、同じレッスンの中での重複は書けない |
-| `primary_elements` | 主要素の ID（1〜2 件）。`video_only` では空の配列にする |
+| `primary_elements` | 主要素の ID。件数は、`lesson`・`generated` では 1〜2 件、`chapter_review` では 2〜5 件。`video_only` では空の配列にする。`lesson` では、[章とレッスンの一覧](../curriculum/chapters/index.md) の「主要素」と同じ要素を、同じ順に書く |
 | `secondary_elements` | 副要素の ID。`video_only` では空の配列にする |
 | `estimated_minutes` | 目安の所要時間（分） |
 | `exercise` | 演習の定義。`video_only` では書かない |

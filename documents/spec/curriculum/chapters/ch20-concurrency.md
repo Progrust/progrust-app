@@ -1,21 +1,21 @@
 ---
 type: Specification
 title: "ch20 並行処理"
-description: "ch20 並行処理の章の説明と、スレッドとデータ競合、スレッドの生成、スレッドと move、スコープ付きスレッド、チャネル、Mutex、Arc、Send と Sync、アトミック型、グローバルな共有状態を扱うレッスン（ch20-01〜ch20-10 と章末復習）の ID・タイトル・主に扱う内容を定める。"
+description: "ch20 並行処理の章の説明と、スレッドとデータ競合、スレッドの生成、スレッドと move、スコープ付きスレッド、チャネル、Mutex、Arc、Send と Sync、アトミック型、グローバルな共有状態を扱うレッスン（ch20-01〜ch20-10 と章末復習）の ID・タイトル・主に扱う内容・主要素を定める。"
 ---
 
 スレッドによる並行処理と、データ競合を防ぐ仕組みを学ぶ
 
-| ID | タイトル | 主に扱う内容 |
-| --- | --- | --- |
-| ch20-01 | スレッドとデータ競合 | OS のスレッドで処理が同時に動くこと（JavaScript のイベントループ・Python の GIL との違い）、データ競合とは何か、Rust がデータ競合をコンパイル時に防ぐこと（動画のみのレッスン） |
-| ch20-02 | スレッドを生成する | `thread::spawn`、`join`、`thread::sleep` と `Duration` |
-| ch20-03 | スレッドと move | スレッドに値を渡す、`'static` が必要な理由 |
-| ch20-04 | スコープ付きスレッド | `thread::scope`、借用したままスレッドを使う |
-| ch20-05 | チャネル | `mpsc`、送信側の複製、受信の終わり |
-| ch20-06 | Mutex | ロックとガード、ガードの破棄でロックが外れる、デッドロック |
-| ch20-07 | Arc | スレッド間での共有、`Arc<Mutex<T>>` |
-| ch20-08 | Send と Sync | スレッド間で渡せる型・共有できる型、`Rc` が使えない理由 |
-| ch20-09 | アトミック型 | `AtomicUsize` など、ロックなしでの共有カウンタ、メモリオーダリングの概要 |
-| ch20-10 | グローバルな共有状態 | `static` と `Mutex`、`OnceLock`・`LazyLock` による一度だけの初期化 |
-| ch20-review | 章末復習 | |
+| ID | タイトル | 主に扱う内容 | 主要素 |
+| --- | --- | --- | --- |
+| ch20-01 | スレッドとデータ競合 | OS のスレッドで処理が同時に動くこと（JavaScript のイベントループ・Python の GIL との違い）、データ競合とは何か、Rust がデータ競合をコンパイル時に防ぐこと（動画のみのレッスン） | |
+| ch20-02 | スレッドを生成する | `thread::spawn`、`join`、`thread::sleep` と `Duration` | `thread.spawn` |
+| ch20-03 | スレッドと move | スレッドに値を渡す、`'static` が必要な理由 | `thread.move` |
+| ch20-04 | スコープ付きスレッド | `thread::scope`、借用したままスレッドを使う | `thread.scope` |
+| ch20-05 | チャネル | `mpsc`、送信側の複製、受信の終わり | `sync.channel` |
+| ch20-06 | Mutex | ロックとガード、ガードの破棄でロックが外れる、デッドロック | `sync.mutex` |
+| ch20-07 | Arc | スレッド間での共有、`Arc<Mutex<T>>` | `sync.arc` |
+| ch20-08 | Send と Sync | スレッド間で渡せる型・共有できる型、`Rc` が使えない理由 | `sync.send_sync` |
+| ch20-09 | アトミック型 | `AtomicUsize` など、ロックなしでの共有カウンタ、メモリオーダリングの概要 | `sync.atomic` |
+| ch20-10 | グローバルな共有状態 | `static` と `Mutex`、`OnceLock`・`LazyLock` による一度だけの初期化 | `sync.global_state` |
+| ch20-review | 章末復習 | | |

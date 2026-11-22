@@ -7,6 +7,9 @@ description: "教材データ形式の仕様を満たしたと判断する条件
 - `chapters.json` に載っているレッスンのうち準備中のレッスンを除くすべてについて、`lesson.json` と必要なファイルが揃っていることを教材チェックツールで確認できる。
 - レッスンのディレクトリが無いレッスンは準備中のレッスンとして扱われ、教材チェックツールでエラーにならない。ディレクトリがあり `lesson.json` が無いレッスンは、教材チェックツールでエラーになる。
 - 準備中のレッスンが無いとき、どのレッスンの `primary_elements` にも含まれない要素（`deprecated` を除く）は、教材チェックツールでエラーになる。準備中のレッスンが 1 つでもあるときは、エラーにならない。
+- [章とレッスンの一覧](../curriculum/chapters/index.md) のどのレッスンの「主要素」にも無い要素（`deprecated` を除く）が要素マスタにあると、準備中のレッスンがあっても、教材チェックツールでエラーになる。
+- `kind` が `lesson` で、`primary_elements` が [章とレッスンの一覧](../curriculum/chapters/index.md) の「主要素」と違う `lesson.json` は、教材チェックツールでエラーになる。
+- `kind` が `chapter_review` で、`primary_elements` が 1 件の `lesson.json` と、ほかの章のレッスンの主要素を `primary_elements` に含む `lesson.json` は、教材チェックツールでエラーになる。
 - `kind` が `lesson`・`video_only` で `tags` のない `lesson.json` は、教材チェックツールでエラーになる。
 - `kind` が `video_only` で、`exercise` を持つか、`primary_elements`・`secondary_elements` が空でない `lesson.json` は、教材チェックツールでエラーになる。
 - テストケースが 1 件の ch01・ch02 のレッスンの演習は、教材チェックツールでエラーにならない。テストケースが 2 件の ch03 のレッスンの演習は、教材チェックツールでエラーになる。

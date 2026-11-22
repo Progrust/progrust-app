@@ -44,6 +44,7 @@
 * [ADR 0120](0120-video-only-lessons-have-no-elements-or-attempt-sessions.md) - 動画のみのレッスンには要素を持たせず、試行セッションも作らない
 * [ADR 0127](0127-encode-narration-with-ffmpeg-aac-and-measure-with-ffprobe.md) - 文の音声を ffmpeg に組み込みの AAC エンコーダーで .m4a に変換し、durations.json の seconds と cue-reference.json の長さを ffprobe の format の duration で測る
 * [ADR 0145](0145-show-unprepared-lessons-as-in-preparation.md) - `chapters.json` には全レッスンを載せたまま、レッスンのディレクトリがまだ無いレッスンを準備中のレッスンとし、レッスン一覧に「準備中」と出して開けないようにする
+* [ADR 0158](0158-chapter-review-has-two-to-five-primary-elements.md) - 章末復習レッスンの主要素を、その章のレッスンの主要素から選ぶ 2〜5 件とし、ほかのレッスンは 1〜2 件のままにする
 
 # カリキュラム
 
@@ -52,6 +53,7 @@
 * [ADR 0104](0104-teach-flush-after-print.md) - print! で出したプロンプトを入力の前に表示するための flush を、ch09-05 で教える
 * [ADR 0118](0118-teach-background-knowledge-hidden-by-gc-languages.md) - ガベージコレクションのある言語では意識しなくてよいが Rust では必要になる周辺知識を既知とせず、TRPL が扱っていないものもカリキュラムで扱う
 * [ADR 0131](0131-record-reasons-for-later-lesson-changes.md) - カリキュラムを組み立てた後に、個々のレッスンを足す・移す・残すなどの変更をしたときは、その理由を ADR に記録する
+* [ADR 0157](0157-define-primary-elements-in-curriculum-list.md) - 各レッスンの主要素を章とレッスンの一覧に定めて唯一の定義とし、`lesson.json` の `primary_elements` をそれに合わせ、副要素はレッスンを作るときに決める
 
 # 教材作成ガイドライン
 
@@ -62,6 +64,7 @@
 * [ADR 0069](0069-video-and-sentence-length-as-guidelines.md) - 動画の長さと 1 文の長さを目安とし、超えてよいことにする
 * [ADR 0095](0095-render-check-all-lessons-in-ci.md) - CI で、描画のチェックを毎回すべてのレッスンに行い、描画のチェックで見つかるのは描画したフレームのエラーだけだと仕様に書く（ADR 0145 で準備中のレッスンを描画の対象から外した）
 * [ADR 0146](0146-one-test-case-allowed-in-ch01-and-ch02.md) - ch01・ch02 のレッスン（章末復習レッスンを含む）の演習は、テストケースを 1 件以上でよいとし、ほかのレッスンは 3 件以上のままにする
+* [ADR 0156](0156-define-all-elements-before-lessons-one-per-lesson.md) - 要素マスタの要素をレッスンを作る前にすべて決め、1 レッスン 1 要素を基本にして 145 件を定め、要素 ID の分類を Rust の機能のまとまりで付ける
 
 # コード実行・判定
 

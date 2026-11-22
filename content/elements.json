@@ -1,0 +1,1286 @@
+[
+  {
+    "id": "program.main",
+    "chapter": "ch01",
+    "name": "main 関数と println!",
+    "description": "プログラムの入口になる `fn main`、`println!` による出力、文字列リテラル、コメント、パッケージの構成（`Cargo.toml`・`src/main.rs`）、コンパイルエラーと実行時のエラーの違い",
+    "related_errors": [
+      "E0423"
+    ]
+  },
+  {
+    "id": "var.mutability",
+    "chapter": "ch01",
+    "name": "変数と不変性",
+    "description": "`let` による変数の宣言、変数が既定で不変であること、`mut`、型推論と型注釈",
+    "related_errors": [
+      "E0384"
+    ]
+  },
+  {
+    "id": "var.shadowing",
+    "chapter": "ch01",
+    "name": "シャドーイング",
+    "description": "同じ名前での `let` による再宣言、`mut` との違い、型を変えた再宣言",
+    "related_errors": []
+  },
+  {
+    "id": "var.const_static",
+    "chapter": "ch01",
+    "name": "定数と static",
+    "description": "`const` による定数、不変の `static`、命名規則、変数との違い",
+    "related_errors": [
+      "E0435"
+    ]
+  },
+  {
+    "id": "fmt.format_spec",
+    "chapter": "ch01",
+    "name": "書式を指定した出力",
+    "description": "`{}`・`{:?}`、引数の埋め込み（`{x}`）、幅・寄せ・精度の指定、`print!`・`eprintln!`",
+    "related_errors": []
+  },
+  {
+    "id": "scalar.integer",
+    "chapter": "ch02",
+    "name": "整数型",
+    "description": "符号と大きさの異なる整数型（`i8`〜`i128`・`u8`〜`u128`・`isize`・`usize`）、リテラルの書き方、`MAX`・`MIN`、オーバーフロー時の panic、`wrapping_add`・`saturating_add`",
+    "related_errors": []
+  },
+  {
+    "id": "scalar.float_arithmetic",
+    "chapter": "ch02",
+    "name": "浮動小数点数と数値の演算",
+    "description": "`f64`・`f32`、整数の除算と剰余、整数と小数を混ぜて計算できないこと",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "scalar.cast",
+    "chapter": "ch02",
+    "name": "as による型の変換",
+    "description": "`as` によるキャスト、暗黙の型変換がないこと、キャストでの切り捨てと桁あふれ",
+    "related_errors": [
+      "E0308",
+      "E0604",
+      "E0054"
+    ]
+  },
+  {
+    "id": "scalar.bool_char",
+    "chapter": "ch02",
+    "name": "論理型と文字型",
+    "description": "`bool` と、Unicode のスカラー値（4 バイト）である `char`",
+    "related_errors": []
+  },
+  {
+    "id": "tuple.basic",
+    "chapter": "ch02",
+    "name": "タプル",
+    "description": "タプルの生成、`.0` によるアクセス、分解代入、ユニット型 `()`",
+    "related_errors": [
+      "E0609"
+    ]
+  },
+  {
+    "id": "array.basic",
+    "chapter": "ch02",
+    "name": "配列",
+    "description": "`[T; N]`、初期化の書き方、添字アクセスと範囲外の panic",
+    "related_errors": []
+  },
+  {
+    "id": "fn.basic",
+    "chapter": "ch03",
+    "name": "関数の定義",
+    "description": "関数の定義、引数の型注釈が必須であること、戻り値の型 `->`、早期 `return`",
+    "related_errors": [
+      "E0061"
+    ]
+  },
+  {
+    "id": "expr.block_value",
+    "chapter": "ch03",
+    "name": "文と式",
+    "description": "文と式の違い、ブロックが値を持つこと、末尾のセミコロンの有無で値が変わること",
+    "related_errors": [
+      "E0308"
+    ]
+  },
+  {
+    "id": "control.if",
+    "chapter": "ch03",
+    "name": "if 式",
+    "description": "条件が `bool` に限られること、`if` を値として使うこと、分岐の型の一致",
+    "related_errors": [
+      "E0308",
+      "E0317"
+    ]
+  },
+  {
+    "id": "control.loop_while",
+    "chapter": "ch03",
+    "name": "loop と while",
+    "description": "`loop` による無限ループ、`break` で値を返すこと、ループラベル、`while`、`continue`",
+    "related_errors": [
+      "E0571"
+    ]
+  },
+  {
+    "id": "control.for_range",
+    "chapter": "ch03",
+    "name": "for と範囲",
+    "description": "`..`・`..=` による範囲、`rev`、`for` による配列の走査",
+    "related_errors": []
+  },
+  {
+    "id": "ownership.scope_drop",
+    "chapter": "ch04",
+    "name": "スコープと値の破棄",
+    "description": "変数のスコープと、スコープの終わりで値が破棄されてメモリが解放されること",
+    "related_errors": [
+      "E0425"
+    ]
+  },
+  {
+    "id": "string.basic",
+    "chapter": "ch04",
+    "name": "String 型",
+    "description": "ヒープに置かれる文字列 `String`（スタックに持つポインタ・長さ・容量）、`String::from`、`push_str`、`format!`、文字列リテラルとの違い",
+    "related_errors": [
+      "E0308",
+      "E0596"
+    ]
+  },
+  {
+    "id": "ownership.move",
+    "chapter": "ch04",
+    "name": "所有権のムーブ",
+    "description": "変数が値そのものを持つこと、代入で所有権が移ること、ムーブ済みの値を使えないこと",
+    "related_errors": [
+      "E0382"
+    ]
+  },
+  {
+    "id": "ownership.clone_copy",
+    "chapter": "ch04",
+    "name": "clone と Copy",
+    "description": "`clone` による明示的な深いコピーと、整数などの `Copy` な型がムーブされずにコピーされること",
+    "related_errors": []
+  },
+  {
+    "id": "ownership.function",
+    "chapter": "ch04",
+    "name": "関数と所有権",
+    "description": "関数の引数に渡すときと、戻り値で返すときの所有権の移動",
+    "related_errors": [
+      "E0382"
+    ]
+  },
+  {
+    "id": "borrow.immutable",
+    "chapter": "ch05",
+    "name": "不変の参照",
+    "description": "`&` による参照、関数に値を貸すこと、参照外し `*`、参照の実体が値のあるアドレスであること",
+    "related_errors": [
+      "E0308",
+      "E0507"
+    ]
+  },
+  {
+    "id": "borrow.mutable",
+    "chapter": "ch05",
+    "name": "可変の参照",
+    "description": "`&mut` による可変の参照と、可変の参照を通した値の変更",
+    "related_errors": [
+      "E0596",
+      "E0594"
+    ]
+  },
+  {
+    "id": "borrow.rules",
+    "chapter": "ch05",
+    "name": "借用の規則",
+    "description": "可変の参照は同時に 1 つだけで、不変の参照と共存できないこと、参照が使われる範囲（NLL）",
+    "related_errors": [
+      "E0499",
+      "E0502",
+      "E0506",
+      "E0505"
+    ]
+  },
+  {
+    "id": "borrow.dangling",
+    "chapter": "ch05",
+    "name": "ダングリング参照",
+    "description": "破棄された値への参照をコンパイラが防ぐこと、参照が値より長く生きられないこと",
+    "related_errors": [
+      "E0597",
+      "E0515",
+      "E0106"
+    ]
+  },
+  {
+    "id": "slice.str",
+    "chapter": "ch05",
+    "name": "文字列スライス",
+    "description": "`&str`、範囲によるスライス、スライスがアドレスと長さの組であること、文字列リテラルが `&str` であること、引数を `&str` で受け取ること",
+    "related_errors": []
+  },
+  {
+    "id": "slice.array",
+    "chapter": "ch05",
+    "name": "配列のスライス",
+    "description": "`&[T]`、配列の一部を貸すこと、スライスがアドレスと長さの組であること",
+    "related_errors": []
+  },
+  {
+    "id": "struct.basic",
+    "chapter": "ch06",
+    "name": "構造体の定義と生成",
+    "description": "フィールドを持つ構造体の定義と生成、フィールド初期化の省略記法、フィールドの変更",
+    "related_errors": [
+      "E0063",
+      "E0560",
+      "E0594"
+    ]
+  },
+  {
+    "id": "fmt.debug",
+    "chapter": "ch06",
+    "name": "デバッグ出力",
+    "description": "`#[derive(Debug)]`、`{:?}`・`{:#?}`、`dbg!`",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "struct.update_syntax",
+    "chapter": "ch06",
+    "name": "構造体更新記法",
+    "description": "`..other` で、残りのフィールドを別の値から埋めること",
+    "related_errors": []
+  },
+  {
+    "id": "ownership.partial_move",
+    "chapter": "ch06",
+    "name": "部分的なムーブ",
+    "description": "フィールド単位で所有権が移ることと、ムーブの後に使えなくなる範囲",
+    "related_errors": [
+      "E0382"
+    ]
+  },
+  {
+    "id": "struct.tuple_unit",
+    "chapter": "ch06",
+    "name": "タプル構造体とユニット様構造体",
+    "description": "名前のないフィールドを持つタプル構造体と、フィールドを持たないユニット様構造体",
+    "related_errors": []
+  },
+  {
+    "id": "struct.method",
+    "chapter": "ch06",
+    "name": "メソッド",
+    "description": "`impl` によるメソッドの定義と、`&self`・`&mut self`・`self` の使い分け",
+    "related_errors": [
+      "E0594",
+      "E0596",
+      "E0424"
+    ]
+  },
+  {
+    "id": "struct.assoc_fn",
+    "chapter": "ch06",
+    "name": "関連関数",
+    "description": "`self` を取らない関連関数、`Self`、コンストラクタとしての `new`、`::` による呼び出し",
+    "related_errors": [
+      "E0423",
+      "E0599"
+    ]
+  },
+  {
+    "id": "enum.basic",
+    "chapter": "ch07",
+    "name": "列挙型",
+    "description": "列挙型の定義と、バリアントの値",
+    "related_errors": []
+  },
+  {
+    "id": "pattern.match",
+    "chapter": "ch07",
+    "name": "match による分岐",
+    "description": "`match` で値によって分岐すること、網羅性の検査、`_`",
+    "related_errors": [
+      "E0004",
+      "E0170"
+    ]
+  },
+  {
+    "id": "enum.data_variant",
+    "chapter": "ch07",
+    "name": "データを持つバリアント",
+    "description": "バリアントにデータを持たせること、`match` でデータを取り出すこと、列挙型のメソッド",
+    "related_errors": [
+      "E0023"
+    ]
+  },
+  {
+    "id": "option.basic",
+    "chapter": "ch07",
+    "name": "Option 型",
+    "description": "null がないこと、`Some`・`None`、`Option<T>` と `T` の区別、`is_some`・`is_none`、`checked_add` など `Option` を返す演算",
+    "related_errors": [
+      "E0308",
+      "E0369"
+    ]
+  },
+  {
+    "id": "pattern.kinds",
+    "chapter": "ch07",
+    "name": "パターンの種類",
+    "description": "リテラル、`|`、範囲 `..=`、変数への束縛、`..` による残りの無視",
+    "related_errors": [
+      "E0004",
+      "E0408"
+    ]
+  },
+  {
+    "id": "pattern.destructure",
+    "chapter": "ch07",
+    "name": "構造体とタプルの分解",
+    "description": "パターンによる構造体とタプルの分解、入れ子の分解、`let` と関数の引数でのパターン",
+    "related_errors": [
+      "E0026",
+      "E0027"
+    ]
+  },
+  {
+    "id": "pattern.reference",
+    "chapter": "ch07",
+    "name": "参照とパターン",
+    "description": "参照に対する `match`（match ergonomics）、`&x` パターン、`ref`・`ref mut`",
+    "related_errors": [
+      "E0507",
+      "E0382"
+    ]
+  },
+  {
+    "id": "pattern.guard_at",
+    "chapter": "ch07",
+    "name": "マッチガードと @ 束縛",
+    "description": "`if` 条件付きのアーム（マッチガード）と、`名前 @ パターン` による束縛",
+    "related_errors": [
+      "E0004"
+    ]
+  },
+  {
+    "id": "pattern.if_let",
+    "chapter": "ch07",
+    "name": "if let と let else",
+    "description": "1 つのパターンだけを扱う `if let`・`let else`、論駁可能なパターンと論駁不可能なパターン、let チェーン（`if let ... && ...`）",
+    "related_errors": [
+      "E0005"
+    ]
+  },
+  {
+    "id": "vec.basic",
+    "chapter": "ch08",
+    "name": "Vec の作成と要素の読み取り",
+    "description": "`Vec::new`、`vec!`、`push`、`len`、添字と `get` の違い、要素の参照を持ったままの `push` が借用のエラーになる理由（再確保）",
+    "related_errors": [
+      "E0502",
+      "E0282"
+    ]
+  },
+  {
+    "id": "vec.iterate",
+    "chapter": "ch08",
+    "name": "Vec の走査とスライス",
+    "description": "`for` で `&v`・`&mut v` を走査すること、要素の書き換え、`Vec` の一部を `&[T]` で貸すこと",
+    "related_errors": [
+      "E0382",
+      "E0594",
+      "E0368"
+    ]
+  },
+  {
+    "id": "pattern.while_let",
+    "chapter": "ch08",
+    "name": "while let",
+    "description": "`while let` によるループと、`Vec` の `pop` で末尾から取り出すこと",
+    "related_errors": []
+  },
+  {
+    "id": "vec.sort_search",
+    "chapter": "ch08",
+    "name": "Vec の並べ替えと検索",
+    "description": "`sort`、`dedup`、`contains`、`reverse`",
+    "related_errors": []
+  },
+  {
+    "id": "string.concat",
+    "chapter": "ch08",
+    "name": "文字列の連結と結合",
+    "description": "`+` 演算子による連結と所有権、`join`・`concat` で `Vec<String>` をつなぐこと",
+    "related_errors": [
+      "E0369",
+      "E0382"
+    ]
+  },
+  {
+    "id": "string.search_split",
+    "chapter": "ch08",
+    "name": "文字列の検索と分割",
+    "description": "`split`・`split_whitespace`・`lines`・`trim`・`contains`・`starts_with`・`replace`・`to_uppercase`",
+    "related_errors": [
+      "E0716"
+    ]
+  },
+  {
+    "id": "string.utf8",
+    "chapter": "ch08",
+    "name": "String と UTF-8",
+    "description": "文字列に添字でアクセスできない理由、`chars`・`bytes`、バイト数と文字数の違い、`char` の `is_ascii_digit`・`to_digit`・`is_alphabetic`",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "hashmap.basic",
+    "chapter": "ch08",
+    "name": "HashMap の基本",
+    "description": "`use` で `HashMap` を取り込むこと、`insert`・`get`、走査の順序が決まっていないこと、キーと値の所有権",
+    "related_errors": [
+      "E0433",
+      "E0382"
+    ]
+  },
+  {
+    "id": "hashmap.entry",
+    "chapter": "ch08",
+    "name": "HashMap の更新",
+    "description": "`entry`・`or_insert` による更新と、出現回数を数えること",
+    "related_errors": [
+      "E0368"
+    ]
+  },
+  {
+    "id": "collections.hashset_btreemap",
+    "chapter": "ch08",
+    "name": "HashSet と BTreeMap",
+    "description": "重複のない集合 `HashSet` と、キーの順に並ぶマップ `BTreeMap`",
+    "related_errors": []
+  },
+  {
+    "id": "error.panic",
+    "chapter": "ch09",
+    "name": "panic と表明",
+    "description": "`panic!`、panic が起きる場面、`assert!`・`assert_eq!`・`unreachable!`・`todo!`",
+    "related_errors": []
+  },
+  {
+    "id": "error.result",
+    "chapter": "ch09",
+    "name": "Result 型と unwrap・expect",
+    "description": "`Ok`・`Err`、`match` によるエラーの処理、`unwrap`・`expect` と、それらを使ってよい場面",
+    "related_errors": [
+      "E0308"
+    ]
+  },
+  {
+    "id": "error.question_mark",
+    "chapter": "ch09",
+    "name": "? 演算子",
+    "description": "`?` でエラーを呼び出し元に返すこと、`Option` での `?`、`ok_or` で `Option` を `Result` にすること",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "string.parse",
+    "chapter": "ch09",
+    "name": "文字列から数値への変換",
+    "description": "`parse` による文字列から数値への変換、型の指定（ターボフィッシュ `::<>`）、変換の失敗の扱い",
+    "related_errors": [
+      "E0284"
+    ]
+  },
+  {
+    "id": "io.stdin",
+    "chapter": "ch09",
+    "name": "標準入力の読み取り",
+    "description": "`std::io::stdin`、`read_line`・`lines`、入力の終わりの扱い、`print!` で出したプロンプトを入力の前に表示する `flush`",
+    "related_errors": [
+      "E0599"
+    ]
+  },
+  {
+    "id": "error.main_result",
+    "chapter": "ch09",
+    "name": "Result を返す main",
+    "description": "`fn main() -> Result<(), E>` と終了コード",
+    "related_errors": []
+  },
+  {
+    "id": "module.basic",
+    "chapter": "ch10",
+    "name": "モジュールの定義",
+    "description": "`mod` によるモジュールの定義と、モジュールの階層",
+    "related_errors": [
+      "E0425",
+      "E0433"
+    ]
+  },
+  {
+    "id": "module.visibility",
+    "chapter": "ch10",
+    "name": "公開範囲",
+    "description": "`pub` による公開、構造体のフィールドは個別に公開すること、列挙型のバリアントは一括で公開されること",
+    "related_errors": [
+      "E0603",
+      "E0616",
+      "E0451"
+    ]
+  },
+  {
+    "id": "module.use_path",
+    "chapter": "ch10",
+    "name": "use とパス",
+    "description": "絶対パス `crate::`、相対パス `super::`、`use`、`as`、`pub use`",
+    "related_errors": [
+      "E0432",
+      "E0433",
+      "E0252"
+    ]
+  },
+  {
+    "id": "module.files",
+    "chapter": "ch10",
+    "name": "モジュールのファイル分割",
+    "description": "`mod` 宣言とファイルの対応（`foo.rs`・`foo/bar.rs`）",
+    "related_errors": [
+      "E0583"
+    ]
+  },
+  {
+    "id": "crate.lib_bin",
+    "chapter": "ch10",
+    "name": "ライブラリクレートとバイナリクレート",
+    "description": "`src/lib.rs` と `src/main.rs` の役割と、パッケージ名でライブラリを使うこと",
+    "related_errors": [
+      "E0432"
+    ]
+  },
+  {
+    "id": "crate.external",
+    "chapter": "ch10",
+    "name": "外部クレートの利用",
+    "description": "`Cargo.toml` の `[dependencies]` と、外部クレート（`rand` の `random_range`）を使うこと",
+    "related_errors": []
+  },
+  {
+    "id": "test.basic",
+    "chapter": "ch11",
+    "name": "テスト関数",
+    "description": "`#[test]`、`assert_eq!` などでの検査、`cargo test` の結果の読み方",
+    "related_errors": []
+  },
+  {
+    "id": "test.module",
+    "chapter": "ch11",
+    "name": "テストモジュール",
+    "description": "`#[cfg(test)]`、`mod tests` と `use super::*`、非公開の関数のテスト",
+    "related_errors": [
+      "E0425"
+    ]
+  },
+  {
+    "id": "test.should_panic",
+    "chapter": "ch11",
+    "name": "panic を期待するテスト",
+    "description": "`#[should_panic]` と、`expected` によるメッセージの確認",
+    "related_errors": []
+  },
+  {
+    "id": "test.result",
+    "chapter": "ch11",
+    "name": "Result を返すテスト",
+    "description": "テスト関数が `Result` を返し、中で `?` を使うこと",
+    "related_errors": []
+  },
+  {
+    "id": "test.integration",
+    "chapter": "ch11",
+    "name": "統合テスト",
+    "description": "`tests/` ディレクトリに置き、ライブラリクレートを外から使うテスト",
+    "related_errors": [
+      "E0603"
+    ]
+  },
+  {
+    "id": "test.doc",
+    "chapter": "ch11",
+    "name": "ドキュメントコメントとドキュメントテスト",
+    "description": "`///`・`//!` によるドキュメントコメントと、その中のコード例がテストとして動くこと",
+    "related_errors": []
+  },
+  {
+    "id": "generic.function",
+    "chapter": "ch12",
+    "name": "ジェネリックな関数",
+    "description": "型パラメータ `<T>`、使える操作が制約で決まること、使う型ごとにコードが作られること（単相化）",
+    "related_errors": [
+      "E0369",
+      "E0425"
+    ]
+  },
+  {
+    "id": "generic.type",
+    "chapter": "ch12",
+    "name": "ジェネリックな構造体と列挙型",
+    "description": "`struct Point<T>`、`impl<T>`、特定の型だけの `impl`",
+    "related_errors": [
+      "E0107",
+      "E0425"
+    ]
+  },
+  {
+    "id": "trait.basic",
+    "chapter": "ch12",
+    "name": "トレイトの定義と実装",
+    "description": "`trait`、`impl Trait for Type`、デフォルト実装と上書き、孤児ルールの概要",
+    "related_errors": [
+      "E0046",
+      "E0117",
+      "E0407"
+    ]
+  },
+  {
+    "id": "trait.bound",
+    "chapter": "ch12",
+    "name": "トレイト境界",
+    "description": "`impl Trait` 引数、`T: Trait`、`+`、`where`",
+    "related_errors": [
+      "E0277",
+      "E0599"
+    ]
+  },
+  {
+    "id": "trait.assoc_type",
+    "chapter": "ch12",
+    "name": "関連型",
+    "description": "トレイトの中の `type` と、型パラメータとの違い",
+    "related_errors": [
+      "E0046",
+      "E0220"
+    ]
+  },
+  {
+    "id": "std_trait.clone_copy_default",
+    "chapter": "ch13",
+    "name": "Clone・Copy・Default",
+    "description": "`Clone`・`Copy`・`Default` の derive と、構造体を `Copy` にできる条件",
+    "related_errors": [
+      "E0204"
+    ]
+  },
+  {
+    "id": "std_trait.eq_ord_hash",
+    "chapter": "ch13",
+    "name": "比較とハッシュ",
+    "description": "`PartialEq`・`Eq`・`Hash`・`PartialOrd`・`Ord` の derive、`Ordering`、`HashMap` のキーと `sort` に使える型",
+    "related_errors": [
+      "E0369",
+      "E0277"
+    ]
+  },
+  {
+    "id": "std_trait.display",
+    "chapter": "ch13",
+    "name": "Display の実装",
+    "description": "`std::fmt::Display` を実装して `{}` で出力できるようにすること、`to_string`",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "std_trait.from_str",
+    "chapter": "ch13",
+    "name": "FromStr の実装",
+    "description": "`FromStr` を実装して `parse` で独自の型に変換できるようにすること、`type Err`",
+    "related_errors": [
+      "E0046"
+    ]
+  },
+  {
+    "id": "std_trait.from_into",
+    "chapter": "ch13",
+    "name": "From と Into",
+    "description": "型の変換をトレイトで表すこと、`From` を実装すると `Into` が使えること、`TryFrom`・`TryInto`",
+    "related_errors": [
+      "E0277",
+      "E0283"
+    ]
+  },
+  {
+    "id": "std_trait.ops",
+    "chapter": "ch13",
+    "name": "演算子のオーバーロード",
+    "description": "`std::ops::Add` などの実装、`type Output`、既定の型パラメータ（`Rhs = Self`）",
+    "related_errors": [
+      "E0369"
+    ]
+  },
+  {
+    "id": "closure.basic",
+    "chapter": "ch14",
+    "name": "クロージャの基本",
+    "description": "`|x| x + 1` の書き方、型推論、変数に入れて呼ぶこと",
+    "related_errors": [
+      "E0282"
+    ]
+  },
+  {
+    "id": "closure.capture",
+    "chapter": "ch14",
+    "name": "環境のキャプチャと move",
+    "description": "参照・可変の参照・所有権によるキャプチャと、`move`",
+    "related_errors": [
+      "E0502",
+      "E0596",
+      "E0382"
+    ]
+  },
+  {
+    "id": "closure.fn_traits",
+    "chapter": "ch14",
+    "name": "Fn・FnMut・FnOnce",
+    "description": "クロージャを引数に取る関数と、`Fn`・`FnMut`・`FnOnce` の違い",
+    "related_errors": [
+      "E0525",
+      "E0596",
+      "E0382"
+    ]
+  },
+  {
+    "id": "closure.fn_pointer_return",
+    "chapter": "ch14",
+    "name": "関数ポインタとクロージャを返す関数",
+    "description": "`fn` 型、関数をクロージャの代わりに渡すこと、`impl Fn` を返すこと",
+    "related_errors": [
+      "E0373"
+    ]
+  },
+  {
+    "id": "iter.basic",
+    "chapter": "ch15",
+    "name": "Iterator トレイトと next",
+    "description": "`next` が `Option` を返すこと、`type Item`、`for` がイテレータを使っていること、遅延評価",
+    "related_errors": [
+      "E0596"
+    ]
+  },
+  {
+    "id": "iter.iter_into_iter",
+    "chapter": "ch15",
+    "name": "iter・iter_mut・into_iter",
+    "description": "要素を参照・可変の参照・所有権のどれで取り出すかの使い分け",
+    "related_errors": [
+      "E0382",
+      "E0594"
+    ]
+  },
+  {
+    "id": "iter.map_filter",
+    "chapter": "ch15",
+    "name": "map と filter",
+    "description": "イテレータアダプタ `map`・`filter`、アダプタだけでは何も起きないこと、`filter` のクロージャが参照の参照を受け取ること（`|&x|`・`**x`）",
+    "related_errors": []
+  },
+  {
+    "id": "iter.collect",
+    "chapter": "ch15",
+    "name": "collect",
+    "description": "`collect` でイテレータを `Vec`・`String`・`HashMap` に集めること",
+    "related_errors": [
+      "E0283"
+    ]
+  },
+  {
+    "id": "iter.consumers",
+    "chapter": "ch15",
+    "name": "消費アダプタ",
+    "description": "`sum`・`count`・`min`・`max`・`last`・`fold`",
+    "related_errors": [
+      "E0283"
+    ]
+  },
+  {
+    "id": "iter.cloned_copied",
+    "chapter": "ch15",
+    "name": "cloned と copied",
+    "description": "`Vec<&T>` と `Vec<T>` の違いと、参照の要素を値にする `cloned`・`copied`",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "iter.sequence_adapters",
+    "chapter": "ch15",
+    "name": "並びを組み替えるアダプタ",
+    "description": "`enumerate`・`zip`・`chain`・`rev`・`take`・`skip`・`take_while`・`skip_while`・`step_by`",
+    "related_errors": [
+      "E0593"
+    ]
+  },
+  {
+    "id": "iter.search",
+    "chapter": "ch15",
+    "name": "要素を探すメソッド",
+    "description": "`any`・`all`・`find`・`position`・`max_by_key`・`min_by_key`",
+    "related_errors": []
+  },
+  {
+    "id": "iter.filter_map_flat_map",
+    "chapter": "ch15",
+    "name": "filter_map と flat_map",
+    "description": "変換と絞り込みを同時に行う `filter_map` と、入れ子を平らにする `flat_map`",
+    "related_errors": []
+  },
+  {
+    "id": "vec.sort_by",
+    "chapter": "ch15",
+    "name": "クロージャでの並べ替え",
+    "description": "`sort_by`・`sort_by_key`、`cmp` と `Ordering`、`then_with`",
+    "related_errors": [
+      "E0599"
+    ]
+  },
+  {
+    "id": "iter.returning",
+    "chapter": "ch15",
+    "name": "イテレータを返す関数",
+    "description": "`impl Iterator<Item = T>` を返すことと、引数の参照を使うイテレータを返すこと",
+    "related_errors": [
+      "E0782",
+      "E0373"
+    ]
+  },
+  {
+    "id": "iter.custom",
+    "chapter": "ch15",
+    "name": "独自のイテレータの実装",
+    "description": "構造体に `Iterator` を実装し、アダプタを使えるようにすること",
+    "related_errors": [
+      "E0046",
+      "E0053"
+    ]
+  },
+  {
+    "id": "lifetime.fn_annotation",
+    "chapter": "ch16",
+    "name": "関数のライフタイム注釈",
+    "description": "`'a` で引数と戻り値の参照の関係を書くことと、借用チェッカーがライフタイムをどう見るか",
+    "related_errors": [
+      "E0106",
+      "E0261",
+      "E0597"
+    ]
+  },
+  {
+    "id": "lifetime.elision",
+    "chapter": "ch16",
+    "name": "ライフタイムの省略規則",
+    "description": "ライフタイム注釈を書かなくてよい場合を決める 3 つの規則",
+    "related_errors": [
+      "E0106"
+    ]
+  },
+  {
+    "id": "lifetime.struct",
+    "chapter": "ch16",
+    "name": "参照を持つ構造体",
+    "description": "`struct Foo<'a>`、`impl<'a>`、メソッドのライフタイム",
+    "related_errors": [
+      "E0106",
+      "E0597",
+      "E0726"
+    ]
+  },
+  {
+    "id": "lifetime.static",
+    "chapter": "ch16",
+    "name": "'static",
+    "description": "文字列リテラルと `static` の寿命、`T: 'static` の意味",
+    "related_errors": [
+      "E0597"
+    ]
+  },
+  {
+    "id": "smart_ptr.box",
+    "chapter": "ch17",
+    "name": "Box",
+    "description": "`Box` でヒープに値を置くこと、型の大きさがコンパイル時に決まっている必要があること、再帰的な型",
+    "related_errors": [
+      "E0072"
+    ]
+  },
+  {
+    "id": "option.borrow_take",
+    "chapter": "ch17",
+    "name": "Option の中身の借用と取り出し",
+    "description": "`as_ref`・`as_deref`・`take`・`replace`、`std::mem::take`・`std::mem::replace`",
+    "related_errors": [
+      "E0507"
+    ]
+  },
+  {
+    "id": "smart_ptr.deref",
+    "chapter": "ch17",
+    "name": "Deref と参照外し型強制",
+    "description": "`Deref` トレイトと、`&String` が `&str` として渡せる理由（参照外し型強制）",
+    "related_errors": [
+      "E0614"
+    ]
+  },
+  {
+    "id": "smart_ptr.drop",
+    "chapter": "ch17",
+    "name": "Drop",
+    "description": "`Drop` による破棄時の処理と、`std::mem::drop` で早めに破棄すること",
+    "related_errors": [
+      "E0040",
+      "E0509"
+    ]
+  },
+  {
+    "id": "smart_ptr.rc",
+    "chapter": "ch17",
+    "name": "Rc",
+    "description": "参照カウントによる値の共有と `Rc::clone`",
+    "related_errors": [
+      "E0382",
+      "E0596"
+    ]
+  },
+  {
+    "id": "smart_ptr.cell_refcell",
+    "chapter": "ch17",
+    "name": "Cell と RefCell",
+    "description": "内部可変性、`Cell`・`RefCell`、実行時の借用チェックと panic",
+    "related_errors": []
+  },
+  {
+    "id": "smart_ptr.rc_refcell",
+    "chapter": "ch17",
+    "name": "Rc と RefCell の組み合わせ",
+    "description": "共有したまま変更する `Rc<RefCell<T>>`",
+    "related_errors": []
+  },
+  {
+    "id": "smart_ptr.weak",
+    "chapter": "ch17",
+    "name": "Weak と循環参照",
+    "description": "循環参照によるメモリリーク、`Weak`、親を指すポインタ",
+    "related_errors": []
+  },
+  {
+    "id": "trait_object.basic",
+    "chapter": "ch18",
+    "name": "トレイトオブジェクト",
+    "description": "`dyn Trait`、`Box<dyn Trait>`・`&dyn Trait`、異なる型を 1 つの `Vec` に入れること、`Box<dyn Fn>`",
+    "related_errors": [
+      "E0782"
+    ]
+  },
+  {
+    "id": "trait_object.dyn_compatibility",
+    "chapter": "ch18",
+    "name": "ディスパッチの使い分けと dyn 互換性",
+    "description": "ジェネリクス（静的ディスパッチ）とトレイトオブジェクト（動的ディスパッチ）の使い分けと、トレイトオブジェクトにできないトレイトの条件",
+    "related_errors": [
+      "E0038"
+    ]
+  },
+  {
+    "id": "types.typestate",
+    "chapter": "ch18",
+    "name": "型による状態の表現",
+    "description": "`self` を消費して別の型を返す状態遷移と、不正な操作をコンパイルエラーにする設計",
+    "related_errors": [
+      "E0599",
+      "E0382"
+    ]
+  },
+  {
+    "id": "error.combinators",
+    "chapter": "ch19",
+    "name": "Option と Result のメソッド",
+    "description": "`map`・`and_then`・`unwrap_or`・`unwrap_or_else`・`map_err`・`ok`・`ok_or_else`、`Result` の `collect`",
+    "related_errors": []
+  },
+  {
+    "id": "error.custom_type",
+    "chapter": "ch19",
+    "name": "独自のエラー型",
+    "description": "列挙型でエラーを表すことと、`Display`・`std::error::Error` の実装",
+    "related_errors": []
+  },
+  {
+    "id": "error.from_conversion",
+    "chapter": "ch19",
+    "name": "? によるエラーの変換",
+    "description": "`From` を実装して、`?` でエラーを自動的に変換すること",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "error.box_dyn",
+    "chapter": "ch19",
+    "name": "Box<dyn Error>",
+    "description": "種類の異なるエラーを `Box<dyn Error>` でまとめて返すことと、独自のエラー型との使い分け",
+    "related_errors": []
+  },
+  {
+    "id": "error.thiserror",
+    "chapter": "ch19",
+    "name": "thiserror によるエラー型の定義",
+    "description": "`thiserror` の `#[derive(Error)]`・`#[error(...)]`・`#[from]` でエラー型を定義すること",
+    "related_errors": []
+  },
+  {
+    "id": "error.anyhow",
+    "chapter": "ch19",
+    "name": "anyhow によるエラー処理",
+    "description": "`anyhow::Result`、`context` で文脈を付けること、`bail!`、ライブラリとアプリケーションでの使い分け",
+    "related_errors": [
+      "E0599"
+    ]
+  },
+  {
+    "id": "thread.spawn",
+    "chapter": "ch20",
+    "name": "スレッドの生成",
+    "description": "`thread::spawn`、`join`、`thread::sleep` と `Duration`",
+    "related_errors": []
+  },
+  {
+    "id": "thread.move",
+    "chapter": "ch20",
+    "name": "スレッドと move",
+    "description": "`move` でスレッドに値を渡すことと、`'static` が必要な理由",
+    "related_errors": [
+      "E0373",
+      "E0382"
+    ]
+  },
+  {
+    "id": "thread.scope",
+    "chapter": "ch20",
+    "name": "スコープ付きスレッド",
+    "description": "`thread::scope` で、借用したままスレッドを使うこと",
+    "related_errors": [
+      "E0499",
+      "E0502"
+    ]
+  },
+  {
+    "id": "sync.channel",
+    "chapter": "ch20",
+    "name": "チャネル",
+    "description": "`mpsc` のチャネル、送信側の複製、受信の終わり",
+    "related_errors": [
+      "E0382"
+    ]
+  },
+  {
+    "id": "sync.mutex",
+    "chapter": "ch20",
+    "name": "Mutex",
+    "description": "ロックとガード、ガードの破棄でロックが外れること、デッドロック",
+    "related_errors": [
+      "E0614"
+    ]
+  },
+  {
+    "id": "sync.arc",
+    "chapter": "ch20",
+    "name": "Arc",
+    "description": "スレッド間での値の共有と `Arc<Mutex<T>>`",
+    "related_errors": [
+      "E0382",
+      "E0596"
+    ]
+  },
+  {
+    "id": "sync.send_sync",
+    "chapter": "ch20",
+    "name": "Send と Sync",
+    "description": "スレッド間で渡せる型（`Send`）・共有できる型（`Sync`）と、`Rc` が使えない理由",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "sync.atomic",
+    "chapter": "ch20",
+    "name": "アトミック型",
+    "description": "`AtomicUsize` など、ロックなしでの共有カウンタ、メモリオーダリングの概要",
+    "related_errors": [
+      "E0368"
+    ]
+  },
+  {
+    "id": "sync.global_state",
+    "chapter": "ch20",
+    "name": "グローバルな共有状態",
+    "description": "`static` と `Mutex` の組み合わせ、`OnceLock`・`LazyLock` による一度だけの初期化",
+    "related_errors": [
+      "E0015",
+      "E0594"
+    ]
+  },
+  {
+    "id": "async.basic",
+    "chapter": "ch21",
+    "name": "async fn・await とランタイム",
+    "description": "`async fn`、Future は `await` するまで動かないこと、`#[tokio::main]`",
+    "related_errors": [
+      "E0728",
+      "E0752"
+    ]
+  },
+  {
+    "id": "async.spawn",
+    "chapter": "ch21",
+    "name": "タスクの生成",
+    "description": "`tokio::spawn` と `JoinHandle`",
+    "related_errors": [
+      "E0373"
+    ]
+  },
+  {
+    "id": "async.join",
+    "chapter": "ch21",
+    "name": "複数の Future の同時待ち",
+    "description": "`join!`・`try_join!` と、数が実行時に決まる場合の `futures::future::join_all`",
+    "related_errors": []
+  },
+  {
+    "id": "async.select_timeout",
+    "chapter": "ch21",
+    "name": "select! とタイムアウト",
+    "description": "早く終わったものを使う `select!` と、`tokio::time::timeout`・`sleep`",
+    "related_errors": []
+  },
+  {
+    "id": "async.channel",
+    "chapter": "ch21",
+    "name": "非同期のチャネル",
+    "description": "`tokio::sync::mpsc`",
+    "related_errors": []
+  },
+  {
+    "id": "async.shared_state",
+    "chapter": "ch21",
+    "name": "非同期の共有状態",
+    "description": "`Arc` と `tokio::sync::Mutex`、標準の `Mutex` との使い分け",
+    "related_errors": []
+  },
+  {
+    "id": "async.stream",
+    "chapter": "ch21",
+    "name": "ストリーム",
+    "description": "非同期に値を順に受け取る `Stream` と `StreamExt`、`buffer_unordered` で同時に動かす数を制限すること、`tokio-stream`",
+    "related_errors": [
+      "E0599"
+    ]
+  },
+  {
+    "id": "async.future_pin",
+    "chapter": "ch21",
+    "name": "Future トレイトと Pin",
+    "description": "`poll` と `Poll`、`Pin` が必要な理由、`Future` を手で実装すること",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "trait.supertrait",
+    "chapter": "ch22",
+    "name": "スーパートレイト",
+    "description": "別のトレイトの実装を前提にするトレイト",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "trait.qualified_syntax",
+    "chapter": "ch22",
+    "name": "完全修飾構文",
+    "description": "同名のメソッドの呼び分けと、`<Type as Trait>::method`",
+    "related_errors": [
+      "E0034",
+      "E0790"
+    ]
+  },
+  {
+    "id": "types.newtype",
+    "chapter": "ch22",
+    "name": "ニュータイプパターン",
+    "description": "孤児ルールを回避することと、型で意味を区別すること",
+    "related_errors": [
+      "E0117"
+    ]
+  },
+  {
+    "id": "types.alias_never",
+    "chapter": "ch22",
+    "name": "型エイリアスと never 型",
+    "description": "`type` による型エイリアスと、never 型 `!` と発散する関数",
+    "related_errors": []
+  },
+  {
+    "id": "types.dst_sized",
+    "chapter": "ch22",
+    "name": "動的サイズ型と Sized",
+    "description": "`str`・`[T]`・`dyn Trait` などの動的サイズ型と、`Sized`・`?Sized`",
+    "related_errors": [
+      "E0277"
+    ]
+  },
+  {
+    "id": "macro.basic",
+    "chapter": "ch23",
+    "name": "宣言的マクロの基本",
+    "description": "`macro_rules!`、マッチャーとフラグメント指定子",
+    "related_errors": []
+  },
+  {
+    "id": "macro.repetition",
+    "chapter": "ch23",
+    "name": "マクロの繰り返し",
+    "description": "`$(...),*` と、可変個の引数を受け取るマクロ",
+    "related_errors": []
+  },
+  {
+    "id": "unsafe.raw_pointer",
+    "chapter": "ch23",
+    "name": "unsafe と生ポインタ",
+    "description": "`unsafe` ブロックでできること、未定義動作とは何か、`*const T`・`*mut T`、`&raw const`・`&raw mut`",
+    "related_errors": [
+      "E0133"
+    ]
+  },
+  {
+    "id": "unsafe.safe_abstraction",
+    "chapter": "ch23",
+    "name": "unsafe を安全な API で包む",
+    "description": "`unsafe fn`、安全性の前提を守る抽象化、`static mut` を避ける理由と代わりの手段",
+    "related_errors": [
+      "E0133"
+    ]
+  }
+]
