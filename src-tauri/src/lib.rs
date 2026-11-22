@@ -1,6 +1,22 @@
+pub mod commands;
+
+use tauri::{Builder, Context, Runtime};
+
+/// コマンドのハンドラを載せたビルダーを返す。`run` と、モックの実行環境のテストで使う。
+pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
+    builder.invoke_handler(tauri::generate_handler![
+        commands::settings::get_app_version,
+    ])
+}
+
+/// `tauri.conf.json` と `capabilities/` から作ったアプリのコンテキスト。
+pub fn app_context<R: Runtime>() -> Context<R> {
+    tauri::generate_context!()
+}
+
 pub fn run() {
-    tauri::Builder::default()
-        .run(tauri::generate_context!())
+    app_builder(Builder::default())
+        .run(app_context())
         .expect("error while running tauri application");
 }
 
@@ -23,6 +39,42 @@ mod tests {
         let dev: serde_json::Value = serde_json::from_str(include_str!("../tauri.dev.conf.json"))
             .expect("tauri.dev.conf.json を読めない");
         assert_eq!(dev["identifier"], "com.progrust.desktop.dev");
+    }
+
+    /// CSP（spec/non-functional/security-privacy.md「アプリ自体」）。
+    /// `tauri dev` では CSP が掛からないので、設定の値をここで確かめる。
+    #[test]
+    fn csp() {
+        let config = config();
+        let csp = config.app.security.csp.expect("CSP を設定する").to_string();
+        let mut directives: Vec<(String, Vec<String>)> = csp
+            .split(';')
+            .map(str::trim)
+            .filter(|directive| !directive.is_empty())
+            .map(|directive| {
+                let mut parts = directive.split_whitespace().map(String::from);
+                let name = parts.next().unwrap();
+                (name, parts.collect())
+            })
+            .collect();
+        directives.sort();
+        let expected = [
+            ("connect-src", "'self' ipc: http://ipc.localhost"),
+            ("default-src", "'self'"),
+            ("font-src", "'self' data:"),
+            ("img-src", "'self' data:"),
+            ("media-src", "'self' asset: data:"),
+            ("script-src", "'self'"),
+            ("style-src", "'self' 'unsafe-inline'"),
+            ("worker-src", "'self'"),
+        ]
+        .map(|(name, sources)| {
+            (
+                name.to_string(),
+                sources.split(' ').map(String::from).collect::<Vec<_>>(),
+            )
+        });
+        assert_eq!(directives, expected);
     }
 
     #[test]

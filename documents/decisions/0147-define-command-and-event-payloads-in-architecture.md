@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0147"
-description: "フロントエンドとバックエンドの間のコマンドとイベントの入力・出力の形を `spec/architecture/commands/` の 1 か所に定め、要求をフロントエンドが作る `request_id` で見分け、エラーを共通の形で返す"
+description: "フロントエンドとバックエンドの間のコマンドとイベントの入力・出力の形を `spec/architecture/commands/` の 1 か所に定め、要求をフロントエンドが作る `request_id` で見分け、エラーを共通の形で返す（ADR 0167 でフロントエンドに許可する権限にイベントの受け取りを加えた）"
 ---
 
 - 日付: 2026-11-22
