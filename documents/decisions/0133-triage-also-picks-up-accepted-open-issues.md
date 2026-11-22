@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0133"
-description: "スキル `triage-issues` で、`未判断` の Issue に加えて、対応すると決めて開いたままの Issue も仕分け、解消しているか、その場で直せるようになっていれば処理する"
+description: "スキル `triage-issues` で、`未判断` の Issue に加えて、対応すると決めて開いたままの Issue も仕分け、解消しているか、その場で直せるようになっていれば処理する（ADR 0164 で仕分ける Issue の範囲を変えた）"
 ---
 
 - 日付: 2026-11-22

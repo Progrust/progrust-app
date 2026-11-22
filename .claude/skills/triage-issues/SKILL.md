@@ -1,7 +1,7 @@
 ---
 name: triage-issues
 description: 開いている「AI起票」の Issue のうち「保留」以外（「未判断」のものと、対応すると決めて開いたままのもの）をまとめて仕分け、ユーザーの判断が要るもの以外を処理する（直す・保留にする・閉じる）。
-argument-hint: "[Issue の番号 …]"
+argument-hint: "[--loop] [Issue の番号 …]"
 disable-model-invocation: true
 allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue comment *) Bash(gh issue edit *) Bash(gh issue close *) Bash(gh issue create *) Bash(git rev-parse --short HEAD) Bash(git status *) Bash(git diff *) Bash(python3 tools/check-documents.py*)
 ---
@@ -12,8 +12,9 @@ allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue comment
 
 引数: `$ARGUMENTS`
 
-- 引数が空なら、開いている `AI起票` の Issue のうち、`保留` が付いていないものを全部対象にする。
-- 引数に Issue の番号があれば、その Issue だけを対象にする。開いていない Issue、`AI起票` が付いていない Issue、`保留` が付いた Issue は、対象にせず、報告でそう伝える。
+- 引数が空なら、開いている `AI起票` の Issue のうち、`保留` も `実装タスク` も付いていないものを全部対象にする。
+- 引数に Issue の番号があれば、その Issue だけを対象にする。開いていない Issue、`AI起票` が付いていない Issue、`保留` か `実装タスク` が付いた Issue は、対象にせず、報告でそう伝える。
+- 引数に `--loop` があれば、実装のループから呼ばれている。ユーザーはいない。下の「ループから呼ばれたとき」に従う。
 
 ## 決まり
 
@@ -27,7 +28,7 @@ allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue comment
 ### 1. 対象を集める
 
 ```bash
-gh issue list --state open --label "AI起票" --search "-label:保留" --limit 200 --json number,title,labels,createdAt
+gh issue list --state open --label "AI起票" --search "-label:保留 -label:実装タスク" --limit 200 --json number,title,labels,createdAt
 git rev-parse --short HEAD
 git status --short
 ```
@@ -108,3 +109,17 @@ EOF
 - この回で、直している途中で見つけて、起票せずに直した問題（何が問題だったかと、どう直したか）。
 - この回で新しく起票した Issue の番号とタイトル。
 - 判断を変えたい Issue があれば、番号を伝えてもらえば処理をやり直せること。
+
+## ループから呼ばれたとき
+
+引数に `--loop` があるときは、実装のループがタスクの切れ目に呼んでいる。決まりは `documents/conventions/implementation-loop.md`「Issue の仕分け」にある。始める前に読む。上の進め方のうち、次の点を変える。
+
+- 対象は、引数の番号の Issue だけにする。
+- 手順 4（ユーザーに尋ねる）は行わない。ユーザーの判断が要る Issue は、何もせず、`未判断` のままにする。
+- ファイルを変えない。「直す」に仕分けた Issue は、その場で直さず、ループのタスクにする。
+  - 「直す」に仕分けるのは、ループの中で直せる Issue だけにする。保護するパス（`documents/conventions/implementation-loop.md`「保護するパス」）を変える必要がある Issue は、「対応するが、この仕分けでは直さない」にし、コメントの「直すのに要る変更」に、ユーザーのいる会話で直す必要があることを書く。
+  - 難易度を、`documents/conventions/implementation-plan.md`「難易度」で決める。
+  - コメントの 1 行目は `ループで直すと決めた（YYYY-MM-DD、Claude の判断）。`、続きの見出しは `## 決めたことと理由` にする。どう直すかを、実装する側がこれだけを読んで直せるように書く。
+  - コメントの後に、`gh issue edit （番号） --remove-label "未判断" --add-label "実装タスク,難易度:小"`（難易度は決めたもの）を実行する。`未判断` が付いていない Issue では、`--remove-label "未判断"` を付けない。Issue は閉じない。ループが直してマージしたときに閉じる。
+- 「解消している」「対応するが、この仕分けでは直さない」「保留」「対応しない」は、上の手順 5 の表のとおりに処理する。
+- 手順 6 の報告は、仕分けた Issue の番号と仕分けを、短く書くだけでよい。

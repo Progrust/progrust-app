@@ -38,10 +38,10 @@ description: "質疑応答の会話履歴を保持する範囲と、AI への入
 | `Open Questions` | 機能の仕様でまだ決まっていない事項（`open-questions.md`） | 仕様を変える前 |
 | `Glossary` | 用語集 | 言葉の意味を確かめるとき |
 | `Decision` | ADR | 仕様を変える前 |
-| `Convention` | `documents/` の中の文書の書き方と運用ルール、AI エージェントの Issue の起票の決まり | 文書を書くとき、Issue を起票するとき |
+| `Convention` | `documents/` の中の文書の書き方と運用ルール、AI エージェントの Issue の起票の決まり、実装の進め方の決まり | 文書を書くとき、Issue を起票するとき、実装計画を作るとき、実装するとき |
 | `Verification Report` | 技術検証の結果（`verification/` の文書） | 実装するとき、仕様を変える前 |
 
-- 教材の作成ルール（`spec/content-guidelines/`）は、プロダクト側の決まりなので `Specification` にする。`Convention` は、`documents/` の中の文書の書き方と、AI エージェントの Issue の起票の決まり（[Issue の起票](issues.md)）だけに使う。
+- 教材の作成ルール（`spec/content-guidelines/`）は、プロダクト側の決まりなので `Specification` にする。`Convention` は、`documents/` の中の文書の書き方と、AI エージェントの Issue の起票の決まり（[Issue の起票](issues.md)）と、実装の進め方の決まり（[実装計画とタスクの Issue](implementation-plan.md)、[タスクの実装](implementation-task.md)、[実装のレビュー](implementation-review.md)、[実装のループ](implementation-loop.md)）だけに使う。
 - 領域（画面、教材、デザインなど）は type で分けない。置き場所（ディレクトリ）で分ける。
 
 ## 使わないキー

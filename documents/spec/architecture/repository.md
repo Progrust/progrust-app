@@ -14,7 +14,7 @@ progrust-app/
 ├── content/             # 教材の原本（動画のコードと音声を含む。形式は spec/content-format/index.md）
 ├── prompts/             # AI への指示文の原本
 ├── runner/              # 許可クレートの定義
-├── tools/               # 教材チェックツール、音声を作るツール、デザインシステムの検査の道具などの開発用ツール（spec/content-guidelines/check-tool.md、spec/content-format/video/voice.md、spec/screens/design-system-files.md）
+├── tools/               # 教材チェックツール、音声を作るツール、デザインシステムの検査の道具、実装のループのスクリプトなどの開発用ツール（spec/content-guidelines/check-tool.md、spec/content-format/video/voice.md、spec/screens/design-system-files.md、conventions/implementation-loop.md）
 ├── src/                 # フロントエンド
 │   └── video/           # 動画の共通部品（プレーヤー・タイムライン・教材用の部品。spec/content-format/video/scenes.md）
 ├── src-tauri/           # バックエンド

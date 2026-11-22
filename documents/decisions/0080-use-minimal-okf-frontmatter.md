@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0080"
-description: "OKF の frontmatter のうち type・title・description・status・superseded_by だけを使い、type を6つに固定する（ADR 0088 で `Convention` の範囲を、ADR 0089 で type の数を変えた）"
+description: "OKF の frontmatter のうち type・title・description・status・superseded_by だけを使い、type を6つに固定する（ADR 0088 で `Convention` の範囲を、ADR 0089 で type の数を、ADR 0160 で `Convention` の範囲を変えた）"
 ---
 
 - 日付: 2026-11-20

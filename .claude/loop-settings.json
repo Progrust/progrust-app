@@ -1,0 +1,47 @@
+{
+  "permissions": {
+    "defaultMode": "dontAsk",
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit",
+      "Write",
+      "Bash(npm run *)",
+      "Bash(npm test*)",
+      "Bash(npm ci)",
+      "Bash(npm install*)",
+      "Bash(npm ls*)",
+      "Bash(npx *)",
+      "Bash(cargo *)",
+      "Bash(rustc *)",
+      "Bash(rustup show*)",
+      "Bash(python3 tools/check-documents.py*)",
+      "Bash(python3 tools/design-system.py check*)",
+      "Bash(mkdir -p *)",
+      "Bash(git mv *)",
+      "Bash(git rm *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)",
+      "Bash(git ls-files*)",
+      "Bash(git merge-base*)",
+      "Bash(git rev-parse*)",
+      "Bash(gh issue list *)",
+      "Bash(gh issue view *)",
+      "Bash(gh issue create *)"
+    ],
+    "deny": [
+      "Edit(CLAUDE.md)",
+      "Edit(.claude/**)",
+      "Edit(.github/**)",
+      "Edit(documents/conventions/**)",
+      "Edit(tools/check-documents.py)",
+      "Edit(tools/design-system.py)",
+      "Edit(tools/okf/**)",
+      "Edit(tools/implement-loop.py)",
+      "Edit(tools/tests/test_implement_loop.py)"
+    ]
+  }
+}
