@@ -21,6 +21,8 @@ tauri = { version = "~2.12.7", features = [] }
 serde_json = "1"
 # Tauri のモックの実行環境（`tauri::test`）でコマンドを確かめる。
 tauri = { version = "~2.12.7", features = ["test"] }
+# テストごとの一時ディレクトリ（spec/non-functional/testing.md「自動テストで確かめるもの」）。
+tempfile = "3.27.0"
 
 # Tauri の資料の推奨に合わせる: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]

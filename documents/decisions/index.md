@@ -175,6 +175,7 @@
 * [ADR 0140](0140-check-csp-in-production-build.md) - デスクトップの開発時の起動（tauri dev）では CSP が掛からないので、CSP の下で動くかどうかを本番ビルドで確かめ、本番ビルドで CSP の違反が出ないことを受け入れ条件にする
 * [ADR 0141](0141-allow-data-uri-in-media-src.md) - Remotion の Player の共有の audio 要素が使う無音の data: の音声を拒否しないよう、CSP の media-src に data: を加える
 * [ADR 0149](0149-testing-policy.md) - バックエンドのロジックを cargo test の自動テストで、AI の出力を受けた動作を決まった出力を返す偽の claude で確かめ、実物の claude を使う確認・画面の操作・本番ビルドでの確認は人が行い、E2E は行わず、CI ではコミット前の確認と教材チェックツールを ubuntu-latest で実行する
+* [ADR 0168](0168-write-fake-claude-in-perl-and-place-by-symlink.md) - 偽の claude を、受け取った環境変数をそのまま書き残せるように sh ではなく perl で書き、偽のツールは原本を指すシンボリックリンクとしてテストごとの一時ディレクトリに置く
 
 # ドキュメントの運用ルール
 

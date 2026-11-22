@@ -1,0 +1,83 @@
+#!/usr/bin/perl
+# テスト用の偽の claude（spec/non-functional/testing.md「偽の claude と偽の cargo」）。
+#
+# テストでは、この原本を指すシンボリックリンクを一時ディレクトリに置いて使う
+# （tests/fake_tools/mod.rs）。返す出力は、実行ファイル（リンク）と同じディレクトリの
+# 次のファイルで決める。環境変数では決めない。
+#
+#   stdout     `-p` の呼び出しで標準出力に書く内容（stream-json の行）。無ければ何も書かない
+#   stderr     `-p` の呼び出しで標準エラー出力に書く内容。無ければ何も書かない
+#   exit-code  `-p` の呼び出しの終了コード。無ければ 0
+#   hang       あれば、`-p` の呼び出しで stdout と stderr を書いた後、終了せずに止まる（応答しない）
+#
+# 呼び出しごとに、受け取ったものを calls/{1 から始まる番号}/ に書き残す。
+#
+#   args   引数。1 つずつ NUL で終える
+#   env    環境変数。`名前=値` を 1 つずつ NUL で終える。名前の順に並べる
+#   stdin  標準入力。`-p` の呼び出しだけ。`--version` では標準入力を読まない
+#
+# sh ではなく perl で書くのは、sh が子のプロセスに環境変数（PWD・SHLVL・_）を足し、
+# 受け取った環境変数をそのまま書き残せないからである。perl の組み込みの機能だけを使う。
+
+use strict;
+use warnings;
+
+my $dir = $0 =~ m{^(.*)/} ? $1 : '.';
+
+sub read_file {
+    my ($path) = @_;
+    open(my $fh, '<:raw', $path) or return undef;
+    local $/;
+    my $content = <$fh>;
+    close $fh;
+    return defined $content ? $content : '';
+}
+
+# 書きかけのファイルを読まれないように、別の名前で書いてから名前を変える。
+sub write_file {
+    my ($path, $content) = @_;
+    open(my $fh, '>:raw', "$path.part") or die "fake claude: $path.part に書けない: $!\n";
+    print {$fh} $content;
+    close $fh or die "fake claude: $path.part に書けない: $!\n";
+    rename("$path.part", $path) or die "fake claude: $path に名前を変えられない: $!\n";
+}
+
+mkdir "$dir/calls";
+my $number = 1;
+until (mkdir "$dir/calls/$number") {
+    die "fake claude: $dir/calls/$number を作れない: $!\n" unless -d "$dir/calls/$number";
+    $number++;
+}
+my $call = "$dir/calls/$number";
+write_file("$call/args", join('', map { "$_\0" } @ARGV));
+write_file("$call/env", join('', map { "$_=$ENV{$_}\0" } sort keys %ENV));
+
+if (@ARGV == 1 && $ARGV[0] eq '--version') {
+    print "2.1.329 (Claude Code)\n";
+    exit 0;
+}
+
+unless (grep { $_ eq '-p' } @ARGV) {
+    print STDERR "fake claude: 対応していない引数: @ARGV\n";
+    exit 2;
+}
+
+binmode STDIN;
+my $stdin = do { local $/; <STDIN> };
+write_file("$call/stdin", defined $stdin ? $stdin : '');
+
+binmode STDOUT;
+binmode STDERR;
+$| = 1;
+my $stdout = read_file("$dir/stdout");
+print STDOUT $stdout if defined $stdout;
+my $stderr = read_file("$dir/stderr");
+print STDERR $stderr if defined $stderr;
+
+if (-e "$dir/hang") {
+    # 子のプロセスを作らずに止まる。テストがこのプロセスを終了すれば、出力のパイプも閉じる。
+    sleep while 1;
+}
+
+my $exit_code = read_file("$dir/exit-code");
+exit(defined $exit_code ? int($exit_code) : 0);
