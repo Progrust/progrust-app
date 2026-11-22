@@ -68,16 +68,16 @@ rand = "=0.9.1"
 
 ## 初回準備のやり直しが要る失敗
 
-`--offline` での演習のビルド（`project/`・`validate/`）が終了コード 101 で失敗し、cargo 自身の標準エラー出力（`--message-format=json` の `compiler-message` ではない行）が次のどれかに当てはまるときは、許可クレートのソースか、ビルド済みの依存が失われている。
+`--offline` での演習のビルド（`project/`・`validate/`）が終了コード 101 で失敗し、ビルドの出力が次のどれかに当てはまるときは、許可クレートのソースか、ビルド済みの依存が失われている。ビルドの出力は、cargo 自身の標準エラー出力と、コンパイラの診断（cargo の標準出力の JSON のうち `compiler-message` の診断）に分かれて出る（[コードの実行（run）](run.md)「ビルドの出力の表示」）。判定に使う文は、表の「探す出力」の列の出力から探す。
 
-| 状態 | 判定に使う文 |
-|---|---|
-| ダウンロード済みの `.crate` が無い | `failed to download` と、`--offline` に触れる文（`attempting to make an HTTP request, but --offline was specified`） |
-| レジストリの索引が無い | `no matching package named` と `location searched: crates.io index` |
-| ビルド済みの依存が壊れている | `found invalid metadata files for crate`（E0786）で、`note:` が示すファイルが `target/` などのビルド先の中にある |
+| 状態 | 探す出力 | 判定に使う文 |
+|---|---|---|
+| ダウンロード済みの `.crate` が無い | cargo 自身の標準エラー出力 | `failed to download` と、`--offline` に触れる文（`attempting to make an HTTP request, but --offline was specified`） |
+| レジストリの索引が無い | cargo 自身の標準エラー出力 | `no matching package named` と `location searched: crates.io index` |
+| ビルド済みの依存が壊れている | コンパイラの診断 | `found invalid metadata files for crate`（E0786）の診断で、その `note:` が示すファイルが `target/` などのビルド先の中にある |
 
 - 文言は cargo の版で変わりうるので、1 つの語だけで判定せず、表の 2 つ以上の語の組で判定する。
-- E0786 は学習者のコードのコンパイルエラーと同じ形で出るので、`note:` のパスがビルド先の中を指すことを必ず確かめる。
+- E0786 は学習者のコードのコンパイルエラーと同じ形（コンパイラの診断）で出るので、`note:` のパスがビルド先の中を指すことを必ず確かめる。ビルド先の中のどこを指すかは cargo の版で変わりうるので、ビルド先の中であることだけを確かめる。
 - 実行・提出のビルドで当てはまったときは、その実行・提出を学習者のコードの誤りとして表示せず、「クレートを準備し直しています」と表示し、`prepared.json` の `status` を `failed` にして初回準備を始める。ネットワークが無いときは初回準備が失敗し、上の「準備中・失敗時の動作」になる。
   - その実行・提出の結果の状態は `crates_unavailable` とする（[コードの実行（run）](run.md)「結果の状態」、[コードの提出（submit）](submit.md)「判定結果」）。試行ログへの記録は [実行・提出の試行ログへの記録](attempt-log.md) に従う。
   - 初回準備が終わっても、その実行・提出を自動ではやり直さない。学習者が、もう一度ボタンを押す。
