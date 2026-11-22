@@ -13,7 +13,8 @@ description: "学習者のコードの実行、アプリ自体の制限、デー
 
 - 動画のコードはアプリのビルドに含める教材で、実行時に外部から読み込まない（[フロントエンドとバックエンドの役割分担](../architecture/responsibilities.md)）。動画のコードから Tauri の API・ネットワーク・ファイルにアクセスすることを、教材チェックツールで禁じる（[動画のコードの禁止事項](../content-format/video/prohibited-code.md)）。
 - フロントエンドに許可する Tauri の権限は最小限にする（[Tauri の権限](../architecture/tauri-permissions.md)）。
-- アプリのページに CSP（Content Security Policy）を設定する。スクリプト・Worker・接続の読み込み先は、アプリ自身（`'self'`）と Tauri の IPC に限る。`style-src` には、Monaco Editor が実行時にスタイルを作るため `'unsafe-inline'` を許す。フォントと画像は `data:` も許す。音声（`media-src`）は、アプリ自身と、Tauri のアセットプロトコル（[Tauri の権限](../architecture/tauri-permissions.md)）に限る。
+- アプリのページに CSP（Content Security Policy）を設定する。スクリプト・Worker・接続の読み込み先は、アプリ自身（`'self'`）と Tauri の IPC に限る。`style-src` には、Monaco Editor が実行時にスタイルを作るため `'unsafe-inline'` を許す。フォントと画像は `data:` も許す。音声（`media-src`）は、アプリ自身と、Tauri のアセットプロトコル（[Tauri の権限](../architecture/tauri-permissions.md)）と、`data:` に限る。
+- デスクトップの開発時の起動（`tauri dev`）では、CSP が掛からない。CSP の下で動くかどうかは、本番ビルド（`tauri build`）で確かめる。
 - AI にはツールを使わせない（[claude -p の呼び出しの共通ルール](../claude-integration/invocation.md)）。
 
 ## データの送信

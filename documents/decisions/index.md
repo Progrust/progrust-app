@@ -154,6 +154,8 @@
 * [ADR 0090](0090-support-only-authors-mac-until-completion.md) - アプリの完成までは、対応環境を作者の Mac だけとし、一般公開しない前提で開発する
 * [ADR 0091](0091-no-distribution-or-auto-update-until-publication.md) - アプリの完成までは配布と更新の仕組みを作らず、作者の Mac でビルドして使い、教材はアプリに同梱する
 * [ADR 0115](0115-minimum-rustc-1-100.md) - 学習者の環境に必要な rustc の最低バージョンを 1.100.0 にする
+* [ADR 0140](0140-check-csp-in-production-build.md) - デスクトップの開発時の起動（tauri dev）では CSP が掛からないので、CSP の下で動くかどうかを本番ビルドで確かめ、本番ビルドで CSP の違反が出ないことを受け入れ条件にする
+* [ADR 0141](0141-allow-data-uri-in-media-src.md) - Remotion の Player の共有の audio 要素が使う無音の data: の音声を拒否しないよう、CSP の media-src に data: を加える
 
 # ドキュメントの運用ルール
 
