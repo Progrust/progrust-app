@@ -26,6 +26,20 @@ beforeEach(() => {
         },
       };
     }
+    if (command === "get_settings") {
+      return {
+        schema_version: 1,
+        theme: "system",
+        editor_font_size: 14,
+        video: { volume: 1, muted: false, playback_rate: 1, captions: false },
+        models: { chat: "sonnet", background: "opus" },
+        tool_paths: { cargo: null, claude: null },
+        first_launch_completed: true,
+      };
+    }
+    if (command === "get_app_version") {
+      return { version: "0.1.0" };
+    }
     return undefined;
   });
 });
@@ -63,7 +77,7 @@ it("メニューで各画面に移り、選んでいる項目だけに aria-curr
   const cases = [
     ["レッスン", "レッスン"],
     ["問題生成", "生成問題一覧"],
-    ["設定", "設定画面"],
+    ["設定", "設定"],
     ["ホーム", "すべてのレッスンを完了しました"],
   ] as const;
   for (const [label, title] of cases) {
