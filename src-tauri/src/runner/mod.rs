@@ -5,8 +5,10 @@
 //!   Tauri の `resource_dir()` の下の `runner/` にし、テストでは一時ディレクトリを渡す。
 //! - エディタから受け取るファイルパスの検証は [`file_path`]、作業領域のパスは [`workspace`]、
 //!   実行・提出の `project/` の組み立てとビルドの条件は [`project`]。
+//! - 学習者のプログラムなどを新しいプロセスグループで動かし、出力・標準入力・停止・制限を扱う部品は [`process`]。
 
 pub mod file_path;
+pub mod process;
 pub mod project;
 pub mod workspace;
 
