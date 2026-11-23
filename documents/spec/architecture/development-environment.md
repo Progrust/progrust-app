@@ -97,6 +97,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 | `npm test` | 自動テスト（Vitest と `cargo test`。[テストの方針](../non-functional/testing.md)） |
 | `npm run check` | コミット前の確認。`npm run lint`、`npm run format:check`、`npm test` を順に実行する |
 | `npm run content:check` | 教材チェックツール（[教材チェックツール](../content-guidelines/check-tool.md)）。`content/` のすべての教材を検査する |
+| `npm run runner:lock` | 許可クレートの `Cargo.lock`（`runner/Cargo.lock`）を、`runner/allowed-crates.toml` から作り直す（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「許可クレート」）。クレートの索引を読むので、ネットワークが要ることがある |
 | `npm run content:voice` | 音声を作るツール（[動画の音声](../content-format/video/voice.md)）。作者の環境の VOICEPEAK と ffmpeg を使う |
 
 - Tauri が開発時の起動と本番ビルドの前に実行するフロントエンドだけのコマンド（`beforeDevCommand`・`beforeBuildCommand`）は、`npm run dev:web`（Vite の開発サーバー）と `npm run build:web`（Vite のビルド）にする。

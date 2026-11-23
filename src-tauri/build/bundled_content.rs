@@ -14,6 +14,13 @@ use std::path::{Component, Path, PathBuf};
 /// `bundle.resources` のキーと同じ。`src-tauri/gen/` は git に入れない。
 pub const STAGING_DIR: &str = "gen/bundled/content/";
 
+/// 許可クレートの定義（`runner/`）を写すディレクトリ。`STAGING_DIR` と同じく、`tauri.conf.json` の
+/// `bundle.resources` のキーと同じ。
+pub const RUNNER_STAGING_DIR: &str = "gen/bundled/runner/";
+
+/// `runner/` から同梱するファイル。
+pub const RUNNER_FILES: [&str; 2] = ["allowed-crates.toml", "Cargo.lock"];
+
 /// `content/` からの相対パスのファイルを、同梱するかどうか。
 ///
 /// 動画のコード（`lessons/{lesson_id}/video/` のうち `script.json` と `voice/` 以外のファイル）と、
@@ -53,19 +60,33 @@ pub fn stage(source: &Path, dest: &Path) -> io::Result<()> {
 
     fs::create_dir_all(dest)?;
     for relative in &files {
-        let from = source.join(relative);
-        let to = dest.join(relative);
-        let content = fs::read(&from)?;
-        if fs::read(&to).is_ok_and(|existing| existing == content) {
-            continue;
-        }
-        if let Some(parent) = to.parent() {
-            fs::create_dir_all(parent)?;
-        }
-        fs::write(&to, content)?;
+        copy_if_changed(&source.join(relative), &dest.join(relative))?;
     }
     remove_unlisted(dest, Path::new(""), &files)?;
     Ok(())
+}
+
+/// `source`（リポジトリの `runner/`）から [`RUNNER_FILES`] だけを `dest` に写す。
+/// 写し方は [`stage`] と同じで、`dest` にある、それ以外のファイルは消す。
+pub fn stage_runner(source: &Path, dest: &Path) -> io::Result<()> {
+    fs::create_dir_all(dest)?;
+    let files: BTreeSet<PathBuf> = RUNNER_FILES.iter().map(PathBuf::from).collect();
+    for relative in &files {
+        copy_if_changed(&source.join(relative), &dest.join(relative))?;
+    }
+    remove_unlisted(dest, Path::new(""), &files)
+}
+
+/// `from` を `to` に写す。`to` が既に同じ中身なら書き直さない。
+fn copy_if_changed(from: &Path, to: &Path) -> io::Result<()> {
+    let content = fs::read(from)?;
+    if fs::read(to).is_ok_and(|existing| existing == content) {
+        return Ok(());
+    }
+    if let Some(parent) = to.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(to, content)
 }
 
 /// `source` の下の同梱するファイルを、`source` からの相対パスで集める。
