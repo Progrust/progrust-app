@@ -52,6 +52,7 @@
 * [ADR 0176](0176-pass-theme-and-chapter-to-video-by-ancestor-attributes.md) - 再生するときのテーマと章カラーを、動画を描く要素の祖先の `data-theme`・`data-chapter` と CSS 変数の継承で動画に渡し、`useLesson()` の材料になる章とレッスン定義は Player の `inputProps` で渡す
 * [ADR 0178](0178-do-not-use-player-built-in-controls.md) - Remotion の Player の組み込みの操作（操作の表示、Space キー、クリック、ダブルクリックでの全画面）を使わず、末尾で先頭に戻さず繰り返さない設定にして、再生の操作をすべてアプリの部品で行う
 * [ADR 0180](0180-derive-introducing-lesson-from-curriculum-list.md) - 要素の導入レッスンを、各レッスンの `lesson.json` ではなく、章とレッスンの一覧の「主要素」から求め、準備中のレッスンが導入する要素も決まるようにする
+* [ADR 0186](0186-round-cue-offsets-to-whole-frames.md) - 合図の関数 `at`・`endOf` が返す位置を整数のフレーム数にし、指定した秒をフレーム数に四捨五入してから足す
 
 # カリキュラム
 
