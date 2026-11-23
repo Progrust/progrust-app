@@ -16,6 +16,7 @@
 * [ADR 0148](0148-pin-dependencies-to-verified-versions-and-app-identifier.md) - 依存の版を技術検証で動いた系列にそろえて仕様に書き、細かい版はロックファイルを正とし、パッケージマネージャーを npm に、アプリの識別子を com.progrust.desktop（開発時の起動は com.progrust.desktop.dev）にする
 * [ADR 0166](0166-choose-unlisted-deps-that-support-node-series.md) - 表にない依存は、Node.js の系列（25.9 系）を `engines` が含み、表の依存の版と peer 依存が合う版を入れ、そのために Vitest を 4 系、jsdom を 29 系、`@testing-library/jest-dom` を 6 系、`stylelint-config-standard` を 40 系にする
 * [ADR 0167](0167-allow-listening-to-backend-events.md) - フロントエンドに許可する Tauri の権限に、バックエンドが送るイベントの受け取り（listen・unlisten）を加え、それ以外の組み込みの API（フロントエンドからのイベントの送信を含む）は許可せず、本アプリのコマンドは権限の一覧に書かずに呼べるままにする
+* [ADR 0185](0185-name-temp-and-broken-files-and-define-unreadable.md) - 学習者データの一時ファイルを同じディレクトリの `.{ファイル名}.{プロセス ID}.tmp` にし、退避の `{日時}` を現地時刻の `YYYYMMDDTHHMMSS`（重なるときは `-2`…）にし、読み込めない場合を JSON・形・`schema_version` の誤りに限り、読み込みの失敗とファイルが無い場合は退避しない
 
 # 教材データ形式
 
