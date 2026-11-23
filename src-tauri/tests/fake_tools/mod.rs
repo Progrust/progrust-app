@@ -16,6 +16,9 @@ use std::{
 use serde_json::json;
 use tempfile::TempDir;
 
+pub mod rust;
+pub use rust::FakeRust;
+
 /// 偽のツールの原本を置くディレクトリ。
 pub fn originals_dir() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fake_tools")
@@ -123,36 +126,6 @@ impl RecordedCall {
             env,
             stdin: read("stdin"),
         }
-    }
-}
-
-/// 一時ディレクトリに並べて置いた偽の `cargo` と `rustc`。
-pub struct FakeRust {
-    _dir: TempDir,
-    cargo: PathBuf,
-    rustc: PathBuf,
-}
-
-impl FakeRust {
-    /// `--version` で `version`（例: `1.99.0`）を返す偽の `cargo` と `rustc`。
-    pub fn new(version: &str) -> Self {
-        let dir = TempDir::new().expect("一時ディレクトリを作れない");
-        let cargo = place(dir.path(), "cargo");
-        let rustc = place(dir.path(), "rustc");
-        write(&dir.path().join("rust-version"), format!("{version}\n"));
-        Self {
-            _dir: dir,
-            cargo,
-            rustc,
-        }
-    }
-
-    pub fn cargo(&self) -> &Path {
-        &self.cargo
-    }
-
-    pub fn rustc(&self) -> &Path {
-        &self.rustc
     }
 }
 

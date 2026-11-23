@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod content;
 pub mod dashboard;
+pub mod environment;
 pub mod progress;
 pub mod runner;
 pub mod settings;
@@ -9,6 +10,7 @@ pub mod storage;
 use tauri::{Builder, Context, Manager, Runtime};
 
 use content::ContentDir;
+use environment::CargoSearch;
 use runner::RunnerDir;
 use storage::AppDataDir;
 
@@ -17,6 +19,7 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
     builder.invoke_handler(tauri::generate_handler![
         commands::content::list_chapters,
         commands::content::get_lesson,
+        commands::environment::get_environment_status,
         commands::learning_record::get_dashboard,
         commands::progress::get_progress,
         commands::progress::open_lesson,
@@ -38,11 +41,15 @@ pub fn run() {
         // `app_builder` には入れず、テストでは一時ディレクトリの `AppDataDir` を `manage` で置けるようにする。
         .setup(|app| {
             let data_dir = AppDataDir::from_app(app.handle())?;
+            // 設定の `tool_paths.cargo`。設定を読めないときは、設定のパスを使わずに探す。
+            let configured_cargo = environment::configured_cargo(&data_dir);
             app.manage(data_dir);
             // 教材のディレクトリは、アプリでは `resource_dir()` の下の `content/` にする。同じく、テストでは差し替える。
             app.manage(ContentDir::from_app(app.handle())?);
             // 同梱の許可クレートの定義（`runner/`）も、`resource_dir()` の下にある。
             app.manage(RunnerDir::from_app(app.handle())?);
+            // cargo・rustc を、画面の表示を待たせずに別のスレッドで探す。
+            environment::start_detection(app.handle(), CargoSearch::from_process(configured_cargo));
             Ok(())
         })
         .run(app_context())
