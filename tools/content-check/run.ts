@@ -8,6 +8,7 @@ import {
   masterElementsUsedCheck,
   reviewPrimaryElementsCheck,
 } from "./elements-in-lessons.ts";
+import { lintCheck } from "./lint.ts";
 import { scriptCheck } from "./script.ts";
 import { structureCheck } from "./structure.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
@@ -23,6 +24,7 @@ export const checks: Check[] = [
   reviewPrimaryElementsCheck,
   scriptCheck,
   audioCheck,
+  lintCheck,
   warningsCheck,
 ];
 

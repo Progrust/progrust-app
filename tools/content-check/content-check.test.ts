@@ -1047,6 +1047,27 @@ describe("npm run content:check のコマンド", () => {
     expect(result.stdout).toContain("エラー [カリキュラム] chapters.json");
   });
 
+  it("動画のコードの禁止事項に違反すると、lint のエラーを表示し、0 以外で終わる", () => {
+    const { contentDir, curriculumDir } = setup(chapters);
+    const dir = join(contentDir, "lessons", "ch01-01", "video");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, "index.tsx"), 'export const c = "#fff";');
+    writeFileSync(join(dir, "scene.css"), ".a { color: red; }");
+    const result = run([
+      "--content",
+      contentDir,
+      "--curriculum",
+      curriculumDir,
+    ]);
+    expect(result.status).not.toBe(0);
+    expect(result.stdout).toContain(
+      "エラー [lint] lessons/ch01-01/video/index.tsx [ch01-01]: 1:18 色を 16 進表記（#fff）",
+    );
+    expect(result.stdout).toContain(
+      "エラー [lint] lessons/ch01-01/video/scene.css [ch01-01]: 1:13 色を色の名前（red）",
+    );
+  });
+
   it("いまのリポジトリの教材は、エラー 0 件で終わる", () => {
     const result = run([]);
     expect(result.status, result.stdout + result.stderr).toBe(0);
@@ -1507,6 +1528,80 @@ describe("警告", () => {
         severity: "warning",
         file: "lessons/ch01-01/video/script.json",
         message: expect.stringContaining("文 t1"),
+      }),
+    ]);
+  });
+});
+
+// 禁止事項の項目ごとのテストは lint.test.ts にある。
+describe("lint", () => {
+  it("違反のない動画のコードは、エラーにならない", () => {
+    expect(
+      checkVideo("lint", (files) => {
+        files["video/index.tsx"] = [
+          'import "./scene.css";',
+          'const Title = () => <h1 style={{ color: "var(--fg)" }}>red</h1>;',
+          "export default { s: Title };",
+        ].join("\n");
+        files["video/scene.css"] = "h1 { background: transparent; }";
+      }),
+    ).toEqual([]);
+  });
+
+  it("色を 16 進表記で直接指定した動画のコードは、エラーになり、0 以外で終わる", () => {
+    const all = checkFull({
+      files: (files, id) => {
+        if (id === "ch01-01") {
+          files["video/index.tsx"] =
+            'const Title = () => <h1 style={{ color: "#ff0000" }} />;\nexport default { s: Title };';
+        }
+      },
+    });
+    expect(all).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        check: "lint",
+        file: "lessons/ch01-01/video/index.tsx",
+        lesson: "ch01-01",
+        message: expect.stringContaining("16 進表記（#ff0000）"),
+      }),
+    ]);
+    const { text, exitCode } = report(all);
+    expect(exitCode).not.toBe(0);
+    expect(text).toContain(
+      "エラー [lint] lessons/ch01-01/video/index.tsx [ch01-01]: 1:",
+    );
+  });
+
+  it("@tauri-apps/ で始まるモジュールを import した動画のコードは、エラーになり、0 以外で終わる", () => {
+    const all = checkFull({
+      files: (files, id) => {
+        if (id === "ch01-01") {
+          files["video/index.tsx"] =
+            'import { invoke } from "@tauri-apps/api/core";\nexport default { s: () => { void invoke("x"); return null; } };';
+        }
+      },
+    });
+    expect(all).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        check: "lint",
+        file: "lessons/ch01-01/video/index.tsx",
+        lesson: "ch01-01",
+        message: expect.stringContaining("@tauri-apps/api/core"),
+      }),
+    ]);
+    expect(report(all).exitCode).not.toBe(0);
+  });
+
+  it("CSS の違反も、エラーになる", () => {
+    const findings = checkVideo("lint", (files) => {
+      files["video/scene.css"] = "h1 { color: #fff; }";
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({
+        file: "lessons/ch01-01/video/scene.css",
+        lesson: "ch01-01",
       }),
     ]);
   });

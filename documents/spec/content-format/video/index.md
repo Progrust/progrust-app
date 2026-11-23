@@ -7,4 +7,4 @@
 * [動画のシーンの書き方](scenes.md) - シーンを React（TSX）の部品として書くときの決まり（`index.tsx` の default export、現在のフレームだけから絵を決めること、画像と図の扱い）と、共通部品（`useCues()`・`useLesson()`・`LessonTitle`・`CodeBlock`・`Camera`）を定める。
 * [動画でのコードの表示](code-display.md) - `code_blocks` の `language` ごとの表示、行番号と Diff の表示、共通部品 `CodeBlock` の指定（`scopes`・`marks`・`errors`・`lines`）とその制約を定める。
 * [動画の色の指定](colors.md) - 動画のコードで使う色クラス（`c-primary`・`c-accent`・`c-ok`・`c-ng`・`c-muted`）と SVG 用のクラス、`callout` とマーカーの色、章カラーの決まり方を定める。
-* [動画のコードの禁止事項](prohibited-code.md) - 教材チェックツールの lint でエラーにする動画のコード（色の直接指定、Tauri の API・ネットワーク・ファイルへのアクセス、CSS の `@import`、検査をすり抜ける書き方、`staticFile()`）と、lint が検出する範囲を定める。
+* [動画のコードの禁止事項](prohibited-code.md) - 教材チェックツールの lint でエラーにする動画のコード（色の直接指定、Tauri の API・ネットワーク・ファイルへのアクセス、CSS の `@import`、検査をすり抜ける書き方、`staticFile()`）と、lint が検出する範囲と、lint を止める指定（`eslint-disable` など）に従わないことを定める。
