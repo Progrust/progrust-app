@@ -18,6 +18,7 @@ description: "実装計画のタスクと、ループが直すと決めた `AI�
 
 - 仕様どおりに作る。仕様に書いていない細部は、技術的な判断で決まるものなら、自分で決める。その判断が ADR に記録する判断（[ADR の運用ルール](decision-records.md)「書く対象」）に当たるときは、ADR を追加する。
 - ファイルの置き場所は [リポジトリ構成](../spec/architecture/repository.md)、コマンドと依存の版は [開発環境と依存の版](../spec/architecture/development-environment.md)、画面の見た目は [デザインシステムのファイルと変更の手順](../spec/screens/design-system-files.md) に従う。
+- 画面を作るタスクでは、画面のレイアウトを [画面の見た目とテーマ](../spec/screens/appearance.md)「画面デザイン」に従って決める。画面デザインのファイル（`design-system/ui-design/`）は、[画面デザインのファイルと変更の手順](../spec/screens/ui-design-files.md)「読み方」に従って読む。
 - Issue の「範囲の外」にあるものと、Issue に書かれていない機能は作らない。後のタスクのための作り込みもしない。
 
 ## テストと確かめ方

@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>レッスン一覧</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--page" data-theme="{{theme}}">
+  <dc-import name="Header" current="lessons" jobs="{{zero}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+  <main class="pgx-wrap">
+    <div class="pgx-page-head">
+      <div>
+        <h1>レッスン</h1>
+        <p><b style="color: var(--ink);">24</b> / 167 レッスン完了。どのレッスンからでも始められます。</p>
+      </div>
+      <div class="pgx-page-head-end" data-chapter="4">
+        <a class="pg-btn pg-btn--sm" href="#ch4"><span class="pg-next">次はここ</span>4-6 関数と所有権</a>
+      </div>
+    </div>
+
+    <div class="pgx-lessons">
+      <nav class="pg-index" aria-label="章">
+        <p class="pg-index-title">章</p>
+        <sc-for list="{{index}}" as="c" hint-placeholder-count="23">
+          <a href="#ch{{c.n}}" data-chapter="{{c.n}}" aria-current="{{c.cur}}"><span class="pg-badge">{{c.n}}</span><span>{{c.name}}</span>
+            <sc-if value="{{c.complete}}" hint-placeholder-val="{{false}}"><svg class="pg-icon" aria-label="完了" role="img" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>
+            <sc-if value="{{c.partial}}" hint-placeholder-val="{{true}}"><small>{{c.done}}/{{c.total}}</small></sc-if>
+          </a>
+        </sc-for>
+      </nav>
+
+      <div class="pgx-chapters">
+        <sc-for list="{{chapters}}" as="ch" hint-placeholder-count="3">
+          <section data-chapter="{{ch.n}}" id="ch{{ch.n}}" aria-labelledby="ch{{ch.n}}-title">
+            <div class="pg-chapter-head">
+              <span class="pg-badge">{{ch.n}}</span>
+              <div><h2 id="ch{{ch.n}}-title">第{{ch.n}}章　{{ch.name}}</h2><p>{{ch.desc}}</p></div>
+              <span class="pg-chapter-count"><b>{{ch.done}}</b> / {{ch.total}} 完了</span>
+            </div>
+            <ul class="pg-lessons">
+              <sc-for list="{{ch.lessons}}" as="l" hint-placeholder-count="7">
+                <li>
+                  <a class="pg-lesson" href="{{l.href}}" aria-current="{{l.cur}}">
+                    <span class="pg-lesson-no">{{l.no}}</span>
+                    <div>
+                      <p class="pg-lesson-name">{{l.title}}
+                        <sc-if value="{{l.isNext}}" hint-placeholder-val="{{false}}"><span class="pg-next">次はここ</span></sc-if>
+                        <sc-if value="{{l.isReview}}" hint-placeholder-val="{{false}}"><span class="pg-tag">復習</span></sc-if>
+                        <sc-if value="{{l.isVideoOnly}}" hint-placeholder-val="{{false}}"><span class="pg-tag">動画のみ</span></sc-if>
+                      </p>
+                      <p class="pg-lesson-desc">{{l.desc}}</p>
+                    </div>
+                    <span class="pg-lesson-time"><svg class="pg-icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>{{l.min}} 分</span>
+                    <span class="pg-status {{l.statusCls}}">
+                      <sc-if value="{{l.isDone}}" hint-placeholder-val="{{false}}"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></sc-if>{{l.status}}</span>
+                  </a>
+                </li>
+              </sc-for>
+            </ul>
+          </section>
+        </sc-for>
+      </div>
+    </div>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1280,"height":2010}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // 章とレッスンは仕様の章とレッスンの一覧（documents/spec/curriculum/chapters/）に合わせている。
+    // 見本の学習者は第3章までと 4-1〜4-5 を完了し、4-6 関数と所有権を学習中（24 / 167 レッスン完了）
+    const all = [['Rust の基本', 6], ['基本の型', 7], ['関数と制御フロー', 6], ['所有権', 7], ['参照と借用', 7], ['構造体', 7],
+      ['列挙型とパターンマッチ', 9], ['コレクション', 11], ['エラー処理', 7], ['モジュールとクレート', 7], ['テスト', 7],
+      ['ジェネリクスとトレイト', 6], ['標準ライブラリのトレイト', 7], ['クロージャ', 5], ['イテレータ', 12], ['ライフタイム', 5],
+      ['スマートポインタ', 9], ['トレイトオブジェクト', 4], ['エラー処理の発展', 7], ['並行処理', 11], ['非同期処理', 9],
+      ['高度なトレイトと型', 6], ['マクロと unsafe', 5]];
+    const names = all.map(([name, total], i) => [name, total, i < 3 ? total : (i === 3 ? 5 : 0)]);
+    const index = names.map(([name, total, done], i) => ({
+      n: i + 1, name, total, done, complete: done === total, partial: done !== total, cur: i === 3 ? 'true' : undefined
+    }));
+    const st = { done: ['完了', 'pg-status--done'], doing: ['進行中', 'pg-status--doing'], todo: ['未着手', 'pg-status--todo'] };
+    const L = (no, title, desc, min, s, extra) => {
+      const review = !!(extra && extra.review);
+      const next = !!(extra && extra.next);
+      const videoOnly = !!(extra && extra.videoOnly);
+      return {
+        no, title, desc, min, status: st[s][0], statusCls: st[s][1], isDone: s === 'done',
+        isReview: review, isVideoOnly: videoOnly, isNext: next, cur: next ? 'true' : undefined,
+        href: review ? 'Exercise.dc.html' : 'Video.dc.html'
+      };
+    };
+    const chapters = [
+      { n: 3, name: '関数と制御フロー', desc: '関数の書き方と、式として値を返す制御構文を学ぶ', done: 6, total: 6, lessons: [
+        L('3-1', '関数の定義', '引数と戻り値の型を書いて、関数を定義する。', 10, 'done'),
+        L('3-2', '文と式', 'ブロックが値を持つことと、末尾のセミコロンで値が変わることを知る。', 10, 'done'),
+        L('3-3', 'if 式', '条件で値を選び、そのまま変数に束縛する書き方を知る。', 10, 'done'),
+        L('3-4', 'loop と while', '終わりの条件の書き方と、loop から値を返す方法を確かめる。', 15, 'done'),
+        L('3-5', 'for と範囲', '範囲と配列を、添字を使わずに順に処理する。', 15, 'done'),
+        L('3-6', '第3章の復習', '演習だけのレッスン。関数と分岐・繰り返しを組み合わせる。', 20, 'done', { review: true })
+      ] },
+      { n: 4, name: '所有権', desc: 'Rust のメモリ管理の中心となる所有権の仕組みを学ぶ', done: 5, total: 7, lessons: [
+        L('4-1', 'メモリの仕組み', 'スタックとヒープ、関数の呼び出しとスタックフレームの関係を知る。', 10, 'done', { videoOnly: true }),
+        L('4-2', 'スコープと値の破棄', 'スコープの終わりで値が破棄され、メモリが解放されることを確かめる。', 10, 'done'),
+        L('4-3', 'String 型', 'ヒープに置かれる文字列と、文字列リテラルとの違いを知る。', 15, 'done'),
+        L('4-4', '所有権のムーブ', '代入で値の持ち主が移ることと、ムーブ済みの値を使ったエラーを確かめる。', 15, 'done'),
+        L('4-5', 'clone と Copy', '複製したいときの書き方と、ムーブされずにコピーされる型を知る。', 15, 'done'),
+        L('4-6', '関数と所有権', '引数と戻り値で、所有権を受け渡す書き方を確かめる。', 15, 'doing', { next: true }),
+        L('4-7', '第4章の復習', '演習だけのレッスン。ムーブと複製を使い分ける。', 20, 'todo', { review: true })
+      ] },
+      { n: 5, name: '参照と借用', desc: '所有権を移さずに値を使う参照と、借用の規則を学ぶ', done: 0, total: 7, lessons: [
+        L('5-1', '不変の参照', '& を付けて、所有権を移さずに値を貸す。', 15, 'todo'),
+        L('5-2', '可変の参照', '&mut で借りた値を書き換える。', 15, 'todo'),
+        L('5-3', '借用の規則', '可変の参照を同時に 1 つしか持てない理由を知る。', 20, 'todo'),
+        L('5-4', 'ダングリング参照', '破棄された値への参照を、コンパイラが防ぐ仕組みを知る。', 15, 'todo'),
+        L('5-5', '文字列スライス', '&str と、文字列の一部を参照する書き方を確かめる。', 15, 'todo'),
+        L('5-6', '配列のスライス', '配列の一部を &[T] で貸す。', 15, 'todo'),
+        L('5-7', '第5章の復習', '演習だけのレッスン。借用を使って関数を設計する。', 25, 'todo', { review: true })
+      ] }
+    ];
+    return { theme: this.props.theme ?? 'light', index, chapters, zero: 0 };
+  }
+}
+</script>
+</body>
+</html>

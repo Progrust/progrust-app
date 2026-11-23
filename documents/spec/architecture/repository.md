@@ -8,9 +8,10 @@ description: "リポジトリ直下のディレクトリ（`.github/workflows/`�
 progrust-app/
 ├── .github/workflows/   # CI の定義（spec/non-functional/testing.md）
 ├── documents/           # ドキュメント（仕様、設計判断記録、運用ルール）
-├── design-system/       # デザインシステムのファイル（spec/screens/design-system-files.md）
+├── design-system/       # デザインシステムと画面デザインのファイル（spec/screens/design-system-files.md、spec/screens/ui-design-files.md）
 │   ├── progrust/        # 画面のデザインシステム「Progrust」
-│   └── progrust-video/  # 動画のデザインシステム「Progrust Video」
+│   ├── progrust-video/  # 動画のデザインシステム「Progrust Video」
+│   └── ui-design/       # 画面デザイン「Progrust UIデザイン」
 ├── content/             # 教材の原本（動画のコードと音声を含む。形式は spec/content-format/index.md）
 ├── prompts/             # AI への指示文の原本
 ├── runner/              # 許可クレートの定義

@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>生成設定画面</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--page" data-theme="{{theme}}">
+  <dc-import name="Header" current="gen" jobs="{{zero}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+  <main class="pgx-wrap pgx-wrap--narrow">
+    <div style="display: flex; flex-direction: column; gap: 14px;">
+      <a class="pg-back" href="GenList.dc.html" style="font-size: 13px;"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>生成問題一覧</a>
+      <div class="pgx-page-head">
+        <div>
+          <h1>新しい問題を生成</h1>
+          <p>設定をもとに AI が問題を作り、模範解答が判定に通ることを確かめてから一覧に加えます。数分かかります。</p>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{noClaude}}" hint-placeholder-val="{{false}}">
+      <div class="pg-banner" role="alert">
+        <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+        <p><b>Claude Code が見つかりません。</b>問題は生成できません。設定は残しておけます。</p>
+        <a class="pg-btn pg-btn--sm pg-btn--outline" href="Settings.dc.html">設定を開く</a>
+      </div>
+    </sc-if>
+
+    <form class="pg-form" onsubmit="return false">
+      <div class="pg-form-row">
+        <div><h2>苦手分野を中心にする</h2><p>分析で苦手とされた要素を初期値として選び、繰り返し躓いているところを克服できる問題にします。</p></div>
+        <div class="pg-form-ctrl">
+          <label class="pg-switch"><input type="checkbox" role="switch" checked="{{yes}}">オン</label>
+        </div>
+      </div>
+
+      <div class="pg-form-row">
+        <div><h2>要素</h2><p>最大 5 件まで選べます。選ばなければ、学習済みの要素から AI が選びます。要素名にマウスを重ねると説明を表示します。</p></div>
+        <div class="pg-form-ctrl">
+          <div class="pgx-row"><span class="pg-count"><b>3</b> / 5 件を選択</span><button class="pg-btn pg-btn--sm pg-btn--text" style="margin-left: auto;">選択をすべて外す</button></div>
+          <div class="pg-picks" aria-label="選んだ要素">
+            <span class="pg-pick"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span>所有権のムーブ<button type="button" aria-label="所有権のムーブ を外す"><svg class="pg-icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></span>
+            <span class="pg-pick"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span>String 型<button type="button" aria-label="String 型 を外す"><svg class="pg-icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></span>
+            <span class="pg-pick"><span class="pg-badge pg-badge--sm" data-chapter="1">1</span>シャドーイング<button type="button" aria-label="シャドーイング を外す"><svg class="pg-icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button></span>
+          </div>
+          <div class="pg-acc">
+            <sc-for list="{{groups}}" as="g" hint-placeholder-count="23">
+              <div class="pg-acc-group">
+                <button type="button" class="pg-acc-head" aria-expanded="{{g.expanded}}">
+                  <span class="pg-badge" data-chapter="{{g.n}}">{{g.n}}</span>
+                  <span class="pg-acc-name">第{{g.n}}章　{{g.name}}</span>
+                  <sc-if value="{{g.hasSel}}" hint-placeholder-val="{{false}}"><span class="pg-acc-sel">{{g.sel}} 件選択</span></sc-if>
+                  <span class="pg-acc-count">{{g.count}} 要素</span>
+                  <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="{{g.chevron}}"><path d="m6 9 6 6 6-6"></path></svg>
+                </button>
+                <sc-if value="{{g.open}}" hint-placeholder-val="{{false}}">
+                  <div class="pg-acc-body">
+                    <sc-for list="{{g.els}}" as="e" hint-placeholder-count="4">
+                      <div class="pg-el">
+                        <label class="pg-check"><input type="checkbox" checked="{{e.checked}}"><span class="pg-el-name">{{e.name}}</span></label>
+                        <span class="pg-el-badges">
+                          <sc-if value="{{e.prov}}" hint-placeholder-val="{{false}}"><span class="pg-mastery-note">データ不足</span></sc-if>
+                          <span class="pg-mastery {{e.cls}}"><sc-if value="{{e.hasMeter}}" hint-placeholder-val="{{true}}"><span class="pg-meter"><sc-for list="{{e.bars}}" as="b" hint-placeholder-count="4"><i class="{{b}}"></i></sc-for></span></sc-if>{{e.label}}</span>
+                        </span>
+                        <sc-if value="{{e.tip}}" hint-placeholder-val="{{false}}">
+                          <div class="pg-tip" role="tooltip" style="top: calc(100% - 2px); left: 18px;"><b>{{e.name}}</b>ヒープに置かれる、長さを変えられる文字列。スタックに持つポインタ・長さ・容量と、文字列リテラルとの違い。<br><code>ownership.string_type</code></div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <div class="pg-form-row">
+        <div><h2>難易度</h2><p>問題の難しさとコードの規模を、5 段階にまとめたものです。初期値は分析の推奨です。</p></div>
+        <div class="pg-form-ctrl">
+          <div class="pg-seg" role="radiogroup" aria-label="難易度" style="align-self: flex-start;">
+            <sc-for list="{{levels}}" as="lv" hint-placeholder-count="5">
+              <button type="button" class="pg-seg-2line" role="radio" aria-checked="{{lv.checked}}" onClick="{{lv.pick}}">{{lv.n}}<sc-if value="{{lv.rec}}" hint-placeholder-val="{{false}}"><span class="pg-seg-rec">推奨</span></sc-if></button>
+            </sc-for>
+          </div>
+          <p class="pg-hint"><b>難易度 {{diff}}</b><span>{{diffText}}</span></p>
+        </div>
+      </div>
+
+      <div class="pg-form-row">
+        <div><h2>AI へのメッセージ</h2><p>任意。ほかの設定より優先されます。</p></div>
+        <div class="pg-form-ctrl">
+          <div class="pg-field">
+            <label for="gen-msg" class="pg-sr">AI へのメッセージ</label>
+            <textarea id="gen-msg" class="pg-textarea" rows="4" placeholder="例: ファイルを 2 つに分ける問題にしてほしい"></textarea>
+            <span class="pg-field-help" style="text-align: right;">0 / 1,000 文字</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pg-form-foot">
+        <span class="pgx-muted" style="font-size: 12px; margin-right: auto;">生成しているあいだもレッスンを続けられます。終わると通知でお知らせします。</span>
+        <a class="pg-btn pg-btn--lg" href="GenList.dc.html">キャンセル</a>
+        <a class="pg-btn pg-btn--ink pg-btn--lg" href="GenList.dc.html" aria-disabled="{{genDisabled}}">
+          <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg>生成</a>
+      </div>
+    </form>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"noClaude":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":2370}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { diff: 2 }; }
+  renderVals() {
+    const M = {
+      0: ['pg-mastery--none', '未学習', 0], 1: ['pg-mastery--weak', 'よく間違える', 1], 2: ['pg-mastery--unsure', 'たまに間違える', 2],
+      3: ['pg-mastery--stable', '安定', 3], 4: ['pg-mastery--strong', '得意', 4]
+    };
+    const E = (name, level, o) => {
+      const m = M[level];
+      return {
+        name, cls: m[0], label: m[1], hasMeter: level > 0,
+        bars: [1, 2, 3, 4].map((i) => (i <= m[2] ? 'on' : '')),
+        checked: !!(o && o.checked), prov: !!(o && o.prov), tip: !!(o && o.tip)
+      };
+    };
+    // 章は仕様の章とレッスンの一覧（documents/spec/curriculum/chapters/）に合わせている。
+    // 要素数は、章末復習と動画のみのレッスンを除いたレッスンの数。見本の学習者は 4-6 を学習中
+    const raw = [
+      ['Rust の基本', 5, [E('fn main と println!', 4), E('変数と不変性', 4), E('シャドーイング', 3, { checked: true }), E('定数と static', 4), E('書式を指定して出力する', 3, { prov: true })]],
+      ['基本の型', 6, null], ['関数と制御フロー', 5, null],
+      ['所有権', 5, [E('スコープと値の破棄', 3), E('String 型', 2, { checked: true, tip: true }), E('所有権のムーブ', 1, { checked: true }), E('clone と Copy', 3), E('関数と所有権', 0)]],
+      ['参照と借用', 6, null], ['構造体', 6, null], ['列挙型とパターンマッチ', 8, null], ['コレクション', 10, null], ['エラー処理', 6, null],
+      ['モジュールとクレート', 6, null], ['テスト', 6, null], ['ジェネリクスとトレイト', 5, null], ['標準ライブラリのトレイト', 6, null], ['クロージャ', 4, null],
+      ['イテレータ', 11, null], ['ライフタイム', 4, null], ['スマートポインタ', 8, null], ['トレイトオブジェクト', 3, null], ['エラー処理の発展', 6, null],
+      ['並行処理', 9, null], ['非同期処理', 8, null], ['高度なトレイトと型', 5, null], ['マクロと unsafe', 4, null]
+    ];
+    const groups = raw.map(([name, count, els], i) => {
+      const open = !!els;
+      const sel = open ? els.filter((e) => e.checked).length : 0;
+      return { n: i + 1, name, count, open, els: els || [], sel, hasSel: sel > 0, expanded: open ? 'true' : 'false', chevron: open ? 'transform: rotate(180deg);' : '' };
+    });
+    const texts = {
+      1: '主要素を 1 つ使う短い問題。解答は 20 行くらい。',
+      2: '主要素に、学習済みの要素を 1〜2 個組み合わせる。通常のレッスンの演習と同じくらい。',
+      3: '複数の要素を組み合わせ、境界のケースへの配慮がいる。解答は 50 行くらい。',
+      4: '型やトレイトの設計を伴う。複数のファイルに分けることもある。',
+      5: '章末の復習レッスン以上。設計の判断を含む、複数ファイルの問題。'
+    };
+    const diff = this.state.diff;
+    const levels = [1, 2, 3, 4, 5].map((n) => ({ n, rec: n === 2, checked: n === diff ? 'true' : 'false', pick: () => this.setState({ diff: n }) }));
+    const noClaude = !!this.props.noClaude;
+    return { theme: this.props.theme ?? 'light', zero: 0, yes: true, groups, levels, diff, diffText: texts[diff], noClaude, genDisabled: noClaude ? 'true' : undefined };
+  }
+}
+</script>
+</body>
+</html>

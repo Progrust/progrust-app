@@ -59,16 +59,16 @@ description: "デザインシステム「Progrust」「Progrust Video」のフ�
    - アイコンは、`path` に id（`files {名前}` の出力の `assets` の `blob`）を渡して 1 つずつ取得する。`out_dir` の直下に `{id}.svg` の名前で保存され、`compare` はその配置のまま読む。
    - アイコンを変えていないときは、アイコンの取得を省き、`compare` に `--skip-assets` を付けてよい（アイコンを比べない）。
    - あわせて、表示用のアーティファクトのファイルの一覧（`action: "list"`、`scope: "files"`）の `project/` の下のパスを、`files {名前}` の出力の `files` のキーと照らし、リポジトリに無いファイルが無いことを確かめる。
-8. `tokens.css`・`tokens.json`・`components/bundle.css` のどれかを変えたときだけ、表示用のアーティファクトへ送った後に、画面デザイン「Progrust UIデザイン」（[画面の見た目とテーマ](appearance.md)「画面デザイン」）の中の写し（`project/ds/{名前}/` の同じ名前のファイル）を取り直す。
+8. `tokens.css`・`tokens.json`・`components/bundle.css` のどれかを変えたときだけ、表示用のアーティファクトへ送った後に、画面デザイン「Progrust UIデザイン」（[画面デザインのファイルと変更の手順](ui-design-files.md)）の中の写し（画面デザインの表示用のアーティファクトの `project/ds/{名前}/` の、同じ名前のファイル）を取り直す。
    - ほかのファイルだけを変えたときは、取り直さない。画面デザインの索引の `designSystems` の記録の `version` は、写しを取ったときの表示用のアーティファクトの版を表すもので、いまの版と違っていてよい。
    - 取り直しは、画面デザインのアーティファクトの種類「Design」の、デザインシステムを入れる手順をやり直して行う。この手順では、サーバーが表示用のアーティファクトからファイルを写し、画面デザインの索引 `project/canvas.json` の `designSystems` の記録も置き換える（Artifact ツールの 1 回の呼び出しで、写す元を表示用のアーティファクトにした `files` の項目と、索引を送る）。手順の細部は、画面デザインのアーティファクトの `SKILL.md` と `artifact-type/reference/design-system-components.md` に従う。
    - 種類の文書からは決まらないことは、次のようにする。
-     - 送る前に、画面デザインのアーティファクトを Artifact ツールで読む（`action: "read"` に `url` だけを渡す）。
+     - 送る前に、画面デザインの表示用のアーティファクトの中身が、リポジトリと同じことを確かめる（[画面デザインのファイルと変更の手順](ui-design-files.md)「変更の手順」の 1）。
      - 写すファイルは、デザインシステムごとに `tokens.css`・`tokens.json`・`components/bundle.css` の 3 つだけにする。
      - 写しのフォルダの名前は、いまある `progrust`・`progrust-video` のままにする。
-     - 索引 `project/canvas.json` を取得し、`designSystems` の中の、そのデザインシステムの記録の `version` を表示用のアーティファクトのいまの版の id（送信の結果か、表示用のアーティファクトの一覧に出る）に、`copiedAt` をいまの UTC の時刻にする。ほかのキーは変えない。
+     - 送る索引は、リポジトリの `design-system/ui-design/canvas.json` にする。送る前に、その `designSystems` の中の、そのデザインシステムの記録の `version` を表示用のアーティファクトのいまの版の id（送信の結果か、表示用のアーティファクトの一覧に出る）に、`copiedAt` をいまの UTC の時刻にする。ほかのキーは変えない。直した後、`python3 tools/design-system.py check` を実行する。索引は、`root` を `design-system/ui-design/` にして、`files` に `"project/canvas.json": "canvas.json"` の形で入れる。
    - `project/ds/` の下のファイルを、直接送って直さない。
-   - 取り直した後、7 と同じように取得し、`python3 tools/design-system.py compare {名前} {取得したディレクトリ} --prefix project/ds/{名前} --partial` で確かめる。
+   - 取り直した後、7 と同じように取得し、`python3 tools/design-system.py compare {名前} {取得したディレクトリ} --prefix project/ds/{名前} --partial` で確かめる。あわせて、画面デザインの索引を、[画面デザインのファイルと変更の手順](ui-design-files.md)「変更の手順」の 5 と同じように確かめる。
 9. デザインシステムの変更は、それに伴う仕様の変更と同じコミットに入れる。
 
 - 「Progrust」の、動画と共通の値を変えたときは、「Progrust Video」の写しも合わせる（[画面の見た目とテーマ](appearance.md)「デザインシステム」）。

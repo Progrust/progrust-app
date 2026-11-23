@@ -1,16 +1,19 @@
 #!/usr/bin/env python3
-"""design-system/ 配下のデザインシステムを検査・生成・照合する。
+"""design-system/ 配下のデザインシステムと画面デザインを検査・生成・照合する。
 
 使い方:
     python3 tools/design-system.py [--root <design-system のディレクトリ>] <サブコマンド> ...
 
     check [<名前> ...]
         規則どおりに置かれているかを検査する。名前を省くと、design-system/ の直下で
-        design-system.json を持つディレクトリをすべて検査する。
+        design-system.json を持つディレクトリ（デザインシステム）と、canvas.json を持つ
+        ディレクトリ（画面デザイン）をすべて検査する。名前を渡したときは、そのディレクトリが
+        どちらの索引を持つかで検査を分ける。
         README などから仕様への参照（`screens/appearance.md`「見出し」の形）は、
         --spec-root（既定: リポジトリの documents/spec/）の文書と照らす。
     tokens-css <名前> [--write]
         tokens.json から tokens.css の内容を作り、標準出力に出す。--write で tokens.css に書く。
+        デザインシステム専用（画面デザインの名前を渡すとエラー）。
     files <名前>
         アーティファクトへ送るファイルの一覧を JSON で標準出力に出す
         （Artifact ツールの root・file_path・files にそのまま渡せる形）。
@@ -18,8 +21,14 @@
         アーティファクトから取得したファイルと、リポジトリのファイルをバイト単位で比べる。
         --partial は、<接頭辞>/ の下にあるファイルだけを比べる（別のアーティファクトが持つ写し用）。
         --skip-assets は、アセット（アイコン）を比べない。
+        画面デザインでは --partial・--skip-assets は使えない。画面デザインの比べ方は、
+        <取得したディレクトリ>/<接頭辞>/ の下と、ディレクトリの全ファイルを比べる
+        （取得した側の ds/ の下は、アーティファクトの中のデザインシステムの写しなので比べない）。
 
-<名前> は design-system/ の直下のディレクトリ名（progrust、progrust-video）。
+<名前> は design-system/ の直下のディレクトリ名（progrust、progrust-video、ui-design）。
+画面デザイン（ui-design）は、claude.ai の「Design」という種類のアーティファクトの project/ の下と同じ形で、
+直下に canvas.json（索引）と、画面ごとの *.dc.html、styles/ を持つ。デザインシステムの写し（ds/）は置かない。
+デザインシステムか画面デザインかは、直下に design-system.json があるか、canvas.json があるかで見分ける。
 --root を省くと、このスクリプトから見たリポジトリの design-system/ を使う（テスト用に差し替えられる）。
 指摘は「パス: 規則名: 説明」の形で1行ずつ標準出力に出し、最後に件数を出す。
 
@@ -37,6 +46,7 @@
 from __future__ import annotations
 
 import argparse
+import html
 import json
 import os
 import re
@@ -47,6 +57,7 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DEFAULT_SPEC_ROOT = os.path.join(REPO_ROOT, "documents", "spec")
 
 INDEX_NAME = "design-system.json"
+CANVAS_NAME = "canvas.json"  # 画面デザインの索引
 # アーティファクトの仕組み上、assets/<Group>/ の下でもテキストは普通の公開ファイルで、
 # それ以外（SVG など）だけがアセットストアに入る。
 TEXT_EXTS = (".md", ".json", ".txt", ".csv")
@@ -501,20 +512,151 @@ def find_systems(root: str) -> List[str]:
     )
 
 
+def find_screens(root: str) -> List[str]:
+    """直下に canvas.json を持つ（画面デザインの）ディレクトリ。"""
+    return sorted(
+        n for n in os.listdir(root) if os.path.isfile(os.path.join(root, n, CANVAS_NAME))
+    )
+
+
+def is_screens(root: str, name: str) -> bool:
+    """名前のディレクトリが画面デザインか（canvas.json を持ち、design-system.json を持たない）。"""
+    d = os.path.join(root, name)
+    return os.path.isfile(os.path.join(d, CANVAS_NAME)) and not os.path.isfile(os.path.join(d, INDEX_NAME))
+
+
+# --- 画面デザインの検査 ---
+# 画面デザインは、claude.ai の「Design」という種類のアーティファクトの project/ の下と同じ形で置く。
+DC_EXT = ".dc.html"
+# 種類（アーティファクトの型）が持つファイル。リポジトリには置かない。
+TYPE_FILES = ("index.html", "SKILL.md")
+TYPE_DIRS = ("artifact-type/",)
+REF_RE = re.compile(r"""\b(?:href|src)\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE)
+IMPORT_RE = re.compile(r"""<dc-import\b[^>]*?\bname\s*=\s*(?:"([^"]*)"|'([^']*)')""", re.IGNORECASE)
+SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+
+
+def ref_is_skipped(value: str) -> bool:
+    """確かめない参照か。種類が配るファイル、ds/、URL（http:・https:・mailto: など）、#、{{ を含むもの。"""
+    return (
+        not value
+        or value == "./support.js"
+        or value.startswith("ds/")
+        or value.startswith("./ds/")
+        or value.startswith("#")
+        or "{{" in value
+        or bool(SCHEME_RE.match(value))
+    )
+
+
+def check_screens(root: str, name: str) -> List[Finding]:
+    sc_dir = os.path.join(root, name)
+    findings: List[Finding] = []
+
+    def add(rel: str, rule: str, message: str) -> None:
+        findings.append(Finding(display(os.path.join(sc_dir, rel)), rule, message))
+
+    files = walk(sc_dir)
+
+    # canvas-json / canvas-boards / canvas-order
+    index = None
+    try:
+        with open(os.path.join(sc_dir, CANVAS_NAME), encoding="utf-8") as f:
+            index = json.load(f)
+        if not isinstance(index, dict):
+            raise ValueError("最上位が JSON のオブジェクトではありません")
+    except (OSError, ValueError) as e:
+        add(CANVAS_NAME, "canvas-json", "%s が JSON のオブジェクトとして読めません（%s）。直してください" % (CANVAS_NAME, e))
+        index = None
+    if index is not None:
+        boards = index.get("boards")
+        order = index.get("order")
+        boards_ok = isinstance(boards, dict)
+        if not boards_ok:
+            add(CANVAS_NAME, "canvas-json", '"boards" がオブジェクトではありません。画面のファイル名をキーにしたオブジェクトにしてください')
+        if "order" in index and not isinstance(order, list):
+            add(CANVAS_NAME, "canvas-json", '"order" がリストではありません。画面のファイル名を並べたリストにしてください')
+        if boards_ok:
+            # ファイルとキーの突き合わせ（ds/ と種類のファイルは、置かないファイルとして別に指摘する）
+            dc_files = {
+                r for r in files
+                if r.endswith(DC_EXT) and not r.startswith("ds/") and not r.startswith(TYPE_DIRS)
+            }
+            for key in sorted(set(boards) - dc_files):
+                add(CANVAS_NAME, "canvas-board-file", "boards のキー `%s` のファイルがありません。ファイルを置くか、キーを消してください" % key)
+            for rel in sorted(dc_files - set(boards)):
+                add(rel, "canvas-board-file", "boards にキーがありません。%s の boards に `%s` を足すか、ファイルを消してください" % (CANVAS_NAME, rel))
+            if isinstance(order, list):
+                keys = set(boards)
+                missing = sorted(keys - {o for o in order if isinstance(o, str)})
+                extra = sorted({str(o) for o in order} - keys)
+                dup = len(order) != len({str(o) for o in order})
+                if missing or extra or dup:
+                    detail = []
+                    if missing:
+                        detail.append("order に無い: %s" % ", ".join(missing))
+                    if extra:
+                        detail.append("boards に無い: %s" % ", ".join(extra))
+                    if dup:
+                        detail.append("重複がある")
+                    add(CANVAS_NAME, "canvas-order", "order が boards のキーを過不足なく、重複なく並べていません（%s）。直してください" % "。".join(detail))
+
+    # dc-ref: 各 .dc.html のローカルのファイルへの参照
+    for rel in files:
+        if not rel.endswith(DC_EXT) or rel.startswith("ds/") or rel.startswith(TYPE_DIRS):
+            continue
+        with open(os.path.join(sc_dir, rel), encoding="utf-8", errors="replace") as f:
+            text = f.read()
+        here = os.path.dirname(rel)
+        refs = []  # (位置, 値, 確かめるパス)
+        for m in REF_RE.finditer(text):
+            refs.append((m.start(), m.group(1) if m.group(1) is not None else m.group(2), None))
+        for m in IMPORT_RE.finditer(text):
+            v = m.group(1) if m.group(1) is not None else m.group(2)
+            refs.append((m.start(), v, v + DC_EXT))
+        for pos, raw, target in refs:
+            value = html.unescape(raw).strip()
+            if ref_is_skipped(value):
+                continue
+            if target is None:
+                target = re.split(r"[?#]", value, maxsplit=1)[0]
+                if not target:
+                    continue
+            else:
+                target = html.unescape(target)
+            if not os.path.isfile(os.path.join(sc_dir, here, *target.split("/"))):
+                line = text.count("\n", 0, pos) + 1
+                add(rel, "dc-ref", "%d 行目の参照 `%s` のファイル `%s` がありません。実在するファイルを指すように直してください（取り込む側のファイルと同じディレクトリからの相対パスです）" % (line, raw, target))
+
+    # stray-file: 置かないファイル
+    for rel in files:
+        if rel.startswith("ds/"):
+            add(rel, "stray-file", "画面デザインのデザインシステムの写し（ds/）は、リポジトリに置きません。デザインシステムは design-system/progrust/ などにあります。消してください")
+        elif rel in TYPE_FILES or rel.startswith(TYPE_DIRS):
+            add(rel, "stray-file", "%s は、アーティファクトの種類が持つファイルなので、置かないでください。消してください" % rel)
+    return findings
+
+
 def cmd_check(root: str, names: List[str], spec_root: str = "") -> int:
     if not names:
-        names = find_systems(root)
+        names = find_systems(root) + [n for n in find_screens(root) if n not in find_systems(root)]
     spec_root = spec_root or DEFAULT_SPEC_ROOT
     if not os.path.isdir(spec_root):
         raise UsageError("仕様のディレクトリ `%s` がありません。" % spec_root)
     all_findings: List[Finding] = []
+    systems = screens = 0
     for name in names:
         require_system(root, name)
-        all_findings.extend(check_system(root, name, spec_root))
+        if is_screens(root, name):
+            screens += 1
+            all_findings.extend(check_screens(root, name))
+        else:
+            systems += 1
+            all_findings.extend(check_system(root, name, spec_root))
     all_findings.sort(key=lambda f: (f.path, f.rule, f.message))
     for f in all_findings:
         print(f.format())
-    print("%d 個のデザインシステムを検査し、指摘は %d 件でした。" % (len(names), len(all_findings)))
+    print("デザインシステム %d 個と画面デザイン %d 個を検査し、指摘は %d 件でした。" % (systems, screens, len(all_findings)))
     return 1 if all_findings else 0
 
 
@@ -523,6 +665,8 @@ def cmd_check(root: str, names: List[str], spec_root: str = "") -> int:
 
 def cmd_tokens_css(root: str, name: str, write: bool) -> int:
     ds_dir = require_system(root, name)
+    if is_screens(root, name):
+        raise UsageError("`%s` は画面デザインです。tokens-css はデザインシステム（progrust など）だけに使えます。" % name)
     try:
         text = generate_tokens_css(ds_dir)
     except (Unsupported, KeyError, TypeError, AttributeError, IndexError, ValueError, OSError) as e:
@@ -552,6 +696,15 @@ def load_index(ds_dir: str) -> dict:
 
 def cmd_files(root: str, name: str) -> int:
     ds_dir = require_system(root, name)
+    if is_screens(root, name):
+        out = {
+            "root": os.path.abspath(ds_dir),
+            "file_path": os.path.abspath(os.path.join(ds_dir, CANVAS_NAME)),
+            "files": {"project/" + rel: rel for rel in walk(ds_dir)},
+            "assets": [],
+        }
+        print(json.dumps(out, indent=2, ensure_ascii=False))
+        return 0
     index = load_index(ds_dir)
     files = {"project/" + rel: rel for rel in public_files(ds_dir)}
     assets = []
@@ -579,10 +732,42 @@ def cmd_files(root: str, name: str) -> int:
 # --- compare ---
 
 
+def compare_screens(ds_dir: str, fetched: str, prefix: str) -> int:
+    """画面デザイン: 取得した側の <接頭辞>/ の下と、ディレクトリの全ファイルを比べる（取得した側の ds/ は比べない）。"""
+    diffs: List[str] = []
+    compared = 0
+    base = os.path.join(fetched, *prefix.split("/"))
+    repo_files = walk(ds_dir)
+    for rel in repo_files:
+        compared += 1
+        other = os.path.join(base, rel)
+        if not os.path.isfile(other):
+            diffs.append("無い: %s（取得した側に %s/%s がありません）" % (rel, prefix, rel))
+        elif read_bytes(other) != read_bytes(os.path.join(ds_dir, rel)):
+            diffs.append("中身が違う: %s" % rel)
+    if os.path.isdir(base):
+        known = set(repo_files)
+        for rel in walk(base):
+            if rel.startswith("ds/"):
+                continue
+            if rel not in known:
+                diffs.append("余分: %s（リポジトリに無いファイルです）" % rel)
+    else:
+        diffs.append("無い: %s/（取得したディレクトリにファイルの置き場がありません）" % prefix)
+    for line in diffs:
+        print(line)
+    print("%d 件を比べ、違いは %d 件でした。" % (compared, len(diffs)))
+    return 1 if diffs else 0
+
+
 def cmd_compare(root: str, name: str, fetched: str, prefix: str, partial: bool, skip_assets: bool = False) -> int:
     ds_dir = require_system(root, name)
     if not os.path.isdir(fetched):
         raise UsageError("取得したディレクトリ `%s` がありません。" % fetched)
+    if is_screens(root, name):
+        if partial or skip_assets:
+            raise UsageError("--partial・--skip-assets は画面デザインでは使えません。")
+        return compare_screens(ds_dir, fetched, prefix)
     diffs: List[str] = []
     compared = 0
 
@@ -661,12 +846,12 @@ class Parser(argparse.ArgumentParser):
 def build_parser() -> argparse.ArgumentParser:
     p = Parser(
         prog="design-system.py",
-        description="design-system/ 配下のデザインシステムを検査・生成・照合する。終了コード: 0 指摘なし、1 指摘あり、2 引数の誤り。",
+        description="design-system/ 配下のデザインシステムと画面デザインを検査・生成・照合する。終了コード: 0 指摘なし、1 指摘あり、2 引数の誤り。",
     )
     p.add_argument("--root", default=os.path.join(REPO_ROOT, "design-system"), metavar="DIR", help="design-system のディレクトリ（既定: リポジトリの design-system/）")
     sub = p.add_subparsers(dest="cmd", metavar="サブコマンド", parser_class=Parser)
     sub.required = True
-    c = sub.add_parser("check", help="規則どおりに置かれているかを検査する（名前を省くと、索引を持つ全部）")
+    c = sub.add_parser("check", help="規則どおりに置かれているかを検査する（名前を省くと、索引を持つ全部。デザインシステムも画面デザインも）")
     c.add_argument("names", nargs="*", metavar="名前")
     c.add_argument("--spec-root", default=DEFAULT_SPEC_ROOT, metavar="DIR", help="仕様への参照を照らす仕様のディレクトリ（既定: リポジトリの documents/spec/）")
     t = sub.add_parser("tokens-css", help="tokens.json から tokens.css の内容を作って標準出力に出す")

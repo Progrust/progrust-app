@@ -1,0 +1,132 @@
+/* Progrust 画面デザインの、画面ごとの配置（レイアウト）だけを置く。
+   部品はデザインシステム（ds/progrust/components/bundle.css、接頭辞 pg-）にある。接頭辞は pgx-。
+   動画の中の絵は、動画のデザインシステム（ds/progrust-video/components/bundle.css）で描く。 */
+
+/* ===== 画面の骨組み ===== */
+.app { font-family: var(--font-sans); background: var(--bg); color: var(--ink); min-width: 1024px; position: relative; -webkit-font-smoothing: antialiased; }
+.app--window { height: 100vh; min-height: 700px; display: flex; flex-direction: column; overflow: hidden; }
+.app--page { min-height: 100vh; display: flex; flex-direction: column; }
+.app p, .app h1, .app h2, .app h3 { margin: 0; }
+.pgx-wrap { width: 100%; max-width: 1080px; margin: 0 auto; padding: var(--space-28) var(--space-28) 56px; box-sizing: border-box; display: flex; flex-direction: column; gap: var(--space-24); }
+.pgx-wrap--narrow { max-width: 880px; }
+.pgx-page-head { display: flex; align-items: flex-end; gap: var(--space-16); }
+.pgx-page-head h1 { font-size: 21px; font-weight: 800; line-height: 1.4; }
+.pgx-page-head p { margin-top: 2px; font-size: 13px; line-height: 1.75; color: var(--ink-2); }
+.pgx-page-head-end { margin-left: auto; display: flex; align-items: center; gap: var(--space-10); }
+.pgx-h2 { font-size: 15px; font-weight: 800; line-height: 1.5; }
+.pgx-h2 small { margin-left: var(--space-8); font-size: 12px; font-weight: 400; color: var(--muted); }
+.pgx-row { display: flex; align-items: center; gap: var(--space-10); }
+.pgx-spacer { flex: 1; }
+.pgx-muted { color: var(--muted); }
+.pgx-mono { font-family: var(--font-mono); }
+.pgx-scroll { overflow: auto; }
+
+
+/* ===== 演習画面 ===== */
+.pgx-ex { flex: 1; min-height: 0; display: flex; padding: 0 var(--space-20) var(--space-14); }
+.pgx-ex-side { width: 380px; flex-shrink: 0; display: flex; flex-direction: column; min-height: 0; }
+.pgx-ex-work { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+.pgx-ex-work .pg-editor { flex: 1; min-height: 0; }
+.pgx-ex-bottom { height: 232px; flex-shrink: 0; display: flex; min-height: 0; }
+.pgx-ex-bottom > .pg-console { flex: 1; min-width: 0; }
+
+
+/* ===== 動画画面 ===== */
+.pgx-video-main { flex: 1; min-width: 0; padding: var(--space-14) var(--space-28) var(--space-18); display: flex; flex-direction: column; gap: var(--space-14); min-height: 0; }
+.pgx-video-main > .pg-context { min-height: var(--control-md); flex-shrink: 0; }
+/* プレーヤー（VideoPlayer）を置く領域。動画は、下に置くものの高さ（--pgx-below）を引いた残りに、16:9 で収まる最大の大きさにする。
+   --pgx-below = 字幕 2 行ぶん 51 + 操作 72（シークバー 20 + 間 8 + 行 44）+ 間 12 × 2 + 台紙の枠 1 = 148。
+   操作が 2 行になる幅では、さらに 52（間 8 + 行 44）で 200。
+   字幕を表示していないときも、右端の行動（「演習へ」など）がまだ出ていないときも同じ高さを引くので、字幕の切り替えと右端の行動の表示で動画の大きさは変わらない。 */
+.pgx-video-area { flex: 1; min-height: 0; container-type: size; container-name: pgx-video-area; display: flex; align-items: center; justify-content: center; }
+.pgx-video-area > .pg-video { --pgx-below: 200px; width: min(100cqw, calc((100cqh - var(--pgx-below)) * 16 / 9)); }
+/* 「演習へ」まで 1 行に並ぶ幅（VideoControls の目安は約 720px）を確保できる広さのときだけ、操作を 1 行として数える */
+@container pgx-video-area (min-width: 740px) and (min-height: 565px) { .pgx-video-area > .pg-video { --pgx-below: 148px; } }
+/* 動画のみのレッスン（data-lesson-kind="video_only"）では、右端が「次のレッスンへ」になり、1 行に並ぶのが約 775px からなので、その広さ（795px）を確保できるまでは 2 行として数える。
+   ボタンの表示で動画の大きさが変わらないように、ボタンがまだ出ていないときも同じに数える */
+@container pgx-video-area not ((min-width: 795px) and (min-height: 596px)) { .pgx-video-area > .pg-video[data-lesson-kind="video_only"] { --pgx-below: 200px; } }
+
+/* ===== 動画の中の絵 =====
+   動画のデザインシステム「Progrust Video」のステージ（1280×720。ds/progrust-video/components/bundle.css）を、
+   動画の台紙（.pg-video-frame）の幅に合わせて縮めて映す。アプリでは Remotion の Player が行う（仕様の content-format/video/structure.md）。
+   --pgx-fit は、tan(atan2()) を使えない環境のための倍率（動画画面を 1280×800 で開いたときの値）。 */
+.pgx-video-frame { container-type: inline-size; }
+.pgx-video-fit { position: absolute; left: 0; top: 0; width: 1280px; height: 720px; overflow: hidden; transform-origin: 0 0; scale: var(--pgx-fit, 0.689); scale: tan(atan2(100cqw, 1280px)); }
+.pg-modal .pgx-video-fit { --pgx-fit: 0.6547; }
+/* 画面のデザインシステムの書体のクラス .code（14px）が、図の中の text.code に当たらないようにする */
+.video-stage text.code, .video-stage tspan.code { font-size: inherit; line-height: inherit; }
+
+/* ===== トップページ ===== */
+.pgx-home { flex: 1; min-height: 0; padding: var(--space-22) var(--space-28); display: flex; flex-direction: column; gap: var(--space-18); box-sizing: border-box; }
+.pgx-home-row { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: var(--space-18); }
+.pgx-home-row--fill { flex: 1; min-height: 0; }
+.pgx-panel-head { display: flex; align-items: baseline; gap: var(--space-10); }
+.pgx-panel-head h2 { font-size: 14px; font-weight: 800; line-height: 1.5; }
+.pgx-panel-head .pg-btn--text { margin-left: auto; height: 24px; padding: 0; font-size: 12px; }
+.pgx-banners { display: flex; flex-direction: column; gap: var(--space-8); }
+.pgx-hero-done { background: var(--panel); }
+.pgx-element-meta { font-size: 12px; color: var(--muted); }
+
+/* ===== レッスン一覧 ===== */
+.pgx-lessons { display: flex; gap: var(--space-32); align-items: flex-start; }
+.pgx-chapters { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 40px; }
+.pgx-chapter-gap { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: var(--space-8); }
+.pgx-chapter-gap::before, .pgx-chapter-gap::after { content: ""; flex: 1; height: 1px; background: var(--line-soft); }
+
+/* ===== 初回起動画面 ===== */
+.pgx-onb { width: 100%; max-width: 760px; margin: 0 auto; padding: 48px var(--space-28) 64px; display: flex; flex-direction: column; gap: 36px; box-sizing: border-box; }
+.pgx-onb-lead h1 { font-size: 30px; font-weight: 800; line-height: 1.25; }
+.pgx-onb-lead p { margin-top: var(--space-10); font-size: 14px; line-height: 1.85; color: var(--ink-2); }
+.pgx-onb-sec { display: flex; flex-direction: column; gap: var(--space-12); }
+.pgx-flow { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-10); }
+.pgx-flow-step { padding: var(--space-16) var(--space-18); border-radius: var(--radius-tile); background: var(--panel); display: flex; flex-direction: column; gap: var(--space-6); }
+.pgx-flow-step .pgx-row { font-size: 14px; font-weight: 800; }
+.pgx-flow-step p { font-size: 13px; line-height: 1.75; color: var(--ink-2); }
+.pgx-flow-icon { width: 32px; height: 32px; border-radius: var(--radius-badge); background: var(--raised); display: grid; place-items: center; color: var(--ink); flex-shrink: 0; }
+.pgx-notice { border-radius: var(--radius-panel); background: var(--panel); padding: var(--space-18) var(--space-22); display: flex; gap: var(--space-14); }
+.pgx-notice > .pg-icon { color: var(--ink-3); margin-top: 3px; }
+.pgx-notice p { font-size: 13px; line-height: 1.85; color: var(--ink-2); }
+.pgx-notice p + p { margin-top: var(--space-6); }
+.pgx-notice b { color: var(--ink); }
+.pgx-onb-foot { display: flex; align-items: center; gap: var(--space-16); }
+.pgx-onb-foot p { font-size: 12px; line-height: 1.7; color: var(--muted); }
+.pgx-onb-foot .pg-btn { margin-left: auto; }
+
+/* ===== 設定画面 ===== */
+.pgx-settings-sec { display: flex; flex-direction: column; gap: var(--space-10); }
+.pgx-settings-sec > h2 { font-size: 15px; font-weight: 800; padding-left: var(--space-4); }
+.pgx-settings-ctrl { display: flex; align-items: center; gap: var(--space-8); justify-content: flex-end; }
+.pgx-settings-ctrl .pg-select-wrap { width: 220px; }
+.pgx-sub-list { grid-column: 1 / -1; list-style: none; margin: var(--space-4) 0 0; padding: 0; border-radius: var(--radius-inset); background: var(--raised); }
+.pgx-sub-list li { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: var(--space-10); align-items: center; padding: var(--space-10) var(--space-10) var(--space-10) var(--space-14); border-top: 1px solid var(--line-soft); font-size: 13px; }
+.pgx-sub-list li:first-child { border-top: 0; }
+.pgx-sub-list .pgx-sub-main b { display: block; font-weight: 700; }
+.pgx-sub-list .pgx-sub-main span { font-size: 12px; color: var(--muted); }
+.pgx-sub-list .pgx-sub-main code { font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.pgx-sub-list .ng { color: var(--danger-ink); }
+.pgx-sub-list .warn { color: var(--warning); }
+
+/* ===== 重なる層の位置 ===== */
+.pgx-at-search { position: absolute; z-index: 15; top: 68px; right: 98px; }
+.pgx-at-jobs { position: absolute; z-index: 15; top: 68px; right: 28px; }
+.pgx-toasts { position: absolute; z-index: 15; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: var(--space-10); align-items: flex-end; }
+.pg-search--active { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* ===== 部品の見本ページ ===== */
+.pgx-sheet { padding: 40px 48px 56px; display: flex; flex-direction: column; gap: 44px; box-sizing: border-box; }
+.pgx-sheet-sec { display: flex; flex-direction: column; gap: var(--space-14); }
+.pgx-sheet-sec > h2 { font-size: 18px; font-weight: 800; }
+.pgx-sheet-sec > p { font-size: 13px; line-height: 1.75; color: var(--ink-2); max-width: 760px; }
+.pgx-sheet-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-20); align-items: start; }
+.pgx-sheet-grid--3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.pgx-specimen { display: flex; flex-direction: column; gap: var(--space-8); }
+.pgx-specimen-label { font-size: 12px; font-weight: 700; color: var(--muted); }
+.pgx-specimen-box { border-radius: var(--radius-panel); border: 1px solid var(--line-soft); padding: var(--space-20); display: flex; flex-wrap: wrap; gap: var(--space-12); align-items: center; background: var(--bg); }
+.pgx-specimen-box--panel { background: var(--panel); border-color: var(--panel); }
+.pgx-specimen-box--col { flex-direction: column; align-items: stretch; }
+
+/* ===== 演習画面で部品を置く位置 ===== */
+.pgx-ex-side .pg-judge { flex-shrink: 0; max-height: 58%; }
+.pgx-overlay { position: absolute; inset: 0; z-index: 20; }
+.pgx-overlay.pg-scrim { padding: var(--space-28); }
+.pgx-bubble-code { margin: var(--space-8) 0 0; }

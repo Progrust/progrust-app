@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>設定画面</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--page" data-theme="{{theme}}">
+  <dc-import name="Header" current="settings" jobs="{{zero}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+  <main class="pgx-wrap pgx-wrap--narrow">
+    <div class="pgx-page-head"><div><h1>設定</h1><p>表示・動画・AI・環境と、学習データの管理です。変更はすぐに保存されます。</p></div></div>
+
+    <section class="pgx-settings-sec" aria-labelledby="s-view">
+      <h2 id="s-view">表示</h2>
+      <div class="pg-settings">
+        <div class="pg-settings-row">
+          <div><h3>テーマ</h3><p>「システムに合わせる」では、OS の設定が変わると切り替わります。</p></div>
+          <div class="pg-seg" role="radiogroup" aria-label="テーマ"><button role="radio" aria-checked="false">ライト</button><button role="radio" aria-checked="false">ダーク</button><button role="radio" aria-checked="true">システムに合わせる</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>エディタの文字サイズ</h3><p>12〜24px。既定は 14px です。</p></div>
+          <div class="pgx-settings-ctrl"><div class="pg-select-wrap" style="width: 120px;"><select class="pg-select" aria-label="エディタの文字サイズ"><option>14px</option></select><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-settings-sec" aria-labelledby="s-video">
+      <h2 id="s-video">動画</h2>
+      <div class="pg-settings">
+        <div class="pg-settings-row">
+          <div><h3>音量とミュート</h3><p>動画の音量と、ミュートするかどうか。</p></div>
+          <div class="pgx-settings-ctrl"><div class="pg-volume"><button class="pg-icon-btn pg-icon-btn--md" aria-label="ミュート" aria-pressed="false"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg></button><div class="pg-slider" role="slider" tabindex="0" aria-label="音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80" style="--pg-slider-value:0.8"><span class="pg-slider-track"><span class="pg-slider-fill"></span></span><span class="pg-slider-thumb"></span></div></div></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>再生速度</h3><p>動画を再生する速さ。</p></div>
+          <div class="pg-seg" role="radiogroup" aria-label="再生速度"><button role="radio" aria-checked="false">0.75 倍</button><button role="radio" aria-checked="true">1 倍</button><button role="radio" aria-checked="false">1.25 倍</button><button role="radio" aria-checked="false">1.5 倍</button><button role="radio" aria-checked="false">2 倍</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>字幕</h3><p>再生中の文を、動画の下に表示します。</p></div>
+          <div class="pgx-settings-ctrl"><label class="pg-switch"><input type="checkbox" role="switch">表示する</label></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-settings-sec" aria-labelledby="s-ai">
+      <h2 id="s-ai">AI</h2>
+      <div class="pg-settings">
+        <div class="pg-settings-row">
+          <div><h3>質疑応答のモデル</h3><p>動画と解説への質問、接続テストに使います。</p></div>
+          <div class="pgx-settings-ctrl"><div class="pg-select-wrap"><select class="pg-select" aria-label="質疑応答のモデル"><option>sonnet</option></select><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>記録・分析・問題生成のモデル</h3><p>バックグラウンドのジョブすべてに使います。</p></div>
+          <div class="pgx-settings-ctrl"><div class="pg-select-wrap"><select class="pg-select" aria-label="記録・分析・問題生成のモデル"><option>opus</option></select><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>接続テスト</h3><p>短い指示を質疑応答のモデルで実行し、応答が返るかを確かめます。</p></div>
+          <div class="pgx-settings-ctrl">
+            <span class="pg-ok-line"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>応答がありました（2.1 秒）</span>
+            <button class="pg-btn">接続テスト</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-settings-sec" aria-labelledby="s-env">
+      <h2 id="s-env">環境</h2>
+      <div class="pg-settings">
+        <div class="pg-settings-row">
+          <div><h3>Rust ツールチェーン</h3><p>rustc 1.89.0 ・ <code>~/.cargo/bin/cargo</code>（自動で検出）</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn">パスを指定</button><button class="pg-btn">再検出</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>Claude Code</h3><p>2.1.4 ・ <code>~/.local/bin/claude</code>（自動で検出）</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn">パスを指定</button><button class="pg-btn">再検出</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>外部クレートの準備</h3><p>演習で使える外部クレートを、初回にダウンロードしてビルドしておきます。</p></div>
+          <div class="pgx-settings-ctrl"><span class="pg-ok-line"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>準備できています（10/28 19:02）</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-settings-sec" aria-labelledby="s-data">
+      <h2 id="s-data">学習データ</h2>
+      <div class="pg-settings">
+        <div class="pg-settings-row">
+          <div><h3>学習記録</h3><p>AI が演習ごとに作った記録です。<code>records/</code> を OS の既定のアプリで開きます。</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"></path></svg>エディタで開く</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>分析ファイル</h3><p>得意・苦手の分析です。<code>analysis/analysis.md</code> を開きます。</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg>エディタで開く</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>分析を再構築</h3><p>すべての学習記録から、分析ファイルを作り直します。バックグラウンドのジョブとして実行します。</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn">再構築</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>分析のみリセット</h3><p>分析ファイルを初期の状態に戻します。学習記録は残ります。</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn">分析をリセット</button></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>学習履歴をすべてリセット</h3><p>試行ログ・学習記録・分析・進捗・下書きを削除します。生成した問題は残ります。</p></div>
+          <div class="pgx-settings-ctrl"><a class="pg-btn" href="ResetDialog.dc.html">すべてリセット</a></div>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>失敗したジョブ</h3><p>3 回続けて失敗し、止まっているジョブです。</p></div>
+          <div class="pgx-settings-ctrl"><span class="pg-count"><b>2</b> 件</span></div>
+          <ul class="pgx-sub-list">
+            <li>
+              <svg class="pg-icon ng" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+              <div class="pgx-sub-main"><b>学習記録の作成 ・ 3-4 loop と while</b><span>利用上限：Claude の利用上限に達しました。時間をおいて再試行してください。</span></div>
+              <button class="pg-btn pg-btn--sm pg-btn--outline">再実行</button>
+            </li>
+            <li>
+              <svg class="pg-icon ng" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+              <div class="pgx-sub-main"><b>分析の更新 ・ 学習記録 1 件</b><span>出力不正：AI の出力が分析ファイルの形式に合いませんでした。</span></div>
+              <button class="pg-btn pg-btn--sm pg-btn--outline">再実行</button>
+            </li>
+          </ul>
+        </div>
+        <div class="pg-settings-row">
+          <div><h3>読み込めない学習記録</h3><p>先頭の設定（frontmatter）を解析できず、分析の集計から外している記録です。</p></div>
+          <div class="pgx-settings-ctrl"><span class="pg-count"><b>1</b> 件</span></div>
+          <ul class="pgx-sub-list">
+            <li>
+              <svg class="pg-icon warn" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+              <div class="pgx-sub-main"><b><code>records/2026-10-20_ch03-04_01.md</code></b><span>12 行目：stumbles の書き方が正しくありません。</span></div>
+              <button class="pg-btn pg-btn--sm pg-btn--outline">エディタで開く</button>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-settings-sec" aria-labelledby="s-app">
+      <h2 id="s-app">アプリ</h2>
+      <div class="pg-settings">
+        <div class="pg-settings-row">
+          <div><h3>バージョン</h3><p>Progrust 0.3.2 ・ 最新のバージョンです（10/31 09:12 に確認）</p></div>
+          <div class="pgx-settings-ctrl"><button class="pg-btn">更新を確認</button></div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <sc-if value="{{showReset}}" hint-placeholder-val="{{false}}">
+    <div class="pg-scrim" style="position: fixed; inset: 0; z-index: 20;">
+      <div class="pg-dialog" role="alertdialog" aria-modal="true" aria-labelledby="reset-title" aria-describedby="reset-desc">
+        <h2 id="reset-title">学習履歴をすべてリセットしますか？</h2>
+        <p id="reset-desc">試行ログ・学習記録・分析・進捗・下書きを削除し、すべてのレッスンが未着手に戻ります。生成した問題は残ります。この操作は取り消せません。</p>
+        <div class="pg-field" style="margin-top: 4px;">
+          <label for="reset-confirm">確認のため「リセット」と入力してください</label>
+          <input id="reset-confirm" class="pg-input" autocomplete="off" placeholder="リセット">
+        </div>
+        <div class="pg-dialog-actions">
+          <a class="pg-btn" href="Settings.dc.html">キャンセル</a>
+          <button class="pg-btn pg-btn--danger" disabled="{{yes}}">すべてリセット</button>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"overlay":{"editor":"enum","options":["none","reset"],"default":"none"},"$preview":{"width":1280,"height":2410}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'light', zero: 0, yes: true, showReset: (this.props.overlay ?? 'none') === 'reset' };
+  }
+}
+</script>
+</body>
+</html>

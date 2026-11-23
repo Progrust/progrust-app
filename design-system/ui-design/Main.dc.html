@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>トップページ</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--window" data-theme="{{theme}}">
+  <dc-import name="Header" current="home" jobs="{{jobs}}" jobs-open="{{showJobs}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+
+  <main class="pgx-home">
+    <sc-if value="{{isFirst}}" hint-placeholder-val="{{false}}">
+      <div class="pgx-banners">
+        <div class="pg-banner pg-banner--info" role="status">
+          <svg class="pg-icon pg-spin" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+          <p><b>外部クレートを準備しています。</b>外部クレートを使う演習は、準備が終わるまで実行・提出できません。ほかの演習はすぐに使えます。</p>
+        </div>
+        <div class="pg-banner" role="alert">
+          <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+          <p><b>Claude Code が見つかりません。</b>質問・学習の分析・問題生成は使えません。レッスンは続けられます。</p>
+          <a class="pg-btn pg-btn--sm pg-btn--outline" href="#">導入手順を見る
+            <svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"></path><path d="M10 14 21 3"></path><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path></svg></a>
+          <a class="pg-btn pg-btn--sm pg-btn--outline" href="Settings.dc.html">パスを指定</a>
+        </div>
+      </div>
+    </sc-if>
+
+    <div class="pgx-home-row">
+      <sc-if value="{{isNormal}}" hint-placeholder-val="{{true}}">
+        <section class="pg-hero" data-chapter="4" aria-label="次のレッスン">
+          <div class="pg-emblem"><small>第4章</small><b>4-6</b></div>
+          <div class="pg-hero-body">
+            <p class="pg-hero-eyebrow">次のレッスン　所有権</p>
+            <h1 class="pg-hero-title">関数と所有権</h1>
+            <p class="pg-hero-desc">引数と戻り値で、所有権を受け渡す書き方を確かめます。目安 15 分。</p>
+          </div>
+          <a class="pg-btn pg-btn--accent pg-btn--xl" href="Video.dc.html">続きから</a>
+        </section>
+      </sc-if>
+      <sc-if value="{{isBroken}}" hint-placeholder-val="{{false}}">
+        <section class="pg-hero" data-chapter="4" aria-label="次のレッスン">
+          <div class="pg-emblem"><small>第4章</small><b>4-6</b></div>
+          <div class="pg-hero-body">
+            <p class="pg-hero-eyebrow">次のレッスン　所有権</p>
+            <h1 class="pg-hero-title">関数と所有権</h1>
+            <p class="pg-hero-desc">引数と戻り値で、所有権を受け渡す書き方を確かめます。目安 15 分。</p>
+          </div>
+          <a class="pg-btn pg-btn--accent pg-btn--xl" href="Video.dc.html">続きから</a>
+        </section>
+      </sc-if>
+      <sc-if value="{{isFirst}}" hint-placeholder-val="{{false}}">
+        <section class="pg-hero" data-chapter="1" aria-label="次のレッスン">
+          <div class="pg-emblem"><small>第1章</small><b>1-1</b></div>
+          <div class="pg-hero-body">
+            <p class="pg-hero-eyebrow">最初のレッスン　Rust の基本</p>
+            <h1 class="pg-hero-title">はじめての Rust</h1>
+            <p class="pg-hero-desc">コンパイルしてから実行する流れと、fn main と println! を確かめます。目安 10 分。</p>
+          </div>
+          <a class="pg-btn pg-btn--accent pg-btn--xl" href="Video.dc.html">始める</a>
+        </section>
+      </sc-if>
+      <sc-if value="{{isDone}}" hint-placeholder-val="{{false}}">
+        <section class="pg-hero pgx-hero-done" aria-label="次にやること">
+          <div class="pg-emblem">
+            <svg class="pg-icon" aria-hidden="true" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>
+          </div>
+          <div class="pg-hero-body">
+            <p class="pg-hero-eyebrow">167 / 167 レッスン完了</p>
+            <h1 class="pg-hero-title">すべてのレッスンを完了しました</h1>
+            <p class="pg-hero-desc">苦手な要素を中心に、AI が新しい演習問題を作れます。推奨の難易度は 3 です。</p>
+          </div>
+          <a class="pg-btn pg-btn--accent pg-btn--xl" href="GenSettings.dc.html">問題を生成する</a>
+        </section>
+      </sc-if>
+
+      <section class="pg-panel" aria-label="総評">
+        <h2>総評</h2>
+        <sc-if value="{{hasAnalysis}}" hint-placeholder-val="{{true}}">
+          <p>基本の型、関数と制御フローは安定しています。所有権では、ムーブした値をそのあと使う書き方が直近 3 回のうち 2 回ありました。参照と借用に進む前に、ムーブとコピーの違いを確かめておくと効果的です。</p>
+        </sc-if>
+        <sc-if value="{{isFirst}}" hint-placeholder-val="{{false}}">
+          <div class="pg-panel-empty">
+            <p>演習に正解すると、ここに分析が表示されます</p>
+          </div>
+        </sc-if>
+        <sc-if value="{{isBroken}}" hint-placeholder-val="{{false}}">
+          <div class="pg-panel-empty">
+            <p>分析ファイルを読み込めません</p>
+          </div>
+        </sc-if>
+      </section>
+    </div>
+
+    <section aria-label="章ごとの進み具合" style="display: flex; flex-direction: column; gap: 10px;">
+      <div style="display: flex; align-items: baseline; gap: 12px;">
+        <h2 class="pgx-h2">章ごとの進み具合</h2>
+        <span style="font-size: 13px; color: var(--muted);"><b style="font-size: 18px; color: var(--ink);">{{doneCount}}</b> / 167 レッスン完了</span>
+      </div>
+      <nav class="pg-tiles" aria-label="章の一覧">
+        <sc-for list="{{chapters}}" as="c" hint-placeholder-count="9">
+          <a class="pg-tile" href="Lessons.dc.html" data-chapter="{{c.n}}" aria-current="{{c.cur}}">
+            <div class="pg-tile-head"><span class="pg-badge">{{c.n}}</span><span class="pg-tile-name">{{c.name}}</span>
+              <sc-if value="{{c.isCur}}" hint-placeholder-val="{{false}}"><span class="pg-tile-state">学習中</span></sc-if>
+            </div>
+            <div class="pg-tile-foot"><div class="pg-progress"><span style="width: {{c.pct}}%;"></span></div><span class="pg-tile-count">{{c.done}}/{{c.total}}</span></div>
+          </a>
+        </sc-for>
+        <a class="pg-tile pg-tile--more" href="Lessons.dc.html">レッスン一覧を開く</a>
+      </nav>
+    </section>
+
+    <sc-if value="{{hasAnalysis}}" hint-placeholder-val="{{true}}">
+      <div class="pgx-home-row pgx-home-row--fill">
+        <section class="pg-panel" aria-label="気をつけたい要素">
+          <div class="pgx-panel-head">
+            <h2>気をつけたい要素</h2>
+            <span class="pgx-element-meta">選ぶと、その要素で問題を生成できます</span>
+          </div>
+          <div class="pg-elements">
+            <a class="pg-element" href="GenSettings.dc.html"><span class="pg-badge" data-chapter="4">4</span><span>所有権のムーブ</span><span class="pg-element-note pg-element-note--weak">よく間違える</span></a>
+            <a class="pg-element" href="GenSettings.dc.html"><span class="pg-badge" data-chapter="1">1</span><span>シャドーイング</span><span class="pg-element-note">復習推奨</span></a>
+            <a class="pg-element" href="GenSettings.dc.html"><span class="pg-badge" data-chapter="4">4</span><span>String 型</span><span class="pg-element-note pg-element-note--unsure">たまに間違える</span></a>
+            <a class="pg-element" href="GenSettings.dc.html"><span class="pg-badge" data-chapter="2">2</span><span>タプルの分解</span><span class="pg-element-note">復習推奨</span></a>
+            <a class="pg-element" href="GenSettings.dc.html" style="border-bottom: 0;"><span class="pg-badge" data-chapter="3">3</span><span>if 式</span><span class="pg-element-note pg-element-note--unsure">たまに間違える</span></a>
+            <a class="pg-element" href="GenSettings.dc.html" style="border-bottom: 0;"><span class="pg-badge" data-chapter="3">3</span><span>loop のラベル</span><span class="pg-element-note">定着度が低下</span></a>
+          </div>
+        </section>
+        <section class="pg-panel" aria-label="学習ペース">
+          <h2>学習ペース <span style="font-size: 12px; font-weight: 400; color: var(--muted);">直近 4 週の記録数</span></h2>
+          <div class="pg-pace" role="img" aria-label="直近4週の記録数。5件、9件、3件、今週7件" style="flex: 1; height: auto; min-height: 96px;">
+            <div><b>5</b><i style="height: 40px;"></i><small>10/6</small></div>
+            <div><b>9</b><i style="height: 72px;"></i><small>10/13</small></div>
+            <div><b>3</b><i style="height: 24px;"></i><small>10/20</small></div>
+            <div class="is-now"><b>7</b><i style="height: 56px;"></i><small>今週</small></div>
+          </div>
+        </section>
+      </div>
+    </sc-if>
+    <sc-if value="{{isFirst}}" hint-placeholder-val="{{false}}">
+      <section class="pg-panel pgx-home-row--fill" aria-label="学習の分析">
+        <h2>学習の分析</h2>
+        <div class="pg-panel-empty">
+          <span class="pg-empty-icon"><svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"></path><path d="m3 7 2 2 4-4"></path><path d="M13 6h8"></path><path d="M13 12h8"></path><path d="M13 18h8"></path></svg></span>
+          <p>演習に正解すると、ここに分析が表示されます</p>
+          <p class="pgx-muted" style="font-size: 12px;">苦手な要素・復習するとよい要素・学習ペースを、AI が学習記録から分析します。</p>
+        </div>
+      </section>
+    </sc-if>
+    <sc-if value="{{isBroken}}" hint-placeholder-val="{{false}}">
+      <div class="pg-banner pg-banner--ng" role="alert">
+        <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+        <p><b>分析ファイルを読み込めません。</b>analysis.md の先頭の設定（frontmatter）を解析できませんでした。設定画面の「分析を再構築」で、学習記録から作り直せます。</p>
+        <a class="pg-btn pg-btn--sm pg-btn--outline" href="Settings.dc.html">設定を開く</a>
+      </div>
+    </sc-if>
+  </main>
+
+  <sc-if value="{{showJobs}}" hint-placeholder-val="{{false}}">
+    <div class="pg-pop pg-jobs-pop pgx-at-jobs" role="dialog" aria-label="ジョブ">
+      <h2>ジョブ</h2>
+      <div class="pg-job"><svg class="pg-icon pg-spin" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg><div><div class="pg-job-name">問題の生成</div><div class="pg-job-target">所有権のムーブ ほか 2 件・難易度 2</div></div><span class="pg-job-state">実行中</span></div>
+      <div class="pg-job pg-job--wait"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><div><div class="pg-job-name">学習記録の作成</div><div class="pg-job-target">4-5 clone と Copy</div></div><span class="pg-job-state">待機中</span></div>
+      <div class="pg-job pg-job--wait"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg><div><div class="pg-job-name">分析の更新</div><div class="pg-job-target">学習記録 1 件</div></div><span class="pg-job-state">待機中</span></div>
+      <div class="pg-jobs-pop-foot">AI のジョブは 1 件ずつ順に実行します。失敗したジョブは<a href="Settings.dc.html">設定画面</a>から再実行できます。</div>
+    </div>
+    <div class="pgx-toasts">
+      <div class="pg-pop pg-toast" role="status">
+        <svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" x2="12" y1="15" y2="3"></line></svg>
+        <div><p class="pg-toast-title">新しいバージョンがあります</p><p class="pg-toast-body">0.4.0 に更新できます。更新すると教材も新しくなります。</p><div class="pg-toast-actions"><button class="pg-btn pg-btn--sm pg-btn--text">更新して再起動</button><button class="pg-btn pg-btn--sm pg-btn--text">あとで</button></div></div>
+        <button class="pg-icon-btn pg-icon-btn--md" aria-label="閉じる"><svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+      <div class="pg-pop pg-toast" role="status">
+        <svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+        <div><p class="pg-toast-title">問題を生成しました</p><p class="pg-toast-body">「在庫リストの集計」（難易度 2）が生成問題一覧に増えました。</p><div class="pg-toast-actions"><a class="pg-btn pg-btn--sm pg-btn--text" href="ExerciseGen.dc.html">開く</a></div></div>
+        <button class="pg-icon-btn pg-icon-btn--md" aria-label="閉じる"><svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;},&quot;variant&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;normal&quot;,&quot;first&quot;,&quot;done&quot;,&quot;broken&quot;],&quot;default&quot;:&quot;normal&quot;},&quot;overlay&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;none&quot;,&quot;jobs&quot;],&quot;default&quot;:&quot;none&quot;},&quot;$preview&quot;:{&quot;width&quot;:1280,&quot;height&quot;:800}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme ?? 'light';
+    const v = this.props.variant ?? 'normal';
+    const showJobs = (this.props.overlay ?? 'none') === 'jobs';
+    // 章は仕様の章とレッスンの一覧（documents/spec/curriculum/chapters/）に合わせている。
+    // 見本の学習者は第3章までと 4-1〜4-5 を完了し、4-6 を学習中（24 / 167 レッスン完了）
+    const base = [['Rust の基本', 6], ['基本の型', 7], ['関数と制御フロー', 6], ['所有権', 7], ['参照と借用', 7], ['構造体', 7],
+      ['列挙型とパターンマッチ', 9], ['コレクション', 11], ['エラー処理', 7], ['モジュールとクレート', 7], ['テスト', 7],
+      ['ジェネリクスとトレイト', 6], ['標準ライブラリのトレイト', 7], ['クロージャ', 5], ['イテレータ', 12], ['ライフタイム', 5],
+      ['スマートポインタ', 9], ['トレイトオブジェクト', 4], ['エラー処理の発展', 7], ['並行処理', 11], ['非同期処理', 9],
+      ['高度なトレイトと型', 6], ['マクロと unsafe', 5]];
+    const doneFor = (i, total) => {
+      if (v === 'first') return 0;
+      if (v === 'done') return total;
+      return i < 3 ? total : (i === 3 ? 5 : 0);
+    };
+    const curIndex = v === 'first' ? 0 : (v === 'done' ? -1 : 3);
+    const all = base.map(([name, total], i) => {
+      const done = doneFor(i, total);
+      return { n: i + 1, name, total, done, pct: Math.round(done / total * 100), cur: i === curIndex ? 'true' : undefined, isCur: i === curIndex };
+    });
+    // 章ごとの完了率は 9 章ぶんだけ並べる（仕様の screens/top-page.md）。次にやるべきレッスンの章の 2 つ前の章から 9 章。
+    // はみ出す分は反対側にずらし、すべて完了していれば最後の 9 章
+    const shown = 9;
+    const from = curIndex < 0 ? all.length - shown : Math.max(0, Math.min(curIndex - 2, all.length - shown));
+    const chapters = all.slice(from, from + shown);
+    const doneCount = all.reduce((s, c) => s + c.done, 0);
+    let jobs = v === 'normal' ? 1 : 0;
+    if (showJobs) jobs = 3;
+    return {
+      theme, chapters, doneCount, jobs, showJobs,
+      isNormal: v === 'normal', isFirst: v === 'first', isDone: v === 'done', isBroken: v === 'broken',
+      hasAnalysis: v === 'normal' || v === 'done'
+    };
+  }
+}
+</script>
+</body>
+</html>

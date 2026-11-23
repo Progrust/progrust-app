@@ -1,0 +1,459 @@
+{
+ "v": 3,
+ "createdOnFiles": {
+  "v": 1,
+  "at": "2026-10-31T11:20:00Z"
+ },
+ "title": "Progrust UIデザイン",
+ "launch": {
+  "view": "canvas",
+  "page": "screens"
+ },
+ "pages": [
+  {
+   "id": "screens",
+   "name": "主な画面"
+  },
+  {
+   "id": "states",
+   "name": "状態と重なる層"
+  },
+  {
+   "id": "parts",
+   "name": "新しい部品"
+  },
+  {
+   "id": "dark",
+   "name": "ダーク"
+  }
+ ],
+ "boards": {
+  "Onboarding.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 960,
+   "title": "初回起動画面",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "Main.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "トップページ",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "Lessons.dc.html": {
+   "x": 2720,
+   "y": 0,
+   "w": 1280,
+   "h": 2010,
+   "title": "レッスン一覧（第4章までスクロールした状態）",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "Video.dc.html": {
+   "x": 0,
+   "y": 2420,
+   "w": 1280,
+   "h": 800,
+   "title": "動画画面：再生中（質問パネルを開いた状態）",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "Exercise.dc.html": {
+   "x": 1360,
+   "y": 2420,
+   "w": 1280,
+   "h": 800,
+   "title": "演習画面：実行中（標準入力を待っている）",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "ExerciseWrong.dc.html": {
+   "x": 2720,
+   "y": 2420,
+   "w": 1280,
+   "h": 800,
+   "title": "演習画面：不正解（判定結果は問題文の上・詳細は畳む）",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "ExercisePassed.dc.html": {
+   "x": 4080,
+   "y": 2420,
+   "w": 1280,
+   "h": 800,
+   "title": "演習画面：正解（解説・質問・次へのモーダル）",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "GenList.dc.html": {
+   "x": 0,
+   "y": 3620,
+   "w": 1280,
+   "h": 980,
+   "title": "生成問題一覧",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "GenSettings.dc.html": {
+   "x": 1360,
+   "y": 3620,
+   "w": 1280,
+   "h": 2370,
+   "title": "生成設定画面",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "Settings.dc.html": {
+   "x": 2720,
+   "y": 3620,
+   "w": 1280,
+   "h": 2410,
+   "title": "設定画面",
+   "page": "screens",
+   "expand": "fill"
+  },
+  "HomeFirst.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "トップページ：学習記録なし・クレート準備中・Claude Code 未検出",
+   "page": "states",
+   "expand": "fill"
+  },
+  "HomeDone.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "トップページ：全レッスン完了",
+   "page": "states",
+   "expand": "fill"
+  },
+  "HomeBroken.dc.html": {
+   "x": 2720,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "トップページ：分析ファイルを読み込めない",
+   "page": "states",
+   "expand": "fill"
+  },
+  "Jobs.dc.html": {
+   "x": 4080,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "ジョブの一覧とトースト通知",
+   "page": "states",
+   "expand": "fill"
+  },
+  "VideoEnd.dc.html": {
+   "x": 0,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "動画画面：最後まで再生した状態（「演習へ」・質問パネルを閉じた状態）",
+   "page": "states",
+   "expand": "fill"
+  },
+  "VideoCaptions.dc.html": {
+   "x": 5440,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "動画画面：字幕を表示した状態",
+   "page": "states",
+   "expand": "fill"
+  },
+  "ExerciseAfter.dc.html": {
+   "x": 1360,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "演習画面：正解後にモーダルを閉じた状態",
+   "page": "states",
+   "expand": "fill"
+  },
+  "ExerciseGen.dc.html": {
+   "x": 4080,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "演習画面：生成問題・コンパイルエラー（墨色）",
+   "page": "states",
+   "expand": "fill"
+  },
+  "Search.dc.html": {
+   "x": 0,
+   "y": 2400,
+   "w": 1280,
+   "h": 800,
+   "title": "レッスン検索の結果",
+   "page": "states",
+   "expand": "fill"
+  },
+  "SearchModal.dc.html": {
+   "x": 1360,
+   "y": 2400,
+   "w": 1280,
+   "h": 800,
+   "title": "検索結果の動画のモーダル（第5章）",
+   "page": "states",
+   "expand": "fill"
+  },
+  "PrevCode.dc.html": {
+   "x": 2720,
+   "y": 2400,
+   "w": 1280,
+   "h": 800,
+   "title": "前回の正解コードを見る",
+   "page": "states",
+   "expand": "fill"
+  },
+  "ResetDialog.dc.html": {
+   "x": 4080,
+   "y": 2400,
+   "w": 1280,
+   "h": 800,
+   "title": "確認ダイアログ：学習履歴をすべてリセット",
+   "page": "states",
+   "expand": "fill"
+  },
+  "GenEmpty.dc.html": {
+   "x": 5440,
+   "y": 2400,
+   "w": 1280,
+   "h": 800,
+   "title": "生成問題一覧：問題がない状態",
+   "page": "states",
+   "expand": "fill"
+  },
+  "Header.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 62,
+   "title": "AppHeader（全画面で共有）",
+   "page": "parts"
+  },
+  "PartsForm.dc.html": {
+   "x": 0,
+   "y": 300,
+   "w": 1280,
+   "h": 1320,
+   "title": "新しい部品：入力と選択",
+   "page": "parts"
+  },
+  "PartsExercise.dc.html": {
+   "x": 1360,
+   "y": 300,
+   "w": 1280,
+   "h": 1900,
+   "title": "新しい部品：演習と質問",
+   "page": "parts"
+  },
+  "PartsLists.dc.html": {
+   "x": 2720,
+   "y": 300,
+   "w": 1280,
+   "h": 1980,
+   "title": "新しい部品：一覧・状態・案内",
+   "page": "parts"
+  },
+  "DarkHome.dc.html": {
+   "x": 0,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "ダーク：トップページ",
+   "page": "dark",
+   "expand": "fill"
+  },
+  "DarkVideo.dc.html": {
+   "x": 1360,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "ダーク：動画画面",
+   "page": "dark",
+   "expand": "fill"
+  },
+  "DarkExercise.dc.html": {
+   "x": 2720,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "ダーク：演習画面（不正解）",
+   "page": "dark",
+   "expand": "fill"
+  },
+  "DarkPassed.dc.html": {
+   "x": 4080,
+   "y": 0,
+   "w": 1280,
+   "h": 800,
+   "title": "ダーク：正解のモーダル",
+   "page": "dark",
+   "expand": "fill"
+  },
+  "DarkGenSettings.dc.html": {
+   "x": 0,
+   "y": 1200,
+   "w": 1280,
+   "h": 2370,
+   "title": "ダーク：生成設定画面",
+   "page": "dark",
+   "expand": "fill"
+  },
+  "ExerciseWrongOpen.dc.html": {
+   "x": 2720,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "演習画面：不正解（判定結果の詳細を開いた状態）",
+   "page": "states",
+   "expand": "fill"
+  },
+  "VideoOnlyEnd.dc.html": {
+   "x": 7240,
+   "y": 1200,
+   "w": 1280,
+   "h": 800,
+   "title": "動画画面：動画のみのレッスンを最後まで再生した状態（「演習へ」の位置に「次のレッスンへ」・質問パネルを開いた状態）",
+   "page": "states",
+   "expand": "fill"
+  }
+ },
+ "order": [
+  "Main.dc.html",
+  "Onboarding.dc.html",
+  "Lessons.dc.html",
+  "Video.dc.html",
+  "Exercise.dc.html",
+  "ExerciseWrong.dc.html",
+  "ExercisePassed.dc.html",
+  "GenList.dc.html",
+  "GenSettings.dc.html",
+  "Settings.dc.html",
+  "HomeFirst.dc.html",
+  "HomeDone.dc.html",
+  "HomeBroken.dc.html",
+  "Jobs.dc.html",
+  "VideoEnd.dc.html",
+  "VideoCaptions.dc.html",
+  "VideoOnlyEnd.dc.html",
+  "ExerciseWrongOpen.dc.html",
+  "ExerciseAfter.dc.html",
+  "ExerciseGen.dc.html",
+  "Search.dc.html",
+  "SearchModal.dc.html",
+  "PrevCode.dc.html",
+  "ResetDialog.dc.html",
+  "GenEmpty.dc.html",
+  "Header.dc.html",
+  "PartsForm.dc.html",
+  "PartsExercise.dc.html",
+  "PartsLists.dc.html",
+  "DarkHome.dc.html",
+  "DarkVideo.dc.html",
+  "DarkExercise.dc.html",
+  "DarkPassed.dc.html",
+  "DarkGenSettings.dc.html"
+ ],
+ "notes": {
+  "t-screens-1": {
+   "x": 0,
+   "y": -300,
+   "text": "起動・ホーム・レッスン一覧",
+   "kind": "title1",
+   "maxW": 4000,
+   "page": "screens",
+   "w": 240
+  },
+  "t-screens-2": {
+   "x": 0,
+   "y": 2120,
+   "text": "動画と演習（第4章）",
+   "kind": "title1",
+   "maxW": 5360,
+   "page": "screens",
+   "w": 240
+  },
+  "t-screens-3": {
+   "x": 0,
+   "y": 3320,
+   "text": "問題生成と設定",
+   "kind": "title1",
+   "maxW": 4000,
+   "page": "screens",
+   "w": 240
+  },
+  "t-states-1": {
+   "x": 0,
+   "y": -300,
+   "text": "トップページの状態と通知",
+   "kind": "title1",
+   "maxW": 5360,
+   "page": "states",
+   "w": 240
+  },
+  "t-states-2": {
+   "x": 0,
+   "y": 900,
+   "text": "動画・演習の状態",
+   "kind": "title1",
+   "maxW": 6720,
+   "page": "states",
+   "w": 240
+  },
+  "n-captions-off": {
+   "x": 6800,
+   "y": 1200,
+   "text": "字幕を表示しないときも、動画の下の字幕の場所を空けておく（仕様の screens/video-screen.md）。動画画面の画板は、この形で描いている。字幕の切り替えで動画の大きさは変わらない（仕様の screens/video-screen.md）。",
+   "w": 360,
+   "page": "states"
+  },
+  "t-states-3": {
+   "x": 0,
+   "y": 2100,
+   "text": "重なる層（検索・モーダル・ダイアログ）",
+   "kind": "title1",
+   "maxW": 6720,
+   "page": "states",
+   "w": 240
+  },
+  "t-dark": {
+   "x": 0,
+   "y": -300,
+   "text": "ダークテーマ（代表画面）",
+   "kind": "title1",
+   "maxW": 5360,
+   "page": "dark",
+   "w": 240
+  }
+ },
+ "designSystems": [
+  {
+   "title": "Progrust",
+   "namespace": "progrust",
+   "artifact": "https://claude.ai/artifact/3Pn15TZ4nZ1H2u8cAfLosA",
+   "version": "1795337743-fdec",
+   "copiedAt": "2026-11-22T08:59:07Z"
+  },
+  {
+   "title": "Progrust Video",
+   "namespace": "progrust-video",
+   "artifact": "https://claude.ai/artifact/QGt9Cb1cFYaA8TU7kY9bPq",
+   "version": "1795342273-388c",
+   "copiedAt": "2026-11-22T10:12:03Z"
+  }
+ ],
+ "attachments": {}
+}

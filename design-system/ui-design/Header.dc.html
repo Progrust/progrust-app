@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>ヘッダー</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<header class="pg-header" data-theme="{{theme}}" style="font-family: var(--font-sans); color: var(--ink); flex-shrink: 0; position: relative; z-index: 12;">
+  <div class="pg-logo">Progrust</div>
+  <sc-if value="{{showNav}}" hint-placeholder-val="{{true}}">
+    <nav class="pg-nav" aria-label="メインメニュー">
+      <a href="Main.dc.html" aria-current="{{curHome}}">ホーム</a>
+      <a href="Lessons.dc.html" aria-current="{{curLessons}}">レッスン</a>
+      <a href="GenList.dc.html" aria-current="{{curGen}}">問題生成</a>
+      <a href="Settings.dc.html" aria-current="{{curSettings}}">設定</a>
+    </nav>
+    <div class="pg-header-end">
+      <label class="pg-search {{searchCls}}">
+        <svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+        <span class="pg-sr">レッスン検索</span>
+        <input type="search" placeholder="レッスン検索" value="{{query}}">
+        <sc-if value="{{hasQuery}}" hint-placeholder-val="{{false}}">
+          <span class="pg-kbd"><kbd>Esc</kbd></span>
+        </sc-if>
+      </label>
+      <sc-if value="{{hasJobs}}" hint-placeholder-val="{{true}}">
+        <button class="pg-jobs" aria-label="実行中・待機中のジョブ {{jobs}} 件" aria-expanded="{{expanded}}">
+          <svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg>{{jobs}}
+        </button>
+      </sc-if>
+    </div>
+  </sc-if>
+</header>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"current":{"editor":"enum","options":["home","lessons","gen","settings","none"],"default":"home"},"jobs":{"editor":"int","min":0,"max":9,"default":1},"jobsOpen":{"editor":"boolean","default":false},"query":{"editor":null,"default":""},"bare":{"editor":"boolean","default":false},"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1280,"height":62}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const cur = this.props.current ?? 'home';
+    const jobs = this.props.jobs ?? 1;
+    const query = this.props.query ?? '';
+    const pick = (k) => (cur === k ? 'page' : undefined);
+    return {
+      theme: this.props.theme ?? 'light',
+      curHome: pick('home'), curLessons: pick('lessons'), curGen: pick('gen'), curSettings: pick('settings'),
+      jobs, hasJobs: jobs > 0, expanded: this.props.jobsOpen ? 'true' : 'false',
+      query, hasQuery: query.length > 0, searchCls: query.length > 0 ? 'pg-search--active' : '',
+      showNav: !this.props.bare
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -123,7 +123,7 @@ Progrust は、動画で学び演習で解く Rust の学習アプリ。画面�
 - テーマはルート要素の `data-theme`（`light` / `dark`）で切り替える。色はすべて CSS 変数で参照し、値を直接書かない。
 - 章の色は、章の範囲の要素の `data-chapter`（1〜12）で切り替える。
 - 部品のクラスは `components/bundle.css` にあり、接頭辞は `pg-`。部品ごとの使い方は各部品の README にある。見本の HTML はクラスと構造の見本で、React の部品はまだない。
-- 画面ごとの部品の組み合わせ方は、画面デザインのキャンバス「Progrust UIデザイン」（https://claude.ai/artifact/SL7VXW5D7weHs8tLG9zHNx ）にある。
+- 画面ごとの部品の組み合わせ方は、画面デザイン「Progrust UIデザイン」にある（置き場所と表示用のアーティファクトは、仕様の `screens/ui-design-files.md`）。
 - `bundle.css` は見本のために Murecho と Red Hat Mono を Google Fonts から読み込んでいる。アプリではフォントを同梱する（仕様の `screens/appearance.md`「書体のファイル」）。
 
 ## 未決事項

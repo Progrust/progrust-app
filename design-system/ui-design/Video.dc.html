@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>動画画面</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust-video/tokens.css">
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+<link rel="stylesheet" href="ds/progrust-video/components/bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--window" data-theme="{{theme}}">
+  <dc-import name="Header" current="lessons" jobs="{{one}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+  <div style="flex: 1; min-height: 0; display: flex;">
+    <main class="pgx-video-main" data-chapter="4">
+      <div class="pg-context">
+        <a class="pg-back" href="Lessons.dc.html"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>レッスン一覧</a>
+        <span class="pg-chip"><span class="pg-chip-num">4</span>所有権</span>
+        <sc-if value="{{isLesson}}" hint-placeholder-val="{{true}}"><span class="pg-context-title">4-6 関数と所有権</span></sc-if>
+        <sc-if value="{{isVideoOnly}}" hint-placeholder-val="{{false}}"><span class="pg-context-title">4-1 メモリの仕組み</span></sc-if>
+        <sc-if value="{{chatClosed}}" hint-placeholder-val="{{false}}">
+          <a class="pg-btn pg-context-end" href="Video.dc.html" aria-expanded="false">
+            <svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"></path></svg>質問する</a>
+        </sc-if>
+      </div>
+
+      <!-- VideoPlayer: 動画の台紙・字幕・操作 -->
+      <div class="pgx-video-area">
+        <div class="pg-video" data-lesson-kind="{{kind}}">
+          <div class="pg-video-frame pgx-video-frame">
+            <!-- 動画の中の絵。動画のデザインシステム「Progrust Video」の見本をそのまま映している -->
+            <div class="pgx-video-fit">
+              <sc-if value="{{isPlaying}}" hint-placeholder-val="{{true}}">
+                <!-- 部品 Camera の見本（コード + 所有者の図 + callout を 1.16 倍で寄せた場面）。4-6 の動画の、4-4 所有権のムーブ をおさらいする場面として映している -->
+                <div class="video-camera" style="--camera-x:22; --camera-y:0; --camera-scale:1.16">
+                  <section class="video-stage" data-lesson-label="{{lessonLabel}}">
+                    <h1>代入すると、所有権が移る</h1>
+                    <pre style="position:absolute;left:72px;top:149px;width:480px"><code class="language-rust"><span class="line" data-ln="1"><span class="tk-k">fn</span> <span class="tk-f">main</span>() {</span><span class="line" data-ln="2">    <span class="tk-k">let</span> s1 = <span class="tk-t">String</span>::<span class="tk-f">from</span>(<span class="tk-s">"hi"</span>);</span><span class="line" data-ln="3">    <span class="tk-k">let</span> s2 = <span class="mark">s1</span>;</span><span class="line" data-ln="4">}</span></code></pre>
+                    <figure class="diagram" style="position:absolute;left:584px;top:149px;width:492px">
+                      <svg viewBox="0 0 492 280" width="492" height="280" role="img" aria-label="s1 が持っていた文字列の所有権が、s2 に移った図">
+                        <rect class="fill-muted" x="0" y="0" width="232" height="280" rx="20" stroke="none"></rect>
+                        <rect class="fill-muted" x="296" y="0" width="196" height="280" rx="20" stroke="none"></rect>
+                        <text class="fill-muted" x="28" y="40" font-size="18">スタック</text>
+                        <text class="fill-muted" x="324" y="40" font-size="18">ヒープ</text>
+                        <rect class="fill-accent stroke-accent" x="324" y="116" width="64" height="64" rx="8"></rect>
+                        <rect class="fill-accent stroke-accent" x="400" y="116" width="64" height="64" rx="8"></rect>
+                        <text class="code fill-accent" x="356" y="148" text-anchor="middle" dominant-baseline="central">h</text>
+                        <text class="code fill-accent" x="432" y="148" text-anchor="middle" dominant-baseline="central">i</text>
+                        <rect class="fill-surface stroke-muted" x="24" y="64" width="184" height="72" rx="12" stroke-dasharray="8 6"></rect>
+                        <rect class="fill-primary" x="24" y="160" width="184" height="72" rx="12" stroke="none"></rect>
+                        <path class="stroke-muted" d="M208 100 C 256 100, 264 140, 310 140" stroke-dasharray="8 6"></path>
+                        <path class="stroke-primary" d="M208 196 C 256 196, 264 156, 310 156" stroke-width="3"></path>
+                        <path class="stroke-primary" d="M302 148 L 312 156 L 302 164" stroke-width="3"></path>
+                        <text class="code fill-muted" x="52" y="100" dominant-baseline="central">s1</text>
+                        <text class="fill-muted" x="188" y="100" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">使えない</text>
+                        <text class="code fill-on" x="52" y="196" dominant-baseline="central">s2</text>
+                        <text class="fill-on" x="188" y="196" text-anchor="end" dominant-baseline="central" font-size="18" font-weight="500">所有者</text>
+                      </svg>
+                    </figure>
+                    <div class="callout info" style="position:absolute;left:584px;top:453px;max-width:492px">所有権が移ることを、<span class="mark">ムーブ</span>と呼びます。</div>
+                  </section>
+                </div>
+              </sc-if>
+              <sc-if value="{{isLessonEnded}}" hint-placeholder-val="{{false}}">
+                <!-- 部品 LayoutSummary の見本（最後のシーン。まとめを映したまま止まる）を、README「寄せ方」の決まりで 1.35 倍に寄せた -->
+                <div class="video-camera" style="--camera-x:32; --camera-y:0; --camera-scale:1.35">
+                  <section class="video-stage" data-layout="summary" data-lesson-label="4-6 関数と所有権">
+                    <h1>このレッスンのまとめ</h1>
+                    <ul style="max-width: 868px;">
+                      <li>関数に渡すと、String の所有権は引数に移る（ムーブ）</li>
+                      <li>渡したあとの元の変数を使うと、ムーブ済みの値を使ったエラーになる</li>
+                      <li>戻り値で返すと、所有権は呼び出し側に移る</li>
+                      <li>i32 のようにコピーされる型は、渡したあとも元の変数を使える</li>
+                    </ul>
+                  </section>
+                </div>
+              </sc-if>
+              <sc-if value="{{isVideoOnlyEnded}}" hint-placeholder-val="{{false}}">
+                <!-- 動画のみのレッスン（4-1 メモリの仕組み）の最後のシーン。寄せ方は上と同じ -->
+                <div class="video-camera" style="--camera-x:32; --camera-y:0; --camera-scale:1.35">
+                  <section class="video-stage" data-layout="summary" data-lesson-label="4-1 メモリの仕組み">
+                    <h1>このレッスンのまとめ</h1>
+                    <ul style="max-width: 868px;">
+                      <li>値は、スタックかヒープに置かれる</li>
+                      <li>関数を呼ぶたびにスタックフレームが作られ、戻ると消える</li>
+                      <li>Rust には、ガベージコレクションがない</li>
+                      <li>メモリを手で解放する言語では、二重解放や解放後の使用が起きる</li>
+                    </ul>
+                  </section>
+                </div>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- Captions: 字幕（動画の枠の外・下） -->
+          <sc-if value="{{captionsOn}}" hint-placeholder-val="{{false}}">
+            <sc-if value="{{isPlaying}}" hint-placeholder-val="{{true}}">
+              <p class="pg-captions">もし s1 と s2 の両方が所有者だとすると、スコープの終わりで、同じメモリを 2 回解放してしまいます。</p>
+            </sc-if>
+            <sc-if value="{{isLessonEnded}}" hint-placeholder-val="{{false}}">
+              <p class="pg-captions">i32 のようにコピーされる型は、代入しても元の変数を使えます。</p>
+            </sc-if>
+            <sc-if value="{{isVideoOnlyEnded}}" hint-placeholder-val="{{false}}">
+              <p class="pg-captions">メモリを手で解放する言語では、二重解放や解放後の使用が起きることがあります。</p>
+            </sc-if>
+          </sc-if>
+          <sc-if value="{{captionsBlank}}" hint-placeholder-val="{{true}}">
+            <p class="pg-captions" aria-hidden="true"></p>
+          </sc-if>
+
+          <!-- VideoControls: プレーヤーの操作 -->
+          <div class="pg-video-controls">
+            <div class="pg-slider pg-slider--accent" role="slider" tabindex="0" aria-label="再生位置" aria-valuemin="0" aria-valuemax="104" aria-valuenow="{{seekNow}}" aria-valuetext="{{seekText}}" style="{{seekStyle}}"><span class="pg-slider-track"><span class="pg-slider-fill"></span><span class="pg-slider-mark" style="left:7.7%"></span><span class="pg-slider-mark" style="left:28.8%"></span><span class="pg-slider-mark" style="left:84.6%"></span></span><span class="pg-slider-thumb"></span></div>
+            <div class="pg-video-bar">
+              <div class="pg-video-group">
+                <sc-if value="{{isPlaying}}" hint-placeholder-val="{{true}}">
+                  <button class="pg-icon-btn pg-icon-btn--ink" aria-label="一時停止" title="一時停止（Space）" aria-keyshortcuts="Space"><svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"></rect><rect x="6" y="4" width="4" height="16" rx="1"></rect></svg></button>
+                </sc-if>
+                <sc-if value="{{isEnded}}" hint-placeholder-val="{{false}}">
+                  <button class="pg-icon-btn pg-icon-btn--ink" aria-label="再生" title="再生（Space）" aria-keyshortcuts="Space"><svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg></button>
+                </sc-if>
+                <span class="pg-video-time"><b>{{timeNow}}</b> / 1:44</span>
+                <button class="pg-btn" aria-label="5 秒戻る" title="5 秒戻る（←）" aria-keyshortcuts="ArrowLeft"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>5 秒</button>
+                <button class="pg-btn" aria-label="5 秒進む" title="5 秒進む（→）" aria-keyshortcuts="ArrowRight">5 秒<svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg></button>
+              </div>
+              <div class="pg-video-group">
+                <div class="pg-select-wrap pg-select-wrap--pill"><select class="pg-select pg-select--pill" aria-label="再生速度"><option>1 倍</option></select><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+                <div class="pg-volume"><button class="pg-icon-btn pg-icon-btn--md" aria-label="ミュート" aria-pressed="false"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg></button><div class="pg-slider" role="slider" tabindex="0" aria-label="音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80" style="--pg-slider-value:0.8"><span class="pg-slider-track"><span class="pg-slider-fill"></span></span><span class="pg-slider-thumb"></span></div></div>
+                <button class="pg-btn" aria-pressed="{{captionsPressed}}"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2" ry="2"></rect><path d="M7 15h4M15 15h2M7 11h2M13 11h4"></path></svg>字幕</button>
+              </div>
+              <sc-if value="{{showExercise}}" hint-placeholder-val="{{false}}">
+                <div class="pg-video-end"><a class="pg-btn pg-btn--accent pg-btn--lg" href="Exercise.dc.html">演習へ</a></div>
+              </sc-if>
+              <!-- 動画のみのレッスン: 「演習へ」の位置に「次のレッスンへ」を置く。レッスン一覧へは左上の「レッスン一覧」で移る。最後のレッスンでは何も置かない -->
+              <sc-if value="{{showVideoOnlyEnd}}" hint-placeholder-val="{{false}}">
+                <div class="pg-video-end"><a class="pg-btn pg-btn--accent pg-btn--lg" href="Video.dc.html">次のレッスンへ</a></div>
+              </sc-if>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <sc-if value="{{chatOpen}}" hint-placeholder-val="{{true}}">
+      <aside class="pg-chat" aria-label="質問">
+        <div class="pg-chat-head"><h2>質問する</h2><a class="pg-icon-btn pg-icon-btn--md" href="VideoEnd.dc.html" aria-label="質問パネルを閉じる"><svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></a></div>
+        <div class="pg-chat-log">
+          <div class="pg-bubble pg-bubble--me">s2 = s1 のとき、"hi" はコピーされないのですか？</div>
+          <div class="pg-bubble pg-bubble--ai">
+            <p>されません。コピーされるのはスタック上のポインタ・長さ・容量だけで、ヒープの "hi" は 1 つのままです。</p>
+            <p>s1 も有効なままだと、同じメモリを 2 回解放してしまいます。そのため s1 は使えなくなります。</p>
+            <pre class="pg-code pg-code--on-bg pgx-bubble-code"><span class="tk-k">let</span> s2 = s1; <span class="tk-c">// s1 はここで無効</span></pre>
+          </div>
+          <div class="pg-bubble pg-bubble--me">では clone() を使うと？</div>
+          <sc-if value="{{isAnswering}}" hint-placeholder-val="{{true}}">
+            <div class="pg-bubble pg-bubble--ai"><p>clone() はヒープ上のデータも複製します。s1 と s2 はそれぞれ別の "hi" を持つので、<span class="pgx-muted">▍</span></p></div>
+          </sc-if>
+          <sc-if value="{{isError}}" hint-placeholder-val="{{false}}">
+            <div class="pg-bubble-error" role="alert">
+              <div class="pg-bubble-error-title"><svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>応答がありませんでした</div>
+              <span>90 秒待っても回答が届きませんでした。</span>
+              <div><button class="pg-btn pg-btn--sm pg-btn--outline">再試行</button></div>
+            </div>
+          </sc-if>
+        </div>
+        <sc-if value="{{isAnswering}}" hint-placeholder-val="{{true}}">
+          <div class="pg-composer">
+            <span class="pg-composer-note"><svg class="pg-icon pg-spin" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: -2px; margin-right: 4px;"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>回答を作成しています。回答中は次の質問を送れません。</span>
+            <button class="pg-btn pg-btn--outline"><svg class="pg-icon" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>停止</button>
+          </div>
+        </sc-if>
+        <sc-if value="{{isError}}" hint-placeholder-val="{{false}}">
+          <form class="pg-composer" onsubmit="return false"><div class="pg-inbox"><textarea class="pg-textarea" rows="2" placeholder="この動画について質問" aria-label="この動画について質問"></textarea><div class="pg-inbox-foot"><span class="pg-inbox-hint">⌘ Enter で送信・Enter で改行</span><button class="pg-icon-btn pg-icon-btn--ink pg-icon-btn--sm" type="submit" aria-label="送信"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div></div></form>
+        </sc-if>
+        <sc-if value="{{isUnavailable}}" hint-placeholder-val="{{false}}">
+          <div class="pg-chat-unavailable" role="note">
+            <svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+            <div>Claude Code が見つかりません。質問は使えません。<br><a href="#">導入手順を見る</a></div>
+          </div>
+        </sc-if>
+      </aside>
+    </sc-if>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"kind":{"editor":"enum","options":["lesson","video_only"],"default":"lesson"},"playback":{"editor":"enum","options":["playing","ended"],"default":"playing"},"watched":{"editor":"boolean","default":false},"captions":{"editor":"boolean","default":false},"captionsOffSpace":{"editor":"enum","options":["reserve","collapse"],"default":"reserve"},"chat":{"editor":"enum","options":["open","closed"],"default":"open"},"chatState":{"editor":"enum","options":["answering","error","unavailable"],"default":"answering"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // playback: playing = 0:42 を再生中、ended = 最後まで再生して末尾で止まった状態
+    const ended = (this.props.playback ?? 'playing') === 'ended';
+    // kind: レッスンの種類（lesson.json の kind）。lesson = 動画 + 演習のレッスン（4-6 関数と所有権）、
+    // video_only = 動画のみのレッスン（4-1 メモリの仕組み）。再生中の動画の中の絵は、どちらも同じ見本を映す
+    const kind = (this.props.kind ?? 'lesson') === 'video_only' ? 'video_only' : 'lesson';
+    const videoOnly = kind === 'video_only';
+    // watched: 動画を最後まで再生したことがある（仕様の lesson-flow/progress.md の video_watched）。
+    // 「演習へ」を出す。動画のみのレッスンでは、代わりに「次のレッスンへ」を出す
+    const watched = ended || !!this.props.watched;
+    const captions = !!this.props.captions;
+    // captionsOffSpace: 字幕を表示しないときの字幕の場所（未決。仕様の screens/open-questions.md）。reserve = 空けておく、collapse = 詰める
+    const reserve = (this.props.captionsOffSpace ?? 'reserve') === 'reserve';
+    const chatOpen = (this.props.chat ?? 'open') === 'open';
+    const cs = this.props.chatState ?? 'answering';
+    return {
+      theme: this.props.theme ?? 'light', one: 1,
+      kind, isLesson: !videoOnly, isVideoOnly: videoOnly,
+      lessonLabel: videoOnly ? '4-1 メモリの仕組み' : '4-6 関数と所有権',
+      isPlaying: !ended, isEnded: ended,
+      isLessonEnded: ended && !videoOnly, isVideoOnlyEnded: ended && videoOnly,
+      showExercise: watched && !videoOnly, showVideoOnlyEnd: watched && videoOnly,
+      seekNow: ended ? 104 : 42, seekText: ended ? '1 分 44 秒' : '0 分 42 秒',
+      seekStyle: ended ? '--pg-slider-value:1' : '--pg-slider-value:0.404',
+      timeNow: ended ? '1:44' : '0:42',
+      captionsOn: captions, captionsBlank: !captions && reserve,
+      captionsPressed: captions ? 'true' : 'false',
+      chatOpen, chatClosed: !chatOpen,
+      isAnswering: cs === 'answering', isError: cs === 'error', isUnavailable: cs === 'unavailable'
+    };
+  }
+}
+</script>
+</body>
+</html>

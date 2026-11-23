@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>新しい部品：演習と質問</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app" data-theme="{{theme}}" style="min-width: 0;">
+  <div class="pgx-sheet">
+    <div>
+      <h1 style="font-size: 30px; font-weight: 800; line-height: 1.25;">演習と質問</h1>
+      <p style="margin-top: 8px; font-size: 14px; line-height: 1.85; color: var(--ink-2);">判定結果をコンソールから分け、正解後をモーダルにした演習画面のための部品。デザインシステム「Progrust」に移した（クラスの接頭辞は <code class="pgx-mono">pg-</code>）。部品ごとの使い方はデザインシステムの各部品の README にある。見本は第4章の中に置いている。</p>
+    </div>
+
+    <section class="pgx-sheet-sec" data-chapter="4">
+      <h2>JudgeCard（判定結果のカード）</h2>
+      <p>提出の結果を、問題文の列の上（問題文の前）に出す。不正解のカードは面を danger-soft（薄い赤）にして、ひと目で不正解と分かるようにする。コンソールの出力はそのまま残る。既定では見出しの行（結果・失敗した件数・提出時刻）だけを出し、詳細は畳んでおく。「詳細を見る」で開くと、通ったケースに check、失敗したケースに x と太字を付け、最初に失敗したケースの詳細を raised（白）の欄に出す。空白は ␣ で見えるようにする。ビルドに失敗したときは、面を warning-soft（薄い黄色）にして、テストを実行していないことを注意の色で示し、エラーはコンソールで読ませる。</p>
+      <div class="pgx-specimen" style="margin-bottom: 20px;"><span class="pgx-specimen-label">畳んだ状態（既定）</span>
+        <div class="pgx-specimen-box pgx-specimen-box--panel pgx-specimen-box--col" style="padding: 10px; max-width: 420px;">
+          <section class="pg-judge" style="margin: 0; max-height: none;" aria-label="判定結果">
+            <div class="pg-judge-head">
+              <span class="pg-judge-mark"><svg class="pg-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>
+              <div><p class="pg-judge-title">不正解</p><p class="pg-judge-sub">4 件中 1 件のテストが失敗しました ・ 14:32 に提出</p></div>
+              <button type="button" class="pg-judge-toggle" aria-expanded="false">詳細を見る<svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></button>
+            </div>
+          </section>
+        </div>
+      </div>
+      <div class="pgx-sheet-grid pgx-sheet-grid--3">
+        <div class="pgx-specimen"><span class="pgx-specimen-label">詳細を開いた状態（test 方式・panic のメッセージ）</span>
+          <div class="pgx-specimen-box pgx-specimen-box--panel pgx-specimen-box--col" style="padding: 10px;">
+            <section class="pg-judge" style="margin: 0; max-height: none;" aria-label="判定結果">
+              <div class="pg-judge-head">
+                <span class="pg-judge-mark"><svg class="pg-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>
+                <div><p class="pg-judge-title">不正解</p><p class="pg-judge-sub">4 件中 1 件のテストが失敗しました ・ 14:32 に提出</p></div>
+                <button type="button" class="pg-judge-toggle" aria-expanded="true">詳細を閉じる<svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(180deg);"><path d="m6 9 6 6 6-6"></path></svg></button>
+              </div>
+              <ul class="pg-cases">
+                <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>末尾に付け足す</li>
+                <li class="ng"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>前後の空白を取り除く</li>
+                <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>空の名前</li>
+                <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>日本語の名前</li>
+              </ul>
+              <div class="pg-case">
+                <p class="pg-case-title">前後の空白を取り除く</p>
+                <dl style="margin: 0;"><dt>テストの失敗</dt><dd>assertion `left == right` failed
+  left: "<span class="pg-ws">␣␣</span>ab_the_crab"
+ right: "ab_the_crab"</dd></dl>
+              </div>
+            </section>
+          </div>
+        </div>
+        <div class="pgx-specimen"><span class="pgx-specimen-label">ビルドに失敗</span>
+          <div class="pgx-specimen-box pgx-specimen-box--panel pgx-specimen-box--col" style="padding: 10px;">
+            <section class="pg-judge pg-judge--warn" style="margin: 0; max-height: none;" aria-label="判定結果">
+              <div class="pg-judge-head">
+                <span class="pg-judge-mark"><svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg></span>
+                <div><p class="pg-judge-title">ビルドに失敗しました</p><p class="pg-judge-sub">テストは実行していません。エラーはコンソールに表示しています。</p></div>
+              </div>
+              <p style="padding: 0 16px 14px; font-size: 12px; line-height: 1.7; color: var(--ink-2);">隠しテストの側でエラーが出ています。問題文で指定された関数名・型・シグネチャを確認してください。</p>
+            </section>
+          </div>
+        </div>
+        <div class="pgx-specimen"><span class="pgx-specimen-label">制限時間を超えた</span>
+          <div class="pgx-specimen-box pgx-specimen-box--panel pgx-specimen-box--col" style="padding: 10px;">
+            <section class="pg-judge" style="margin: 0; max-height: none;" aria-label="判定結果">
+              <div class="pg-judge-head">
+                <span class="pg-judge-mark"><svg class="pg-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>
+                <div><p class="pg-judge-title">不正解</p><p class="pg-judge-sub">3 件中 1 件が制限時間を超えました</p></div>
+              </div>
+              <ul class="pg-cases">
+                <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>小さな入力</li>
+                <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>空の入力</li>
+                <li class="ng"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>大きな入力 ・ 制限時間</li>
+              </ul>
+              <div class="pg-case">
+                <p class="pg-case-title">大きな入力</p>
+                <dl style="margin: 0;"><dt>標準エラー出力の先頭</dt><dd class="pgx-muted">（出力はありませんでした）</dd><dt>考えられること</dt><dd style="font-family: var(--font-sans); font-size: 12px;">終わらない繰り返しや、入力の終わりを待ち続けていないかを確かめてください。</dd></dl>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-sheet-sec">
+      <h2>PassModal（正解のモーダル）と SolvedBar（正解後の帯）</h2>
+      <p>正解するとモーダルを開き、解説（問題文・提出したコードはタブで切り替え）、解説への質問、次へ進むボタンをまとめて出す。モーダルを閉じると、エディタは読み取り専用になり、画面の下に帯を残す。章の中では章の色、生成問題では墨色。</p>
+      <div class="pgx-sheet-grid">
+        <div class="pgx-specimen"><span class="pgx-specimen-label">モーダルの見出しと足元（生成問題・墨色）</span>
+          <div class="pgx-specimen-box pgx-specimen-box--col" style="padding: 0; overflow: hidden; gap: 0;">
+            <div class="pg-pass-head">
+              <span class="pg-pass-mark"><svg class="pg-icon" aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+              <div><p class="pg-pass-title">正解</p><p class="pg-pass-sub">5 件のテストがすべて通りました</p></div>
+              <span class="pg-tag" style="margin-left: auto;">生成問題</span>
+              <button class="pg-icon-btn pg-icon-btn--md" aria-label="閉じてコードを見る"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></button>
+            </div>
+            <div style="height: 64px; display: flex; align-items: center; justify-content: center; font-size: 12px; color: var(--muted);">（解説と質問パネル）</div>
+            <div class="pg-pass-foot">
+              <button class="pg-btn pg-btn--text">閉じてコードを見る</button>
+              <span class="pgx-spacer"></span>
+              <a class="pg-btn pg-btn--accent pg-btn--xl" href="GenList.dc.html">生成問題一覧へ</a>
+            </div>
+          </div>
+        </div>
+        <div class="pgx-specimen"><span class="pgx-specimen-label">正解後の帯（第4章・墨色）</span>
+          <div class="pgx-specimen-box pgx-specimen-box--col">
+            <div class="pg-solved" data-chapter="4" style="margin: 0;">
+              <span class="pg-solved-mark"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+              <span class="pg-solved-text">正解しました</span>
+              <div class="pg-solved-actions"><button class="pg-btn pg-btn--outline">解説を開く</button><button class="pg-btn pg-btn--accent">次のレッスンへ</button></div>
+            </div>
+            <div class="pg-solved" style="margin: 0;">
+              <span class="pg-solved-mark"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+              <span class="pg-solved-text">正解しました</span>
+              <div class="pg-solved-actions"><button class="pg-btn pg-btn--outline">解説を開く</button><button class="pg-btn pg-btn--accent">生成問題一覧へ</button></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-sheet-sec" data-chapter="4">
+      <h2>Splitter（境界の取っ手）と、実行できないときの案内</h2>
+      <p>問題文とエディタ、エディタとコンソールの境界はドラッグで動かせる。境界の中央に短い棒を置き、マウスを重ねると濃くする。キーボードでは矢印キーで動かす。Rust が見つからないときや外部クレートの準備中は、実行・提出を無効にし、コンソールの上に理由を出す。</p>
+      <div class="pgx-sheet-grid">
+        <div class="pgx-specimen"><span class="pgx-specimen-label">取っ手（縦・横）</span>
+          <div class="pgx-specimen-box" style="gap: 0; align-items: stretch; height: 160px; padding: 12px;">
+            <div style="flex: 1; border-radius: 14px; background: var(--panel);"></div>
+            <div class="pg-split-v" role="separator" aria-orientation="vertical" aria-label="境界" tabindex="0"></div>
+            <div style="flex: 2; display: flex; flex-direction: column;">
+              <div style="flex: 1; border-radius: 14px; border: 1px solid var(--line);"></div>
+              <div class="pg-split-h" role="separator" aria-orientation="horizontal" aria-label="境界" tabindex="0"></div>
+              <div style="height: 48px; border-radius: 14px; background: var(--panel);"></div>
+            </div>
+          </div>
+        </div>
+        <div class="pgx-specimen"><span class="pgx-specimen-label">コンソールの案内（Rust が見つからない・準備中）</span>
+          <div class="pgx-specimen-box pgx-specimen-box--col" style="padding: 12px;">
+            <section class="pg-console" aria-label="コンソール">
+              <div class="pg-console-bar">
+                <span style="padding-left: 10px; font-size: 14px; font-weight: 800;">コンソール</span>
+                <div class="pg-console-actions"><button class="pg-btn" disabled="{{yes}}">実行</button><button class="pg-btn" disabled="{{yes}}">提出</button></div>
+              </div>
+              <div style="margin: 0 10px 8px;" class="pg-banner">
+                <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+                <p><b>Rust ツールチェーンが見つかりません。</b>実行と提出はできません。</p>
+                <a class="pg-btn pg-btn--sm pg-btn--outline" href="#">rustup の導入手順</a>
+              </div>
+              <div style="margin: 0 10px 10px;" class="pg-banner pg-banner--info">
+                <svg class="pg-icon pg-spin" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>
+                <p><b>外部クレートを準備しています。</b>この演習は準備が終わるまで実行・提出できません。</p>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="pgx-sheet-sec">
+      <h2>ChatPanel の状態</h2>
+      <p>回答中は送信の代わりに「停止」を出す。止めた回答は残し「（停止しました）」を添える。エラーは回答の場所に出し、再試行できるようにする。Claude Code が見つからないときは入力欄の代わりに案内を出す。送信ボタンは入力欄の中の右下に置き、入力欄の幅を狭めない。左にはショートカットの案内を添える。解説の質問は、空の状態から始まる。</p>
+      <div class="pgx-sheet-grid pgx-sheet-grid--3">
+        <div class="pgx-specimen"><span class="pgx-specimen-label">停止した・再試行</span>
+          <aside class="pg-chat" aria-label="質問" style="width: auto; height: 420px; border-radius: 14px;">
+            <div class="pg-chat-head"><h2>質問する</h2></div>
+            <div class="pg-chat-log">
+              <div class="pg-bubble pg-bubble--me">Copy な型には何がありますか？</div>
+              <div class="pg-bubble pg-bubble--ai"><p>整数・浮動小数点数・bool・char と、それらだけからなるタプルや配列です。String は</p><p class="pg-stopped">（停止しました）</p></div>
+              <div class="pg-bubble pg-bubble--me">String がヒープを使う理由は？</div>
+              <div class="pg-bubble-error" role="alert">
+                <div class="pg-bubble-error-title"><svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>Claude の利用上限に達しました</div>
+                <span>時間をおいて再試行してください。</span>
+                <div><button class="pg-btn pg-btn--sm pg-btn--outline">再試行</button></div>
+              </div>
+            </div>
+            <form class="pg-composer" onsubmit="return false"><div class="pg-inbox"><textarea class="pg-textarea" rows="2" placeholder="この動画について質問" aria-label="この動画について質問"></textarea><div class="pg-inbox-foot"><span class="pg-inbox-hint">⌘ Enter で送信・Enter で改行</span><button class="pg-icon-btn pg-icon-btn--ink pg-icon-btn--sm" type="submit" aria-label="送信"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div></div></form>
+          </aside>
+        </div>
+        <div class="pgx-specimen"><span class="pgx-specimen-label">解説の質問（空の状態）</span>
+          <aside class="pg-chat" aria-label="解説について質問" style="width: auto; height: 420px; border-radius: 14px;">
+            <div class="pg-chat-head"><h2>解説について質問する</h2></div>
+            <div class="pg-chat-empty"><b>質問できるようになりました</b><p>解説の内容や、提出したコードと模範解答の違い、より Rust らしい書き方について質問できます。</p></div>
+            <form class="pg-composer" onsubmit="return false"><div class="pg-inbox"><textarea class="pg-textarea" rows="2" placeholder="解説について質問" aria-label="解説について質問"></textarea><div class="pg-inbox-foot"><span class="pg-inbox-hint">⌘ Enter で送信・Enter で改行</span><button class="pg-icon-btn pg-icon-btn--ink pg-icon-btn--sm" type="submit" aria-label="送信"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div></div></form>
+          </aside>
+        </div>
+        <div class="pgx-specimen"><span class="pgx-specimen-label">Claude Code が見つからない</span>
+          <aside class="pg-chat" aria-label="質問" style="width: auto; height: 420px; border-radius: 14px;">
+            <div class="pg-chat-head"><h2>質問する</h2></div>
+            <div class="pg-chat-empty"><b>質問は使えません</b><p>Claude Code を導入すると、動画の内容について質問できます。</p></div>
+            <div class="pg-chat-unavailable" role="note">
+              <svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg>
+              <div>Claude Code が見つかりません。<br><a href="#">導入手順を見る</a></div>
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"$preview":{"width":1280,"height":1900}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return { theme: this.props.theme ?? 'light', yes: true };
+  }
+}
+</script>
+</body>
+</html>

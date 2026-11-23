@@ -232,8 +232,8 @@
  },
  "lastChange": {
   "by": "nishiki",
-  "at": "2026-11-22T15:45:09Z",
+  "at": "2026-11-23T00:30:00Z",
   "via": "Claude Code",
-  "note": "章カラーの「第N章」の N を章の番号とし（ADR 0174）、字幕を表示しないときも場所を空けておくことにしたので（ADR 0171）、README の「未決事項」と Captions の見本から外した"
+  "note": "画面デザイン「Progrust UIデザイン」をリポジトリの design-system/ui-design/ に置いたので（ADR 0181）、README の画面デザインの参照を仕様の screens/ui-design-files.md に変えた"
  }
 }

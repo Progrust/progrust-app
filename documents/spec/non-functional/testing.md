@@ -78,7 +78,7 @@ description: "テストの種類と道具（`cargo test`、Vitest、教材チェ
 
 - コミットする前に、`npm run check`（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」）を実行し、通ることを確かめる。AI エージェントがコミットするときも同じにする。
 - 教材を追加・変更したときは、教材チェックツールを実行する（[教材チェックツール](../content-guidelines/check-tool.md)）。
-- デザインシステムを変えたときは、`python3 tools/design-system.py check` を実行する（[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)「検査」）。仕様の文書（`documents/spec/`）を移したり、名前や小見出しを変えたりしたときも実行する。デザインシステムの README などからの、仕様への参照を確かめるためである。
+- デザインシステムか画面デザインを変えたときは、`python3 tools/design-system.py check` を実行する（[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)「検査」、[画面デザインのファイルと変更の手順](../screens/ui-design-files.md)「検査」）。仕様の文書（`documents/spec/`）を移したり、名前や小見出しを変えたりしたときも実行する。デザインシステムの README などからの、仕様への参照を確かめるためである。
 - 本番ビルドを人が操作して確かめることは、次のときに行う。
   - 依存の版を上げたとき（[開発環境と依存の版](../architecture/development-environment.md)「版を上げるとき」）
   - CSP の読み込み先に関わる変更をしたとき（[セキュリティとプライバシー](security-privacy.md)「アプリ自体」）
@@ -90,7 +90,7 @@ description: "テストの種類と道具（`cargo test`、Vitest、教材チェ
 - リポジトリへの push と pull request のたびに、GitHub Actions で次のものを実行する。
   - `npm ci` の後の `npm run check`。`cargo` のコマンドは、`src-tauri/Cargo.lock` のとおりの依存で実行する（`--locked`）
   - 教材チェックツール（[教材チェックツール](../content-guidelines/check-tool.md)）
-  - デザインシステムの検査（`python3 tools/design-system.py check`。[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)「検査」）
+  - デザインシステムと画面デザインの検査（`python3 tools/design-system.py check`。[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)「検査」、[画面デザインのファイルと変更の手順](../screens/ui-design-files.md)「検査」）
 - CI の実行環境は GitHub Actions の ubuntu-latest である。CI の実行環境で、対応環境（[対応環境](environments.md)）ではない。Tauri が Linux でのビルドに要るライブラリを入れて実行する。
 - macOS に固有の動作を確かめるテストは、macOS のときだけ実行するようにし、CI では実行しない。CI の結果を、対応環境で動くことの確かめにしない。
 - 作者の Mac では通り、CI の実行環境でだけ失敗するビルドやテストがあるときは、アプリのコードを Linux に合わせて直さない。そのテストを macOS のときだけ実行するようにするか、そのビルドやテストを CI で実行するものから外す。

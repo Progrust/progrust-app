@@ -1,0 +1,455 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>演習画面</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust-video/tokens.css">
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+<link rel="stylesheet" href="ds/progrust-video/components/bundle.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--window" data-theme="{{theme}}">
+  <dc-import name="Header" current="{{headerCurrent}}" jobs="{{one}}" query="{{query}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+
+  <div data-chapter="{{chapterAttr}}" style="flex: 1; min-height: 0; display: flex; flex-direction: column;">
+    <div class="pg-context" style="height: 56px; flex-shrink: 0; padding: 0 28px;">
+      <sc-if value="{{notGen}}" hint-placeholder-val="{{true}}">
+        <a class="pg-back" href="Video.dc.html"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>戻る</a>
+        <span class="pg-chip"><span class="pg-chip-num">4</span>所有権</span>
+        <span class="pg-context-title">4-6 関数と所有権</span>
+        <a class="pg-btn pg-context-end" href="Video.dc.html">動画を見直す</a>
+      </sc-if>
+      <sc-if value="{{isGen}}" hint-placeholder-val="{{false}}">
+        <a class="pg-back" href="GenList.dc.html"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>生成問題一覧</a>
+        <span class="pg-tag">生成問題</span>
+        <span class="pg-context-title">在庫リストの集計</span>
+        <span class="pg-diff"><span class="pg-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>難易度 3</span>
+      </sc-if>
+    </div>
+
+    <div class="pgx-ex" style="{{exPad}}">
+      <!-- 左：判定結果（不正解のとき）と問題文 -->
+      <div class="pgx-ex-side">
+        <sc-if value="{{isWrong}}" hint-placeholder-val="{{false}}">
+          <section class="pg-judge" aria-label="判定結果" style="margin: 0 0 10px;">
+            <div class="pg-judge-head">
+              <span class="pg-judge-mark"><svg class="pg-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></span>
+              <div><p class="pg-judge-title">不正解</p><p class="pg-judge-sub">3 件中 1 件のテストが失敗しました ・ 14:32 に提出</p></div>
+              <button type="button" class="pg-judge-toggle" aria-expanded="{{judgeExpanded}}" aria-controls="judge-detail" onClick="{{toggleJudge}}">{{judgeToggleText}}<svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="{{judgeChevron}}"><path d="m6 9 6 6 6-6"></path></svg></button>
+            </div>
+            <sc-if value="{{judgeOpen}}" hint-placeholder-val="{{false}}">
+            <div id="judge-detail" class="pg-judge-detail">
+            <ul class="pg-cases">
+              <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>基本の名前</li>
+              <li class="ng"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>前後に空白がある名前</li>
+              <li class="ok"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>日本語の名前</li>
+            </ul>
+            <div class="pg-case">
+              <p class="pg-case-title">前後に空白がある名前</p>
+              <dl style="margin: 0;">
+                <dt>入力</dt><dd><span class="pg-ws">␣␣</span>ferris<span class="pg-ws">␣␣</span></dd>
+                <dt>期待する出力</dt><dd>ferris_the_crab</dd>
+                <dt>実際の出力</dt><dd class="diff"><span class="pg-ws">␣␣</span>ferris_the_crab</dd>
+              </dl>
+            </div>
+            <p class="pg-judge-time">空白は ␣ で表示しています</p>
+            </div>
+            </sc-if>
+          </section>
+        </sc-if>
+
+        <section class="pg-side" aria-label="問題文">
+          <div class="pg-side-head">問題文<span class="pg-tag">テスト 3 件</span></div>
+          <div class="pg-side-scroll">
+            <sc-if value="{{notGen}}" hint-placeholder-val="{{true}}">
+              <div class="pg-prose">
+                <h1>名前に接尾辞を付ける</h1>
+                <p>標準入力から名前を 1 行読み取り、末尾に <code>_the_crab</code> を付けて表示するプログラムを完成させてください。</p>
+                <h2>条件</h2>
+                <ul>
+                  <li><code>add_suffix</code> は引数の <code>String</code> の所有権を受け取り、付け足した <code>String</code> を返す</li>
+                  <li>名前の前後の空白は取り除く</li>
+                  <li><code>clone()</code> は使わない</li>
+                </ul>
+                <h2>入力と出力の例</h2>
+                <dl class="pg-io" style="margin: 0;"><dt>入力</dt><dd><code>ferris</code></dd><dt>出力</dt><dd><code>ferris_the_crab</code></dd></dl>
+                <h2>ファイル</h2>
+                <p><code>src/main.rs</code> と <code>src/suffix.rs</code> があります。ファイルを増やしてもかまいません。</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{isGen}}" hint-placeholder-val="{{false}}">
+              <div class="pg-prose">
+                <h1>在庫リストの集計</h1>
+                <p>標準入力から「商品名 個数」の行を最後まで読み取り、商品ごとの個数の合計と、全体の合計を表示してください。</p>
+                <h2>条件</h2>
+                <ul>
+                  <li>商品は、最初に現れた順に表示する</li>
+                  <li>全体の合計を <code>sum</code> 関数で求めたあとも、読み取った一覧を表示に使う</li>
+                </ul>
+                <h2>入力と出力の例</h2>
+                <dl class="pg-io" style="margin: 0;"><dt>入力</dt><dd><code>りんご 3</code><br><code>みかん 2</code><br><code>りんご 1</code></dd><dt>出力</dt><dd><code>りんご 4</code><br><code>みかん 2</code><br><code>合計 6</code></dd></dl>
+              </div>
+            </sc-if>
+          </div>
+        </section>
+
+      </div>
+
+      <div class="pg-split-v" role="separator" aria-orientation="vertical" aria-label="問題文とエディタの境界" tabindex="0"></div>
+
+      <!-- 右：エディタとコンソール -->
+      <div class="pgx-ex-work">
+        <div class="pg-editor">
+          <div class="pg-editor-bar">
+            <div role="tablist" aria-label="ファイル" style="display: flex; gap: 6px; align-items: center;">
+              <sc-if value="{{notGen}}" hint-placeholder-val="{{true}}">
+                <button class="pg-filetab" role="tab" aria-selected="{{selMain}}">src/main.rs</button>
+                <button class="pg-filetab" role="tab" aria-selected="{{selSuffix}}">src/suffix.rs</button>
+              </sc-if>
+              <sc-if value="{{isGen}}" hint-placeholder-val="{{false}}">
+                <button class="pg-filetab" role="tab" aria-selected="true">src/main.rs</button>
+              </sc-if>
+            </div>
+            <sc-if value="{{canAddFile}}" hint-placeholder-val="{{true}}">
+              <button class="pg-icon-btn pg-icon-btn--sm" aria-label="ファイルを追加"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg></button>
+            </sc-if>
+            <div style="margin-left: auto; display: flex; align-items: center; gap: 4px;">
+              <sc-if value="{{isSolved}}" hint-placeholder-val="{{false}}">
+                <span class="pg-tag" style="gap: 4px;"><svg class="pg-icon" aria-hidden="true" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>読み取り専用</span>
+              </sc-if>
+              <sc-if value="{{showPrev}}" hint-placeholder-val="{{false}}">
+                <a class="pg-btn pg-btn--sm pg-btn--text" href="PrevCode.dc.html">前回の正解コードを見る</a>
+              </sc-if>
+              <button class="pg-btn pg-btn--sm pg-btn--text" disabled="{{isSolved}}">
+                <svg class="pg-icon" aria-hidden="true" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>初期コードに戻す</button>
+            </div>
+          </div>
+          <sc-if value="{{showMain}}" hint-placeholder-val="{{true}}">
+            <div class="pg-editor-code"><div class="pg-ln">{{ln12}}</div><div><span class="tk-k">mod</span> suffix;
+
+<span class="tk-k">use</span> std::io;
+<span class="tk-k">use</span> suffix::<span class="tk-f">add_suffix</span>;
+
+<span class="tk-k">fn</span> <span class="tk-f">main</span>() {
+    <span class="tk-k">let mut</span> name = <span class="tk-t">String</span>::<span class="tk-f">new</span>();
+    io::<span class="tk-f">stdin</span>().<span class="tk-f">read_line</span>(&amp;<span class="tk-k">mut</span> name).<span class="tk-f">unwrap</span>();
+
+    <span class="tk-k">let</span> name = <span class="tk-f">add_suffix</span>(name);
+    <span class="tk-m">println!</span>(<span class="tk-s">"{name}"</span>);
+}</div></div>
+          </sc-if>
+          <sc-if value="{{showSuffix}}" hint-placeholder-val="{{false}}">
+            <div class="pg-editor-code"><div class="pg-ln">{{ln7}}</div><div><span class="tk-c">/// 名前の前後の空白を取り除き、末尾に "_the_crab" を付けて返す</span>
+<span class="tk-k">pub fn</span> <span class="tk-f">add_suffix</span>(name: <span class="tk-t">String</span>) -&gt; <span class="tk-t">String</span> {
+    <span class="tk-k">let mut</span> s = name.<span class="tk-f">{{trimFn}}</span>().<span class="tk-f">to_string</span>();
+    s.<span class="tk-f">push_str</span>(<span class="tk-s">"_the_crab"</span>);
+    s
+}
+</div></div>
+          </sc-if>
+          <sc-if value="{{isGen}}" hint-placeholder-val="{{false}}">
+            <div class="pg-editor-code"><div class="pg-ln">{{ln18}}</div><div><span class="tk-k">use</span> std::io::{<span class="tk-k">self</span>, <span class="tk-t">Read</span>};
+
+<span class="tk-k">struct</span> <span class="tk-t">Item</span> {
+    name: <span class="tk-t">String</span>,
+    count: <span class="tk-t">u32</span>,
+}
+
+<span class="tk-k">fn</span> <span class="tk-f">main</span>() {
+    <span class="tk-k">let mut</span> input = <span class="tk-t">String</span>::<span class="tk-f">new</span>();
+    io::<span class="tk-f">stdin</span>().<span class="tk-f">read_to_string</span>(&amp;<span class="tk-k">mut</span> input).<span class="tk-f">unwrap</span>();
+    <span class="tk-k">let</span> items = <span class="tk-f">parse</span>(&amp;input);
+    <span class="tk-k">let</span> total = <span class="tk-f">sum</span>(items);
+
+    <span class="tk-k">for</span> item <span class="tk-k">in</span> &amp;items {
+        <span class="tk-m">println!</span>(<span class="tk-s">"{} {}"</span>, item.name, item.count);
+    }
+    <span class="tk-m">println!</span>(<span class="tk-s">"合計 {total}"</span>);</div></div>
+          </sc-if>
+        </div>
+
+        <div class="pg-split-h" role="separator" aria-orientation="horizontal" aria-label="エディタとコンソールの境界" tabindex="0"></div>
+
+        <div class="pgx-ex-bottom">
+          <section class="pg-console" aria-label="コンソール">
+            <div class="pg-console-bar">
+              <span style="padding-left: 10px; font-size: 14px; font-weight: 800;">コンソール</span>
+              <div class="pg-console-actions">
+                <sc-if value="{{isRunning}}" hint-placeholder-val="{{true}}">
+                  <span class="pg-running"><svg class="pg-icon pg-spin" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>実行中</span>
+                </sc-if>
+                <button class="pg-btn pg-btn--outline" disabled="{{runOff}}" title="実行（⌘ Enter）" aria-keyshortcuts="Meta+Enter"><svg class="pg-icon" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><path d="M6 4l14 8-14 8z"></path></svg>実行</button>
+                <button class="pg-btn pg-btn--ink" disabled="{{submitOff}}" title="提出（⌘ Shift Enter）" aria-keyshortcuts="Meta+Shift+Enter">提出</button>
+                <button class="pg-btn {{stopCls}}" disabled="{{stopOff}}" title="停止（⌘ .）" aria-keyshortcuts="Meta+."><svg class="pg-icon" aria-hidden="true" width="10" height="10" viewBox="0 0 24 24" fill="currentColor"><rect x="5" y="5" width="14" height="14" rx="2"></rect></svg>停止</button>
+              </div>
+            </div>
+            <div class="pg-console-body">
+              <sc-if value="{{isRunning}}" hint-placeholder-val="{{true}}">
+<pre class="pg-console-out"><span class="pgx-muted">── 実行  14:30 ──</span>
+<span class="pgx-muted">標準入力を待っています。下の欄に入力して Enter で送ります。</span></pre>
+              </sc-if>
+              <sc-if value="{{showSubmitLog}}" hint-placeholder-val="{{false}}">
+<pre class="pg-console-out"><span class="pgx-muted">── 実行  14:30 ──</span>
+<span class="ansi-cyan">  ferris  </span>
+  ferris_the_crab
+<span class="pgx-muted">終了しました（終了コード 0）</span>
+
+<span class="pgx-muted">── 提出  14:32 ──</span>
+ビルドしました
+テストを実行しました（3 / 3）
+<span class="ansi-red ansi-bold">3 件中 1 件のテストが失敗しました。</span>{{whereText}}</pre>
+              </sc-if>
+              <sc-if value="{{isSolved}}" hint-placeholder-val="{{false}}">
+<pre class="pg-console-out"><span class="pgx-muted">── 提出  14:36 ──</span>
+ビルドしました
+テストを実行しました（3 / 3）
+<span class="ansi-bold">3 件のテストがすべて通りました。</span></pre>
+              </sc-if>
+              <sc-if value="{{isGen}}" hint-placeholder-val="{{false}}">
+<pre class="pg-console-out"><span class="pgx-muted">── 実行  15:04 ──</span>
+<span class="ansi-red ansi-bold">error[E0382]</span><span class="ansi-bold">: borrow of moved value: `items`</span>
+  <span class="ansi-blue ansi-bold">--&gt;</span> src/main.rs:14:17
+   <span class="ansi-blue ansi-bold">|</span>
+<span class="ansi-blue ansi-bold">11</span> <span class="ansi-blue ansi-bold">|</span>     let items = parse(&amp;input);
+   <span class="ansi-blue ansi-bold">|</span>         <span class="ansi-blue ansi-bold">-----</span> <span class="ansi-blue ansi-bold">move occurs because `items` has type `Vec&lt;Item&gt;`, which does not implement the `Copy` trait</span>
+<span class="ansi-blue ansi-bold">12</span> <span class="ansi-blue ansi-bold">|</span>     let total = sum(items);
+   <span class="ansi-blue ansi-bold">|</span>                     <span class="ansi-blue ansi-bold">-----</span> <span class="ansi-blue ansi-bold">value moved here</span>
+<span class="ansi-blue ansi-bold">13</span> <span class="ansi-blue ansi-bold">|</span>
+<span class="ansi-blue ansi-bold">14</span> <span class="ansi-blue ansi-bold">|</span>     for item in &amp;items {
+   <span class="ansi-blue ansi-bold">|</span>                 <span class="ansi-red ansi-bold">^^^^^^</span> <span class="ansi-red ansi-bold">value borrowed here after move</span>
+   <span class="ansi-blue ansi-bold">|</span>
+<span class="ansi-cyan ansi-bold">help</span><span class="ansi-bold">: consider borrowing `items`</span>
+   <span class="ansi-blue ansi-bold">|</span>
+<span class="ansi-blue ansi-bold">12</span> <span class="ansi-blue ansi-bold">|</span>     let total = sum(<span class="ansi-green">&amp;</span>items);
+   <span class="ansi-blue ansi-bold">|</span>                     <span class="ansi-green">+</span>
+
+<span class="pgx-muted">ビルドに失敗したため、実行していません。</span></pre>
+              </sc-if>
+              <label class="pg-stdin">
+                <span>&gt;</span>
+                <input aria-label="標準入力" value="{{stdinValue}}" disabled="{{stdinOff}}" placeholder="{{stdinPh}}">
+                <button class="pg-btn pg-btn--sm" disabled="{{stdinOff}}" title="入力終了（Ctrl D）">入力終了</button>
+              </label>
+            </div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <sc-if value="{{isSolved}}" hint-placeholder-val="{{false}}">
+      <div style="padding: 0 20px 14px; flex-shrink: 0;">
+        <div class="pg-solved" role="status" style="margin-top: 12px;">
+          <span class="pg-solved-mark"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+          <span class="pg-solved-text">正解しました</span>
+          <span class="pg-solved-sub">エディタは読み取り専用になりました。</span>
+          <div class="pg-solved-actions">
+            <a class="pg-btn pg-btn--outline" href="ExercisePassed.dc.html">解説を開く</a>
+            <a class="pg-btn pg-btn--outline" href="Lessons.dc.html">レッスン一覧へ</a>
+            <a class="pg-btn pg-btn--accent" href="Video.dc.html">次のレッスンへ<span class="pg-btn-sub">4-7 第4章の復習</span></a>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+
+    <!-- 正解のモーダル -->
+    <sc-if value="{{isPassed}}" hint-placeholder-val="{{false}}">
+      <div class="pg-scrim pgx-overlay">
+        <div class="pg-pass" role="dialog" aria-modal="true" aria-labelledby="pass-title">
+          <div class="pg-pass-head">
+            <span class="pg-pass-mark"><svg class="pg-icon" aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div><h2 class="pg-pass-title" id="pass-title">正解</h2><p class="pg-pass-sub">3 件のテストがすべて通りました。4-6 関数と所有権 を完了しました。</p></div>
+            <span class="pg-chip"><span class="pg-chip-num">4</span>所有権　6 / 7 完了</span>
+            <a class="pg-icon-btn pg-icon-btn--md" href="ExerciseAfter.dc.html" aria-label="閉じてコードを見る"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></a>
+          </div>
+          <div class="pg-pass-body">
+            <div class="pg-pass-main">
+              <div class="pg-pass-tabs">
+                <div class="pg-tabs" role="tablist" aria-label="正解後の表示">
+                  <button class="pg-tab" role="tab" aria-selected="true">解説</button>
+                  <button class="pg-tab" role="tab" aria-selected="false">問題文</button>
+                  <button class="pg-tab" role="tab" aria-selected="false">提出したコード</button>
+                </div>
+              </div>
+              <div class="pg-pass-scroll">
+                <div class="pg-prose pg-prose--on-bg">
+                  <h1>戻り値で所有権を受け取り直す</h1>
+                  <h2>考え方</h2>
+                  <p><code>add_suffix(name)</code> を呼ぶと、<code>name</code> の所有権は引数に移ります（ムーブ）。呼んだあとの <code>name</code> は使えませんが、関数が新しい <code>String</code> を返すので、それを受け取れば <code>main</code> で続けて使えます。</p>
+                  <pre class="pg-code pg-code--on-bg"><span class="tk-k">let</span> name = <span class="tk-f">add_suffix</span>(name);</pre>
+                  <p>同じ名前で受け取り直す書き方は、第1章のシャドーイングです。元の <code>name</code> はムーブ済みなので、取り違えるおそれがありません。</p>
+                  <h2>模範解答（src/suffix.rs）</h2>
+                  <pre class="pg-code pg-code--on-bg"><span class="tk-k">pub fn</span> <span class="tk-f">add_suffix</span>(name: <span class="tk-t">String</span>) -&gt; <span class="tk-t">String</span> {
+    <span class="tk-k">let mut</span> s = name.<span class="tk-f">trim</span>().<span class="tk-f">to_string</span>();
+    s.<span class="tk-f">push_str</span>(<span class="tk-s">"_the_crab"</span>);
+    s
+}</pre>
+                  <h2>気をつけたい点</h2>
+                  <p><code>trim_end()</code> だけでは先頭の空白が残ります。テストの「前後に空白がある名前」は、この違いを確かめています。</p>
+                  <a class="pg-xref" href="Lessons.dc.html" style="background: var(--panel);"><span class="pg-badge pg-badge--sm" data-chapter="5">5</span>所有権を移さずに渡す書き方は 第5章 参照と借用 で<svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"></path></svg></a>
+                </div>
+              </div>
+            </div>
+            <aside class="pg-chat" aria-label="解説について質問">
+              <div class="pg-chat-head"><h2>解説について質問する</h2></div>
+              <div class="pg-chat-empty">
+                <b>質問できるようになりました</b>
+                <p>解説の内容や、提出したコードと模範解答の違い、より Rust らしい書き方について質問できます。</p>
+              </div>
+              <form class="pg-composer" onsubmit="return false"><div class="pg-inbox"><textarea class="pg-textarea" rows="2" placeholder="解説について質問" aria-label="解説について質問"></textarea><div class="pg-inbox-foot"><span class="pg-inbox-hint">⌘ Enter で送信・Enter で改行</span><button class="pg-icon-btn pg-icon-btn--ink pg-icon-btn--sm" type="submit" aria-label="送信"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></button></div></div></form>
+            </aside>
+          </div>
+          <div class="pg-pass-foot">
+            <a class="pg-btn pg-btn--text" href="ExerciseAfter.dc.html">閉じてコードを見る</a>
+            <span class="pgx-spacer"></span>
+            <a class="pg-btn pg-btn--lg" href="Lessons.dc.html">レッスン一覧へ</a>
+            <a class="pg-btn pg-btn--accent pg-btn--xl" href="Video.dc.html">次のレッスンへ<span class="pg-btn-sub">4-7 第4章の復習</span>
+              <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg></a>
+          </div>
+        </div>
+      </div>
+    </sc-if>
+  </div>
+
+  <!-- レッスン検索の結果（SearchResults。検索ワードとタイトルが対象で、結果はレッスン単位） -->
+  <sc-if value="{{ovSearch}}" hint-placeholder-val="{{false}}">
+    <div class="pg-pop pg-results pgx-at-search" role="listbox" aria-label="レッスン検索の結果">
+      <a class="pg-result" href="SearchModal.dc.html" role="option" aria-selected="true">
+        <span class="pg-result-meta"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span><b>所有権</b></span>
+        <span class="pg-result-h">4-4 <mark>所有権</mark>の<mark>ムーブ</mark></span>
+      </a>
+      <a class="pg-result" href="SearchModal.dc.html" role="option" aria-selected="false">
+        <span class="pg-result-meta"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span><b>所有権</b></span>
+        <span class="pg-result-h">4-5 clone と Copy</span>
+        <span class="pg-result-tags">検索ワード<span class="pg-tag"><mark>所有権</mark></span><span class="pg-tag"><mark>ムーブ</mark></span></span>
+      </a>
+      <a class="pg-result" href="SearchModal.dc.html" role="option" aria-selected="false">
+        <span class="pg-result-meta"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span><b>所有権</b></span>
+        <span class="pg-result-h">4-6 関数と<mark>所有権</mark></span>
+        <span class="pg-result-tags">検索ワード<span class="pg-tag"><mark>ムーブ</mark></span></span>
+      </a>
+      <a class="pg-result" href="SearchModal.dc.html" role="option" aria-selected="false">
+        <span class="pg-result-meta"><span class="pg-badge pg-badge--sm" data-chapter="5">5</span><b>参照と借用</b></span>
+        <span class="pg-result-h">5-1 不変の参照</span>
+        <span class="pg-result-tags">検索ワード<span class="pg-tag"><mark>所有権</mark>を移さない</span><span class="pg-tag"><mark>ムーブ</mark></span></span>
+      </a>
+      <div class="pg-results-foot">4 件 ・ ↑↓ で選び、Enter で開く</div>
+    </div>
+  </sc-if>
+
+  <!-- 検索結果の動画のモーダル（VideoModal。動画の先頭で、一時停止の状態で開く。「演習へ」は出さない） -->
+  <sc-if value="{{ovVideo}}" hint-placeholder-val="{{false}}">
+    <div class="pg-scrim pgx-overlay">
+      <div class="pg-modal" role="dialog" aria-modal="true" aria-label="5-1 不変の参照 の動画" data-chapter="5">
+        <div class="pg-modal-head"><span class="pg-chip"><span class="pg-chip-num">5</span>参照と借用</span><span class="pg-context-title">5-1 不変の参照</span><a class="pg-icon-btn pg-icon-btn--md" href="Exercise.dc.html" aria-label="閉じる"><svg class="pg-icon" aria-hidden="true" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></a></div>
+        <div class="pg-modal-body">
+          <div class="pg-video">
+            <div class="pg-video-frame pgx-video-frame">
+              <!-- 動画の中の絵。動画のデザインシステム「Progrust Video」の部品 LayoutTitle の見本（表紙。寄せない）を、第5章のレッスンの名前で映している -->
+              <div class="pgx-video-fit">
+                <div class="video-camera">
+                  <section class="video-stage" data-layout="title" data-chapter-label="第5章 参照と借用">
+                    <h1>不変の参照</h1>
+                    <p>&amp; を付けて、所有権を移さずに値を貸す</p>
+                  </section>
+                </div>
+              </div>
+            </div>
+            <div class="pg-video-controls">
+              <div class="pg-slider pg-slider--accent" role="slider" tabindex="0" aria-label="再生位置" aria-valuemin="0" aria-valuemax="112" aria-valuenow="0" aria-valuetext="0 分 0 秒" style="--pg-slider-value:0"><span class="pg-slider-track"><span class="pg-slider-fill"></span><span class="pg-slider-mark" style="left:6.3%"></span><span class="pg-slider-mark" style="left:33.9%"></span><span class="pg-slider-mark" style="left:86.6%"></span></span><span class="pg-slider-thumb"></span></div>
+              <div class="pg-video-bar">
+                <div class="pg-video-group">
+                  <button class="pg-icon-btn pg-icon-btn--ink" aria-label="再生" title="再生（Space）" aria-keyshortcuts="Space"><svg class="pg-icon" aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"></polygon></svg></button>
+                  <span class="pg-video-time"><b>0:00</b> / 1:52</span>
+                  <button class="pg-btn" aria-label="5 秒戻る" title="5 秒戻る（←）" aria-keyshortcuts="ArrowLeft"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path><path d="M3 3v5h5"></path></svg>5 秒</button>
+                  <button class="pg-btn" aria-label="5 秒進む" title="5 秒進む（→）" aria-keyshortcuts="ArrowRight">5 秒<svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path></svg></button>
+                </div>
+                <div class="pg-video-group">
+                  <div class="pg-select-wrap pg-select-wrap--pill"><select class="pg-select pg-select--pill" aria-label="再生速度"><option>1 倍</option></select><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div>
+                  <div class="pg-volume"><button class="pg-icon-btn pg-icon-btn--md" aria-label="ミュート" aria-pressed="false"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4.702a.705.705 0 0 0-1.203-.498L6.413 7.587A1.4 1.4 0 0 1 5.416 8H3a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h2.416a1.4 1.4 0 0 1 .997.413l3.383 3.384A.705.705 0 0 0 11 19.298z"></path><path d="M16 9a5 5 0 0 1 0 6"></path><path d="M19.364 18.364a9 9 0 0 0 0-12.728"></path></svg></button><div class="pg-slider" role="slider" tabindex="0" aria-label="音量" aria-valuemin="0" aria-valuemax="100" aria-valuenow="80" style="--pg-slider-value:0.8"><span class="pg-slider-track"><span class="pg-slider-fill"></span></span><span class="pg-slider-thumb"></span></div></div>
+                  <button class="pg-btn" aria-pressed="false"><svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="14" x="3" y="5" rx="2" ry="2"></rect><path d="M7 15h4M15 15h2M7 11h2M13 11h4"></path></svg>字幕</button>
+                </div>
+                <div class="pg-video-end"><a class="pg-btn pg-btn--accent pg-btn--lg" href="Video.dc.html">このレッスンを開く</a></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- 前回の正解コード -->
+  <sc-if value="{{ovPrev}}" hint-placeholder-val="{{false}}">
+    <div class="pg-scrim pgx-overlay">
+      <div class="pg-code-modal" role="dialog" aria-modal="true" aria-labelledby="prev-title">
+        <div class="pg-code-modal-head">
+          <div><h2 id="prev-title">前回の正解コード</h2><p>10 月 28 日 14:32 に正解 ・ 読み取り専用</p></div>
+          <a class="pg-icon-btn pg-icon-btn--md" href="Exercise.dc.html" aria-label="閉じる"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg></a>
+        </div>
+        <div class="pg-editor">
+          <div class="pg-editor-bar" role="tablist" aria-label="ファイル">
+            <button class="pg-filetab" role="tab" aria-selected="false">src/main.rs</button>
+            <button class="pg-filetab" role="tab" aria-selected="true">src/suffix.rs</button>
+          </div>
+          <div class="pg-editor-code"><div class="pg-ln">{{ln7}}</div><div><span class="tk-c">/// 名前の前後の空白を取り除き、末尾に "_the_crab" を付けて返す</span>
+<span class="tk-k">pub fn</span> <span class="tk-f">add_suffix</span>(name: <span class="tk-t">String</span>) -&gt; <span class="tk-t">String</span> {
+    <span class="tk-k">let</span> trimmed = name.<span class="tk-f">trim</span>();
+    <span class="tk-m">format!</span>(<span class="tk-s">"{trimmed}_the_crab"</span>)
+}
+
+</div></div>
+        </div>
+        <div class="pg-code-modal-foot"><a class="pg-btn" href="Exercise.dc.html">閉じる</a></div>
+      </div>
+    </div>
+  </sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"state":{"editor":"enum","options":["running","wrong","solved","passed","generated"],"default":"running"},"overlay":{"editor":"enum","options":["none","search","videoModal","prevCode"],"default":"none"},"completed":{"editor":"boolean","default":false},"judgeOpen":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { judgeOpen: null }; }
+  renderVals() {
+    const st = this.props.state ?? 'running';
+    const ov = this.props.overlay ?? 'none';
+    const gen = st === 'generated';
+    const running = st === 'running';
+    const wrongAny = st === 'wrong';
+    const solved = st === 'solved' || st === 'passed';
+    const jOpen = this.state.judgeOpen ?? !!this.props.judgeOpen;
+    const ln = (n) => Array.from({ length: n }, (_, i) => String(i + 1)).join('\n');
+    return {
+      theme: this.props.theme ?? 'light', one: 1,
+      chapterAttr: gen ? undefined : '4', isGen: gen, notGen: !gen,
+      headerCurrent: gen ? 'gen' : 'lessons',
+      query: ov === 'search' ? '所有権 ムーブ' : '',
+      ovSearch: ov === 'search', ovVideo: ov === 'videoModal', ovPrev: ov === 'prevCode',
+      showPrev: !!this.props.completed || ov === 'prevCode',
+      isRunning: running, isWrong: st === 'wrong', isSolved: solved, isPassed: st === 'passed',
+      showSubmitLog: wrongAny,
+      judgeOpen: jOpen, judgeExpanded: jOpen ? 'true' : 'false',
+      judgeToggleText: jOpen ? '詳細を閉じる' : '詳細を見る',
+      judgeChevron: jOpen ? 'transform: rotate(180deg);' : '',
+      toggleJudge: () => this.setState({ judgeOpen: !jOpen }),
+      whereText: '詳しくは左上の「判定結果」を見てください。',
+      showMain: running && !gen, showSuffix: wrongAny || solved,
+      selMain: running ? 'true' : 'false', selSuffix: running ? 'false' : 'true',
+      trimFn: solved ? 'trim' : 'trim_end',
+      canAddFile: !gen && !solved,
+      exPad: solved ? 'padding-bottom: 0;' : '',
+      runOff: running, submitOff: running || solved, stopOff: !running,
+      stopCls: running ? 'pg-btn--outline' : '',
+      stdinOff: !running, stdinValue: running ? 'ferris' : '', stdinPh: running ? '' : '実行中だけ入力できます',
+      ln7: ln(7), ln12: ln(12), ln18: ln(18)
+    };
+  }
+}
+</script>
+</body>
+</html>

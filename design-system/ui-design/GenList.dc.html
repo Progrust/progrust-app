@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<title>生成問題一覧</title>
+<script src="./support.js"></script>
+<link rel="stylesheet" href="ds/progrust/tokens.css">
+<link rel="stylesheet" href="ds/progrust/components/bundle.css">
+<link rel="stylesheet" href="styles/app.css">
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&amp;family=Red+Hat+Mono:wght@400;500;600&amp;display=swap">
+<style>body{margin:0}</style>
+</helmet>
+<div class="app app--page" data-theme="{{theme}}">
+  <dc-import name="Header" current="gen" jobs="{{jobs}}" theme="{{theme}}" hint-size="100%,62px"></dc-import>
+  <main class="pgx-wrap">
+    <div class="pgx-page-head">
+      <div>
+        <h1>生成問題</h1>
+        <p>学習の分析をもとに、AI が作った演習問題です。新しい順に並べています。</p>
+      </div>
+      <div class="pgx-page-head-end">
+        <a class="pg-btn pg-btn--accent pg-btn--lg" href="GenSettings.dc.html">
+          <svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>新しい問題を生成</a>
+      </div>
+    </div>
+
+    <sc-if value="{{isEmpty}}" hint-placeholder-val="{{false}}">
+      <section class="pg-empty" aria-label="生成問題がありません">
+        <span class="pg-empty-icon"><svg class="pg-icon" aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.64 3.64-1.28-1.28a1.21 1.21 0 0 0-1.72 0L2.36 18.64a1.21 1.21 0 0 0 0 1.72l1.28 1.28a1.2 1.2 0 0 0 1.72 0L21.64 5.36a1.2 1.2 0 0 0 0-1.72"></path><path d="m14 7 3 3"></path><path d="M5 6v4"></path><path d="M19 14v4"></path><path d="M10 2v2"></path><path d="M7 8H3"></path><path d="M21 16h-4"></path><path d="M11 3H9"></path></svg></span>
+        <h2>まだ生成した問題はありません</h2>
+        <p>苦手な要素や復習したい要素を選ぶと、AI がその要素を使う演習問題を作ります。<br>生成には数分かかります。そのあいだもレッスンを続けられます。</p>
+        <a class="pg-btn pg-btn--accent pg-btn--lg" href="GenSettings.dc.html">新しい問題を生成</a>
+      </section>
+    </sc-if>
+
+    <sc-if value="{{hasItems}}" hint-placeholder-val="{{true}}">
+      <ul class="pg-gen-list">
+        <li>
+          <div class="pg-gen pg-gen--busy">
+            <div>
+              <p class="pg-gen-title"><span class="pg-status pg-status--wait"><svg class="pg-icon pg-spin" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"></path></svg>生成中</span>問題を生成しています</p>
+              <p class="pg-gen-sum">生成と検証が終わると、通知でお知らせします。</p>
+              <div class="pg-gen-meta">
+                <div class="pg-gen-els"><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span>所有権のムーブ</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="1">1</span>シャドーイング</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span>String 型</span></div>
+                <span class="pg-diff"><span class="pg-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span>難易度 2</span>
+                <span>10/31 15:10 に依頼</span>
+              </div>
+            </div>
+            <div class="pg-gen-actions"></div>
+          </div>
+        </li>
+        <li>
+          <div class="pg-gen">
+            <div>
+              <p class="pg-gen-title"><span class="pg-status pg-status--todo">未着手</span>在庫リストの集計</p>
+              <p class="pg-gen-sum">集計したあとも元の一覧を使えるように、所有権を意識して配列と String を扱う。</p>
+              <div class="pg-gen-meta">
+                <div class="pg-gen-els"><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span>所有権のムーブ</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="3">3</span>for と範囲</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="2">2</span>配列</span></div>
+                <span class="pg-diff"><span class="pg-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>難易度 3</span>
+                <span>10/31 15:02 に作成</span>
+              </div>
+            </div>
+            <div class="pg-gen-actions">
+              <a class="pg-btn" href="ExerciseGen.dc.html">開く</a>
+              <a class="pg-btn pg-btn--text" href="GenSettings.dc.html">同じ設定で生成</a>
+              <button class="pg-icon-btn pg-icon-btn--md" aria-label="在庫リストの集計 を削除"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+            </div>
+          </div>
+        </li>
+        <li>
+          <div class="pg-gen">
+            <div>
+              <p class="pg-gen-title"><span class="pg-status pg-status--ng"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>失敗</span>問題を生成できませんでした</p>
+              <div class="pg-gen-meta">
+                <div class="pg-gen-els"><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="3">3</span>if 式</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="3">3</span>loop のラベル</span></div>
+                <span class="pg-diff"><span class="pg-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span>難易度 4</span>
+                <span>10/30 21:40 に依頼</span>
+              </div>
+            </div>
+            <div class="pg-gen-actions">
+              <button class="pg-btn">再生成</button>
+              <button class="pg-icon-btn pg-icon-btn--md" aria-label="失敗した生成を削除"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+            </div>
+            <div class="pg-gen-error" role="note">
+              <svg class="pg-icon" aria-hidden="true" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" x2="12" y1="8" y2="12"></line><line x1="12" x2="12.01" y1="16" y2="16"></line></svg>
+              <div>2 回修正しても検証に通りませんでした。模範解答が、テストケース「空の入力」に通りません。<br><span class="pgx-muted">「再生成」は同じ設定で新しく生成します。</span></div>
+            </div>
+          </div>
+        </li>
+        <li>
+          <div class="pg-gen">
+            <div>
+              <p class="pg-gen-title"><span class="pg-status pg-status--done"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>完了</span>名前の一覧を整える</p>
+              <p class="pg-gen-sum">関数に渡した String を戻り値で受け取り直しながら、名前の一覧を加工する。</p>
+              <div class="pg-gen-meta">
+                <div class="pg-gen-els"><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="4">4</span>所有権のムーブ</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="1">1</span>シャドーイング</span></div>
+                <span class="pg-diff"><span class="pg-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i></i><i></i><i></i></span>難易度 2</span>
+                <span>10/29 20:15 に作成 ・ 正解 2 回</span>
+              </div>
+            </div>
+            <div class="pg-gen-actions">
+              <a class="pg-btn" href="ExerciseGen.dc.html">開く</a>
+              <a class="pg-btn pg-btn--text" href="GenSettings.dc.html">同じ設定で生成</a>
+              <button class="pg-icon-btn pg-icon-btn--md" aria-label="名前の一覧を整える を削除"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+            </div>
+          </div>
+        </li>
+        <li>
+          <div class="pg-gen">
+            <div>
+              <p class="pg-gen-title"><span class="pg-status pg-status--done"><svg class="pg-icon" aria-hidden="true" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"></path></svg>完了</span>信号機の状態を切り替える</p>
+              <p class="pg-gen-sum">loop と if 式を組み合わせて、入力に応じて状態を切り替える。</p>
+              <div class="pg-gen-meta">
+                <div class="pg-gen-els"><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="3">3</span>if 式</span><span class="pg-elchip"><span class="pg-badge pg-badge--sm" data-chapter="3">3</span>loop と while</span></div>
+                <span class="pg-diff"><span class="pg-meter" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></span>難易度 3</span>
+                <span>10/25 19:02 に作成 ・ 正解 1 回</span>
+              </div>
+            </div>
+            <div class="pg-gen-actions">
+              <a class="pg-btn" href="ExerciseGen.dc.html">開く</a>
+              <a class="pg-btn pg-btn--text" href="GenSettings.dc.html">同じ設定で生成</a>
+              <button class="pg-icon-btn pg-icon-btn--md" aria-label="信号機の状態を切り替える を削除"><svg class="pg-icon" aria-hidden="true" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+            </div>
+          </div>
+        </li>
+      </ul>
+    </sc-if>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"variant":{"editor":"enum","options":["normal","empty"],"default":"normal"},"$preview":{"width":1280,"height":980}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const empty = (this.props.variant ?? 'normal') === 'empty';
+    return { theme: this.props.theme ?? 'light', isEmpty: empty, hasItems: !empty, jobs: empty ? 0 : 1 };
+  }
+}
+</script>
+</body>
+</html>

@@ -26,7 +26,7 @@ description: "画面の見た目と動画の中身の見た目が従うデザイ
 
 ## 画面デザイン
 
-- 各画面のレイアウト（部品の配置）は、画面デザイン「Progrust UIデザイン」（https://claude.ai/artifact/SL7VXW5D7weHs8tLG9zHNx ）に従う。
+- 各画面のレイアウト（部品の配置）は、画面デザイン「Progrust UIデザイン」に従う。画面デザインのファイルは、リポジトリの `design-system/ui-design/` にある（[画面デザインのファイルと変更の手順](ui-design-files.md)）。
 - 画面を実装した後は、その画面については、実装を正とする。
 
 ## 書体のファイル
