@@ -18,6 +18,7 @@
 * [ADR 0167](0167-allow-listening-to-backend-events.md) - フロントエンドに許可する Tauri の権限に、バックエンドが送るイベントの受け取り（listen・unlisten）を加え、それ以外の組み込みの API（フロントエンドからのイベントの送信を含む）は許可せず、本アプリのコマンドは権限の一覧に書かずに呼べるままにする
 * [ADR 0185](0185-name-temp-and-broken-files-and-define-unreadable.md) - 学習者データの一時ファイルを同じディレクトリの `.{ファイル名}.{プロセス ID}.tmp` にし、退避の `{日時}` を現地時刻の `YYYYMMDDTHHMMSS`（重なるときは `-2`…）にし、読み込めない場合を JSON・形・`schema_version` の誤りに限り、読み込みの失敗とファイルが無い場合は退避しない
 * [ADR 0187](0187-stage-bundled-content-in-build-script.md) - 同梱する教材を、ビルドスクリプトがリポジトリの content/ から選んで src-tauri/gen/bundled/content/ に写し、Tauri の bundle.resources はそのディレクトリだけを {app_resources}/content/ に入れる
+* [ADR 0199](0199-put-react-in-one-prebundled-chunk-for-dev.md) - 開発時の起動で Vite が前もってまとめる依存（optimizeDeps）の分け方を指定し、react・react-dom・scheduler を 1 つの塊に入れる
 
 # 教材データ形式
 

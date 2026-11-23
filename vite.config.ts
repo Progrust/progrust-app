@@ -6,6 +6,23 @@ export default defineConfig({
   plugins: [lessonVideos(), react()],
   // Tauri の出力（Rust のエラー）を消さない。
   clearScreen: false,
+  // 開発時の起動で前もってまとめる依存（node_modules/.vite/deps）で、React を 1 つの塊に入れる。
+  // 指定しないと、教材の動画のコードがあるときに React が 2 つの塊に重複して入り、
+  // 画面が何も表示されない（ADR 0199）。本番ビルドには効かない。
+  optimizeDeps: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "react",
+              test: /node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+            },
+          ],
+        },
+      },
+    },
+  },
   server: {
     // tauri.conf.json の devUrl と同じポート。使えないときは失敗させる。
     port: 1420,
