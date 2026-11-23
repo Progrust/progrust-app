@@ -38,7 +38,7 @@ function ofLesson(lesson: string, check?: string): Finding[] {
 }
 
 describe("描画", () => {
-  it("正しい動画は、レッスン専用の CSS を閉じ込め、書体の @import を取り除いて、エラーなく描画できる", () => {
+  it("正しい動画は、レッスン専用の CSS を閉じ込め、書体の @import を読み込まずに、エラーなく描画できる", () => {
     expect(ofLesson("ok")).toEqual([]);
   });
 

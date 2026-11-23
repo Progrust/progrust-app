@@ -439,21 +439,5 @@
    "w": 240
   }
  },
- "designSystems": [
-  {
-   "title": "Progrust",
-   "namespace": "progrust",
-   "artifact": "https://claude.ai/artifact/3Pn15TZ4nZ1H2u8cAfLosA",
-   "version": "1795337743-fdec",
-   "copiedAt": "2026-11-22T08:59:07Z"
-  },
-  {
-   "title": "Progrust Video",
-   "namespace": "progrust-video",
-   "artifact": "https://claude.ai/artifact/QGt9Cb1cFYaA8TU7kY9bPq",
-   "version": "1795342273-388c",
-   "copiedAt": "2026-11-22T10:12:03Z"
-  }
- ],
  "attachments": {}
 }

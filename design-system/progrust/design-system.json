@@ -1,7 +1,6 @@
 {
  "v": 3,
  "layout": "files",
- "editing": "code",
  "createdOnFiles": {
   "v": 1,
   "at": "2026-10-31T10:08:00Z"
@@ -51,175 +50,146 @@
    "files": {
     "arrow-right.svg": {
      "name": "arrow-right.svg",
-     "blob": "5b59ea2d7890b55b528acc47d14cee1a",
      "size": 285,
      "type": "image/svg+xml"
     },
     "book-open.svg": {
      "name": "book-open.svg",
-     "blob": "6ad109aa83b66c124c7b918c37c4c9e9",
      "size": 400,
      "type": "image/svg+xml"
     },
     "check.svg": {
      "name": "check.svg",
-     "blob": "3133876b23eb2711bf572bbcb10ce855",
      "size": 252,
      "type": "image/svg+xml"
     },
     "chevron-down.svg": {
      "name": "chevron-down.svg",
-     "blob": "e4e1817d769e0190e1a5adbb15225d8d",
      "size": 256,
      "type": "image/svg+xml"
     },
     "chevron-left.svg": {
      "name": "chevron-left.svg",
-     "blob": "fa3f8177d6ef78e66ad1d5f2ec89ee69",
      "size": 258,
      "type": "image/svg+xml"
     },
     "chevron-right.svg": {
      "name": "chevron-right.svg",
-     "blob": "4f76492f2699a74d1618956b7d17976b",
      "size": 258,
      "type": "image/svg+xml"
     },
     "circle-alert.svg": {
      "name": "circle-alert.svg",
-     "blob": "8b6b68d3f6ceb0fb6a298fa915118ca9",
      "size": 364,
      "type": "image/svg+xml"
     },
     "circle-check.svg": {
      "name": "circle-check.svg",
-     "blob": "f5d08e62710bed57b9c195a89dc2e3b8",
      "size": 300,
      "type": "image/svg+xml"
     },
     "circle-x.svg": {
      "name": "circle-x.svg",
-     "blob": "e6dc46a8db716e3fe409a7b877fd75d9",
      "size": 321,
      "type": "image/svg+xml"
     },
     "clock.svg": {
      "name": "clock.svg",
-     "blob": "e1973e9badcc2e4e777fd6665af0f77e",
      "size": 309,
      "type": "image/svg+xml"
     },
     "external-link.svg": {
      "name": "external-link.svg",
-     "blob": "4b99afcb880fb833bd6ad57d019ff83c",
      "size": 363,
      "type": "image/svg+xml"
     },
     "file-code.svg": {
      "name": "file-code.svg",
-     "blob": "6dcb209d16c3f0a0bec8cd2dbc01e7e3",
      "size": 424,
      "type": "image/svg+xml"
     },
     "folder-open.svg": {
      "name": "folder-open.svg",
-     "blob": "7ab8b9e71792644114533635a160496c",
      "size": 420,
      "type": "image/svg+xml"
     },
     "house.svg": {
      "name": "house.svg",
-     "blob": "491d6ce4e8284210b8f92557be819b80",
      "size": 409,
      "type": "image/svg+xml"
     },
     "info.svg": {
      "name": "info.svg",
-     "blob": "a7f8846eac5fe8bfac835fefcf5a8b99",
      "size": 318,
      "type": "image/svg+xml"
     },
     "list-checks.svg": {
      "name": "list-checks.svg",
-     "blob": "b54c2c6756e2fa373aafcb969c2b007b",
      "size": 375,
      "type": "image/svg+xml"
     },
     "loader-circle.svg": {
      "name": "loader-circle.svg",
-     "blob": "ce3b361dbd24abde7d6e665f55904c0c",
      "size": 272,
      "type": "image/svg+xml"
     },
     "message-circle.svg": {
      "name": "message-circle.svg",
-     "blob": "a60bfc39943d2f8e2a1dfee7265baea7",
      "size": 276,
      "type": "image/svg+xml"
     },
     "play.svg": {
      "name": "play.svg",
-     "blob": "5e36b6cdc670fba3c5d1b0917dd82985",
      "size": 265,
      "type": "image/svg+xml"
     },
     "plus.svg": {
      "name": "plus.svg",
-     "blob": "96b9d84d46567e44a01a3de51bd4797f",
      "size": 273,
      "type": "image/svg+xml"
     },
     "refresh-cw.svg": {
      "name": "refresh-cw.svg",
-     "blob": "4f728498a924f4413319fe203467ddcf",
      "size": 425,
      "type": "image/svg+xml"
     },
     "rotate-ccw.svg": {
      "name": "rotate-ccw.svg",
-     "blob": "f3bf8cc47116619822854ad96c91cde8",
      "size": 320,
      "type": "image/svg+xml"
     },
     "search.svg": {
      "name": "search.svg",
-     "blob": "f840ceb847927f20b721679dbea28803",
      "size": 294,
      "type": "image/svg+xml"
     },
     "settings.svg": {
      "name": "settings.svg",
-     "blob": "fae482be1d9933c3cc53c5aa66f25970",
      "size": 847,
      "type": "image/svg+xml"
     },
     "square.svg": {
      "name": "square.svg",
-     "blob": "95280170aea06d5b098840f81eea537d",
      "size": 275,
      "type": "image/svg+xml"
     },
     "terminal.svg": {
      "name": "terminal.svg",
-     "blob": "614c9003193371373c7b70cb1e381aab",
      "size": 315,
      "type": "image/svg+xml"
     },
     "triangle-alert.svg": {
      "name": "triangle-alert.svg",
-     "blob": "c768722c13ec91f3a859f4948e22e78b",
      "size": 377,
      "type": "image/svg+xml"
     },
     "wand-sparkles.svg": {
      "name": "wand-sparkles.svg",
-     "blob": "4a148c2f5b4fd5886f28ab6a7195953c",
      "size": 585,
      "type": "image/svg+xml"
     },
     "x.svg": {
      "name": "x.svg",
-     "blob": "8c67af5de708fa8fba29673d644f526c",
      "size": 274,
      "type": "image/svg+xml"
     }
@@ -229,11 +199,5 @@
  "blobs": {},
  "docs": {
   "sections": []
- },
- "lastChange": {
-  "by": "nishiki",
-  "at": "2026-11-23T00:30:00Z",
-  "via": "Claude Code",
-  "note": "画面デザイン「Progrust UIデザイン」をリポジトリの design-system/ui-design/ に置いたので（ADR 0181）、README の画面デザインの参照を仕様の screens/ui-design-files.md に変えた"
  }
 }

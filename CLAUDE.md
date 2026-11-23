@@ -30,8 +30,8 @@ AIは各演習ごとに学習者の特徴を分析・記録する。記録した
 
 ## デザインシステム
 
-- 画面と動画の見た目を定めるデザインシステム「Progrust」「Progrust Video」と、各画面のレイアウトを描いた画面デザイン「Progrust UIデザイン」は `./design-system` にある。リポジトリのファイルが正で、Claude のアーティファクトは表示用である。
-- 変えるときは、リポジトリのファイルを直し、`python3 tools/design-system.py check` を通してから、アーティファクトへ送る。アーティファクトのページでは編集しない。
+- 画面と動画の見た目を定めるデザインシステム「Progrust」「Progrust Video」と、各画面のレイアウトを描いた画面デザイン「Progrust UIデザイン」は `./design-system` にある。リポジトリのファイルだけが正で、Claude のアーティファクト（表示用のページ）は使わない。
+- 変えるときは、リポジトリのファイルを直し、`python3 tools/design-system.py check` を通す。
 - 手順は、デザインシステムは `documents/spec/screens/design-system-files.md` に、画面デザインは `documents/spec/screens/ui-design-files.md` に従う。
 
 ## 実装の進め方

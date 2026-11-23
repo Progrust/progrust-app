@@ -174,18 +174,19 @@
 * [ADR 0143](0143-no-lesson-list-button-in-video-only-controls.md) - 動画のみのレッスンの動画画面に「レッスン一覧へ」を置かず、「演習へ」の位置には「次のレッスンへ」だけを置く
 * [ADR 0144](0144-top-page-shows-nine-chapters.md) - トップページの章ごとの完了率を、次にやるべきレッスンの章を含む 9 章ぶんだけ表示する
 * [ADR 0150](0150-screen-layouts-follow-ui-design-until-implemented.md) - 各画面のレイアウトは画面デザイン「Progrust UIデザイン」に従い、画面を実装した後は実装を正とする
-* [ADR 0152](0152-keep-design-system-files-in-repository.md) - デザインシステム「Progrust」「Progrust Video」のファイルをリポジトリの `design-system/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは読み取り専用の表示用として残し、変えるときはリポジトリを直してからアーティファクトへ送り、画面デザインの中の写しを取り直して、中身を確かめる（ADR 0181 で画面デザインの置き場所を変えた）
-* [ADR 0153](0153-load-design-system-css-directly-from-repository.md) - アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す
+* [ADR 0152](0152-keep-design-system-files-in-repository.md) - デザインシステム「Progrust」「Progrust Video」のファイルをリポジトリの `design-system/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは読み取り専用の表示用として残し、変えるときはリポジトリを直してからアーティファクトへ送り、画面デザインの中の写しを取り直して、中身を確かめる（ADR 0181 で画面デザインの置き場所を、ADR 0196 で表示用のアーティファクトを残して送ることを変えた）
+* [ADR 0153](0153-load-design-system-css-directly-from-repository.md) - アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す（ADR 0197 で `@import` の行をデザインシステムのファイルから消した）
 * [ADR 0154](0154-check-spec-references-in-design-systems.md) - デザインシステムの検査で、README などからインラインコードのパスで書いた仕様とデザインシステムの文書への参照が、実在する文書と小見出しを指すことを確かめる
 * [ADR 0155](0155-check-video-design-system-copied-tokens.md) - デザインシステムの検査で、「Progrust Video」の `video-` で始まらないトークンと書体の族が、「Progrust」と同じ名前・同じ値であることを確かめる
 * [ADR 0171](0171-keep-caption-space-when-captions-are-hidden.md) - 字幕を表示しないときも、動画の下に字幕の場所を空けておき、字幕を切り替えてもプレーヤーの操作の位置を変えない
 * [ADR 0172](0172-dim-rows-of-lessons-in-preparation.md) - レッスン一覧で、準備中のレッスンの行の番号と文字を淡い色にして「準備中」の印を付け、選んでもマウスを乗せても反応させない
 * [ADR 0173](0173-show-video-loading-and-retry-inside-the-frame.md) - 動画を読み込んでいる間は動画の枠の中に回る印を出し、読み込みに失敗したら枠の中に失敗の文と「もう一度読み込む」ボタンを出す
-* [ADR 0175](0175-strip-font-import-with-vite-plugin.md) - デザインシステムの `bundle.css` の、書体を外部から読み込む `@import` の行を、Vite のプラグインで取り除いて読み込み、教材チェックツールの描画でも同じように取り除く
 * [ADR 0177](0177-load-both-design-systems-and-write-app-css-with-classes.md) - 「Progrust」と「Progrust Video」の CSS をどちらもアプリ全体に読み込み、アプリの画面の CSS は動画の枠の中の要素に当たらないように書き、デザインシステムの土台の規則はそのまま両方に効かせる
 * [ADR 0179](0179-define-initial-settings-values.md) - `settings.json` が無いときの初期値を定め、テーマは「システムに合わせる」、エディタの文字サイズは 14px、動画は音量 1.0・ミュートなし・1 倍・字幕なしにする
-* [ADR 0181](0181-keep-ui-design-files-in-repository.md) - 画面デザイン「Progrust UIデザイン」のファイルをリポジトリの `design-system/ui-design/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは表示用としてデザインシステムと同じやり方で送り、実装のループと計画と実装とレビューはリポジトリのファイルを読む
+* [ADR 0181](0181-keep-ui-design-files-in-repository.md) - 画面デザイン「Progrust UIデザイン」のファイルをリポジトリの `design-system/ui-design/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは表示用としてデザインシステムと同じやり方で送り、実装のループと計画と実装とレビューはリポジトリのファイルを読む（ADR 0196 で表示用のアーティファクトを残して送ることを変えた）
 * [ADR 0182](0182-app-icon-p-in-chapter-colors-on-white.md) - アプリのアイコンを、白い地に第1〜4章の章カラーで塗り分けた「P」を置いた絵にし、元の絵を `src-tauri/app-icon.svg` に置いて、アプリに入れるファイルを Tauri CLI で作る
+* [ADR 0196](0196-stop-display-artifacts-for-design-files.md) - デザインシステムと画面デザインの表示用のアーティファクトをやめてリポジトリのファイルだけを正とし、アーティファクトへ送る手順と道具とページのためだけの索引の項目を消し、見る仕組みは作らず、実装前の画面は引き続き画面デザインのファイルに従う
+* [ADR 0197](0197-remove-font-import-from-design-system-css.md) - デザインシステムの `bundle.css` から書体を外部から読み込む `@import` の行を消し、ビルドと教材チェックツールの描画で取り除く仕組みをやめ、デザインシステムの CSS が外部から読み込まないことを検査で確かめる
 
 # 非機能要件
 
@@ -237,3 +238,4 @@
 * [ADR 0038](0038-no-os-code-signing-for-now.md) - OS のコード署名を当面行わない
 * [ADR 0047](0047-separate-slide-design-system.md) - スライドの見た目を、画面とは別のデザインシステム「Progrust Slides」に定める
 * [ADR 0151](0151-copy-design-system-css-into-repository.md) - デザインシステムの CSS とアイコンをリポジトリに写して使い、写しは編集せず、デザインシステムを変えてから取り直す
+* [ADR 0175](0175-strip-font-import-with-vite-plugin.md) - デザインシステムの `bundle.css` の、書体を外部から読み込む `@import` の行を、Vite のプラグインで取り除いて読み込み、教材チェックツールの描画でも同じように取り除く

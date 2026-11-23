@@ -1,6 +1,6 @@
 Progrust は、動画で学び演習で解く Rust の学習アプリ。画面は白い地に淡い灰色の面を重ね、角を大きく丸め、開いている章の色をその画面のアクセントにする（デザイン案 D2「章カラー」）。章が進むたびに画面の色が変わることで、学習者が先に進んでいる感覚を持てるようにする。
 
-この README は画面を作る人とエージェントのための使い方のルールである。値はすべて `tokens.json` にあり、ここではトークンの名前で書く。動画の中身（動画の枠の中に描画するもの）の見た目（仕様の `content-format/video/colors.md` の色クラスなど）はこのデザインシステムの対象外で、動画のデザインシステム「Progrust Video」（https://claude.ai/artifact/QGt9Cb1cFYaA8TU7kY9bPq ）に従う。動画の枠の外に置くプレーヤーの操作と字幕は、画面の一部としてこのデザインシステムに従う（仕様の `screens/appearance.md`「デザインシステム」）。
+この README は画面を作る人とエージェントのための使い方のルールである。値はすべて `tokens.json` にあり、ここではトークンの名前で書く。動画の中身（動画の枠の中に描画するもの）の見た目（仕様の `content-format/video/colors.md` の色クラスなど）はこのデザインシステムの対象外で、動画のデザインシステム「Progrust Video」（リポジトリの `design-system/progrust-video/`）に従う。動画の枠の外に置くプレーヤーの操作と字幕は、画面の一部としてこのデザインシステムに従う（仕様の `screens/appearance.md`「デザインシステム」）。
 
 ## 文言
 
@@ -123,8 +123,8 @@ Progrust は、動画で学び演習で解く Rust の学習アプリ。画面�
 - テーマはルート要素の `data-theme`（`light` / `dark`）で切り替える。色はすべて CSS 変数で参照し、値を直接書かない。
 - 章の色は、章の範囲の要素の `data-chapter`（1〜12）で切り替える。
 - 部品のクラスは `components/bundle.css` にあり、接頭辞は `pg-`。部品ごとの使い方は各部品の README にある。見本の HTML はクラスと構造の見本で、React の部品はまだない。
-- 画面ごとの部品の組み合わせ方は、画面デザイン「Progrust UIデザイン」にある（置き場所と表示用のアーティファクトは、仕様の `screens/ui-design-files.md`）。
-- `bundle.css` は見本のために Murecho と Red Hat Mono を Google Fonts から読み込んでいる。アプリではフォントを同梱する（仕様の `screens/appearance.md`「書体のファイル」）。
+- 画面ごとの部品の組み合わせ方は、画面デザイン「Progrust UIデザイン」にある（置き場所と読み方は、仕様の `screens/ui-design-files.md`）。
+- `bundle.css` は書体を読み込まない。Murecho と Red Hat Mono は、アプリに同梱したファイルから読む（仕様の `screens/appearance.md`「書体のファイル」）。CSS には、外部から読み込む指定を書かない（仕様の `screens/appearance.md`「デザインシステムの CSS とアイコン」）。
 
 ## 未決事項
 

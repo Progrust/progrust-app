@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""design-system/ 配下のデザインシステムと画面デザインを検査・生成・照合する。
+"""design-system/ 配下のデザインシステムと画面デザインを検査・生成する。
 
 使い方:
     python3 tools/design-system.py [--root <design-system のディレクトリ>] <サブコマンド> ...
@@ -14,31 +14,20 @@
     tokens-css <名前> [--write]
         tokens.json から tokens.css の内容を作り、標準出力に出す。--write で tokens.css に書く。
         デザインシステム専用（画面デザインの名前を渡すとエラー）。
-    files <名前>
-        アーティファクトへ送るファイルの一覧を JSON で標準出力に出す
-        （Artifact ツールの root・file_path・files にそのまま渡せる形）。
-    compare <名前> <取得したディレクトリ> [--prefix <接頭辞>] [--partial] [--skip-assets]
-        アーティファクトから取得したファイルと、リポジトリのファイルをバイト単位で比べる。
-        --partial は、<接頭辞>/ の下にあるファイルだけを比べる（別のアーティファクトが持つ写し用）。
-        --skip-assets は、アセット（アイコン）を比べない。
-        画面デザインでは --partial・--skip-assets は使えない。画面デザインの比べ方は、
-        <取得したディレクトリ>/<接頭辞>/ の下と、ディレクトリの全ファイルを比べる
-        （取得した側の ds/ の下は、アーティファクトの中のデザインシステムの写しなので比べない）。
 
 <名前> は design-system/ の直下のディレクトリ名（progrust、progrust-video、ui-design）。
-画面デザイン（ui-design）は、claude.ai の「Design」という種類のアーティファクトの project/ の下と同じ形で、
+画面デザイン（ui-design）は、claude.ai の「Design」という種類のアーティファクトの project/ の下の形で、
 直下に canvas.json（索引）と、画面ごとの *.dc.html、styles/ を持つ。デザインシステムの写し（ds/）は置かない。
 デザインシステムか画面デザインかは、直下に design-system.json があるか、canvas.json があるかで見分ける。
 --root を省くと、このスクリプトから見たリポジトリの design-system/ を使う（テスト用に差し替えられる）。
 指摘は「パス: 規則名: 説明」の形で1行ずつ標準出力に出し、最後に件数を出す。
 
 終了コード:
-    0  指摘なし・違いなし（tokens-css・files は成功）
-    1  指摘あり・違いあり（tokens-css は tokens.json から作れなかったとき）
+    0  指摘なし（tokens-css は成功）
+    1  指摘あり（tokens-css は tokens.json から作れなかったとき）
     2  引数の誤り、名前のディレクトリが無い、など
 
-デザインシステムの正はリポジトリのファイルで、claude.ai のアーティファクトは表示用である。
-アーティファクトとのやり取りはこのスクリプトでは行わない（Claude が Artifact ツールで行う）。
+デザインシステムと画面デザインの正はリポジトリのファイルで、claude.ai のアーティファクト（表示用のページ）は使わない。
 
 標準ライブラリだけを使う。Python 3.9 以降で動く。
 """
@@ -58,10 +47,11 @@ DEFAULT_SPEC_ROOT = os.path.join(REPO_ROOT, "documents", "spec")
 
 INDEX_NAME = "design-system.json"
 CANVAS_NAME = "canvas.json"  # 画面デザインの索引
-# アーティファクトの仕組み上、assets/<Group>/ の下でもテキストは普通の公開ファイルで、
-# それ以外（SVG など）だけがアセットストアに入る。
+# assets/<Group>/ の下のファイルのうち、テキスト以外（SVG など）だけを、索引の assetGroups に記録する
+# （アーティファクトの種類「Design System」の形。テキストはアセットストアに入らない普通のファイルだった）。
 TEXT_EXTS = (".md", ".json", ".txt", ".csv")
-BLOB_RE = re.compile(r"^[0-9a-f]{32}$")
+# 外部（http・https・`//`）から読み込む CSS の @import
+EXTERNAL_IMPORT_RE = re.compile(r"""@import\s+(?:url\(\s*)?["']?(?:https?:)?//""", re.IGNORECASE)
 NAME_RE = re.compile(r"^[a-z0-9-]+$")
 
 
@@ -215,26 +205,6 @@ def asset_group_of(rel: str) -> Optional[Tuple[str, str]]:
     if len(parts) >= 3 and parts[0] == "assets" and not is_text(parts[-1]):
         return parts[1], "/".join(parts[2:])
     return None
-
-
-def public_files(ds_dir: str) -> List[str]:
-    return [r for r in walk(ds_dir) if asset_group_of(r) is None]
-
-
-def asset_records(index: dict) -> List[Tuple[str, str, dict]]:
-    """索引のアセットの記録を (Group, キー, 記録) の列にする。形が違うものは読み飛ばす（check が指摘する）。"""
-    out = []
-    groups = index.get("assetGroups")
-    if not isinstance(groups, dict):
-        return out
-    for group, g in groups.items():
-        files = g.get("files") if isinstance(g, dict) else None
-        if not isinstance(files, dict):
-            continue
-        for key, rec in files.items():
-            if isinstance(rec, dict):
-                out.append((group, key, rec))
-    return out
 
 
 def display(path: str) -> str:
@@ -428,13 +398,6 @@ def check_system(root: str, name: str, spec_root: str = "") -> List[Finding]:
             add(INDEX_NAME, "index-json", '"layout" が "files" ではありません。"files" にしてください')
         if "createdOnFiles" not in index and "convertedFrom" not in index:
             add(INDEX_NAME, "index-json", '"createdOnFiles" も "convertedFrom" もありません。ファイル形式の索引であることを示すために、どちらかを足してください')
-        # index-editing
-        if index.get("editing") != "code":
-            add(
-                INDEX_NAME,
-                "index-editing",
-                '"editing" が "code" ではありません。アーティファクトのページを読み取り専用にする設定です（正はリポジトリのファイルなので、ページでは編集させません）。"layout" の直後に "editing": "code" を足してください',
-            )
 
     # asset-record
     recorded = {}  # Group -> 記録のある名前の集合
@@ -458,9 +421,6 @@ def check_system(root: str, name: str, spec_root: str = "") -> List[Finding]:
                     add(INDEX_NAME, "asset-record", "%s の name が使えない形です。ファイル名だけ（/ を含まない）にしてください" % where)
                     continue
                 names.add(rname)
-                blob = rec.get("blob")
-                if not isinstance(blob, str) or not BLOB_RE.match(blob):
-                    add(INDEX_NAME, "asset-record", "%s の blob が 32 桁の 16 進ではありません。アーティファクトのアセットストアの id を入れてください" % where)
                 rel = "assets/%s/%s" % (group, rname)
                 fpath = os.path.join(ds_dir, rel)
                 if not os.path.isfile(fpath):
@@ -495,7 +455,7 @@ def check_system(root: str, name: str, spec_root: str = "") -> List[Finding]:
             continue
         group, fname = ag
         if fname not in recorded.get(group, set()):
-            add(rel, "asset-file", "索引 %s に記録がありません。assetGroups.%s.files と order に記録を足すか（blob はアーティファクトへ送ったあとの id）、ファイルを消してください" % (INDEX_NAME, group))
+            add(rel, "asset-file", "索引 %s に記録がありません。assetGroups.%s.files と order に記録を足すか、ファイルを消してください" % (INDEX_NAME, group))
 
     # stray-file
     for rel in walk(ds_dir):
@@ -503,6 +463,15 @@ def check_system(root: str, name: str, spec_root: str = "") -> List[Finding]:
             add(rel, "stray-file", "api/ の下はアーティファクトのページが作るファイルなので、置かないでください。消してください")
         elif rel == "manifest.json":
             add(rel, "stray-file", "manifest.json はアーティファクトのページが作るファイルなので、置かないでください。消してください")
+
+    # external-import: CSS が外部（http・https・`//`）から読み込まないこと
+    for rel in walk(ds_dir):
+        if not rel.endswith(".css"):
+            continue
+        with open(os.path.join(ds_dir, rel), encoding="utf-8", errors="replace") as f:
+            for number, line in enumerate(f, 1):
+                if EXTERNAL_IMPORT_RE.search(line):
+                    add("%s:%d" % (rel, number), "external-import", "CSS が外部から読み込んでいます。アプリは外部から読み込まず、書体は同梱したファイルから読みます。この行を消してください")
     return findings
 
 
@@ -526,7 +495,7 @@ def is_screens(root: str, name: str) -> bool:
 
 
 # --- 画面デザインの検査 ---
-# 画面デザインは、claude.ai の「Design」という種類のアーティファクトの project/ の下と同じ形で置く。
+# 画面デザインは、claude.ai の「Design」という種類のアーティファクトの project/ の下の形で置く。
 DC_EXT = ".dc.html"
 # 種類（アーティファクトの型）が持つファイル。リポジトリには置かない。
 TYPE_FILES = ("index.html", "SKILL.md")
@@ -680,146 +649,6 @@ def cmd_tokens_css(root: str, name: str, write: bool) -> int:
     return 0
 
 
-# --- files ---
-
-
-def load_index(ds_dir: str) -> dict:
-    try:
-        with open(os.path.join(ds_dir, INDEX_NAME), encoding="utf-8") as f:
-            index = json.load(f)
-        if not isinstance(index, dict):
-            raise ValueError("最上位が JSON のオブジェクトではありません")
-        return index
-    except (OSError, ValueError) as e:
-        raise UsageError("%s が読めません（%s）。先に check で確かめてください。" % (display(os.path.join(ds_dir, INDEX_NAME)), e))
-
-
-def cmd_files(root: str, name: str) -> int:
-    ds_dir = require_system(root, name)
-    if is_screens(root, name):
-        out = {
-            "root": os.path.abspath(ds_dir),
-            "file_path": os.path.abspath(os.path.join(ds_dir, CANVAS_NAME)),
-            "files": {"project/" + rel: rel for rel in walk(ds_dir)},
-            "assets": [],
-        }
-        print(json.dumps(out, indent=2, ensure_ascii=False))
-        return 0
-    index = load_index(ds_dir)
-    files = {"project/" + rel: rel for rel in public_files(ds_dir)}
-    assets = []
-    for group, key, rec in asset_records(index):
-        assets.append(
-            {
-                "group": group,
-                "name": rec.get("name"),
-                "path": "assets/%s/%s" % (group, rec.get("name")),
-                "blob": rec.get("blob"),
-                "size": rec.get("size"),
-            }
-        )
-    assets.sort(key=lambda a: (a["group"], str(a["name"])))
-    out = {
-        "root": os.path.abspath(ds_dir),
-        "file_path": os.path.abspath(os.path.join(ds_dir, INDEX_NAME)),
-        "files": files,
-        "assets": assets,
-    }
-    print(json.dumps(out, indent=2, ensure_ascii=False))
-    return 0
-
-
-# --- compare ---
-
-
-def compare_screens(ds_dir: str, fetched: str, prefix: str) -> int:
-    """画面デザイン: 取得した側の <接頭辞>/ の下と、ディレクトリの全ファイルを比べる（取得した側の ds/ は比べない）。"""
-    diffs: List[str] = []
-    compared = 0
-    base = os.path.join(fetched, *prefix.split("/"))
-    repo_files = walk(ds_dir)
-    for rel in repo_files:
-        compared += 1
-        other = os.path.join(base, rel)
-        if not os.path.isfile(other):
-            diffs.append("無い: %s（取得した側に %s/%s がありません）" % (rel, prefix, rel))
-        elif read_bytes(other) != read_bytes(os.path.join(ds_dir, rel)):
-            diffs.append("中身が違う: %s" % rel)
-    if os.path.isdir(base):
-        known = set(repo_files)
-        for rel in walk(base):
-            if rel.startswith("ds/"):
-                continue
-            if rel not in known:
-                diffs.append("余分: %s（リポジトリに無いファイルです）" % rel)
-    else:
-        diffs.append("無い: %s/（取得したディレクトリにファイルの置き場がありません）" % prefix)
-    for line in diffs:
-        print(line)
-    print("%d 件を比べ、違いは %d 件でした。" % (compared, len(diffs)))
-    return 1 if diffs else 0
-
-
-def cmd_compare(root: str, name: str, fetched: str, prefix: str, partial: bool, skip_assets: bool = False) -> int:
-    ds_dir = require_system(root, name)
-    if not os.path.isdir(fetched):
-        raise UsageError("取得したディレクトリ `%s` がありません。" % fetched)
-    if is_screens(root, name):
-        if partial or skip_assets:
-            raise UsageError("--partial・--skip-assets は画面デザインでは使えません。")
-        return compare_screens(ds_dir, fetched, prefix)
-    diffs: List[str] = []
-    compared = 0
-
-    def same(repo_rel: str, other: str) -> None:
-        """リポジトリの repo_rel と、取得した側の other を比べる。"""
-        nonlocal compared
-        compared += 1
-        if not os.path.isfile(other):
-            diffs.append("無い: %s（取得した側に %s がありません）" % (repo_rel, os.path.relpath(other, fetched)))
-        elif read_bytes(other) != read_bytes(os.path.join(ds_dir, repo_rel)):
-            diffs.append("中身が違う: %s" % repo_rel)
-
-    if partial:
-        base = os.path.join(fetched, *prefix.split("/"))
-        if not os.path.isdir(base):
-            raise UsageError("取得したディレクトリの接頭辞 `%s` のディレクトリがありません。" % prefix)
-        for rel in walk(base):
-            compared += 1
-            repo_file = os.path.join(ds_dir, rel)
-            if not os.path.isfile(repo_file):
-                diffs.append("余分: %s（リポジトリに無いファイルです）" % rel)
-            elif read_bytes(repo_file) != read_bytes(os.path.join(base, rel)):
-                diffs.append("中身が違う: %s" % rel)
-    else:
-        index = load_index(ds_dir)
-        repo_public = public_files(ds_dir)
-        base = os.path.join(fetched, *prefix.split("/"))
-        for rel in repo_public:
-            same(rel, os.path.join(base, rel))
-        # アセットは id ごとに 1 つずつ取得する必要があるので、変えていないときは省けるようにする。
-        for group, key, rec in ([] if skip_assets else asset_records(index)):
-            aname = str(rec.get("name"))
-            rel = "assets/%s/%s" % (group, aname)
-            ext = os.path.splitext(aname)[1]
-            if not os.path.isfile(os.path.join(ds_dir, rel)):
-                diffs.append("無い: %s（リポジトリにファイルがありません）" % rel)
-                compared += 1
-                continue
-            same(rel, os.path.join(fetched, "%s%s" % (rec.get("blob"), ext)))
-        known = set(repo_public)
-        if os.path.isdir(base):
-            for rel in walk(base):
-                if rel not in known:
-                    diffs.append("余分: %s（リポジトリに無いファイルです）" % rel)
-        else:
-            diffs.append("無い: %s/（取得したディレクトリに公開ファイルの置き場がありません）" % prefix)
-    for line in diffs:
-        print(line)
-    print("%d 件を比べ、違いは %d 件でした。" % (compared, len(diffs)))
-    return 1 if diffs else 0
-
-
 # --- 引数 ---
 
 
@@ -846,7 +675,7 @@ class Parser(argparse.ArgumentParser):
 def build_parser() -> argparse.ArgumentParser:
     p = Parser(
         prog="design-system.py",
-        description="design-system/ 配下のデザインシステムと画面デザインを検査・生成・照合する。終了コード: 0 指摘なし、1 指摘あり、2 引数の誤り。",
+        description="design-system/ 配下のデザインシステムと画面デザインを検査・生成する。終了コード: 0 指摘なし、1 指摘あり、2 引数の誤り。",
     )
     p.add_argument("--root", default=os.path.join(REPO_ROOT, "design-system"), metavar="DIR", help="design-system のディレクトリ（既定: リポジトリの design-system/）")
     sub = p.add_subparsers(dest="cmd", metavar="サブコマンド", parser_class=Parser)
@@ -857,14 +686,6 @@ def build_parser() -> argparse.ArgumentParser:
     t = sub.add_parser("tokens-css", help="tokens.json から tokens.css の内容を作って標準出力に出す")
     t.add_argument("name", metavar="名前")
     t.add_argument("--write", action="store_true", help="標準出力ではなく tokens.css に書く")
-    f = sub.add_parser("files", help="アーティファクトへ送るファイルの一覧を JSON で出す")
-    f.add_argument("name", metavar="名前")
-    m = sub.add_parser("compare", help="アーティファクトから取得したファイルと、リポジトリのファイルをバイト単位で比べる")
-    m.add_argument("name", metavar="名前")
-    m.add_argument("fetched", metavar="取得したディレクトリ")
-    m.add_argument("--prefix", default="project", metavar="接頭辞", help="公開ファイルが入っているディレクトリ（既定: project）")
-    m.add_argument("--partial", action="store_true", help="<接頭辞>/ の下にあるファイルだけを、リポジトリの同じパスのファイルと比べる（アセットは比べない）")
-    m.add_argument("--skip-assets", action="store_true", help="アセット（アイコン）を比べない。アセットを変えていないときに、取得を省くために使う")
     return p
 
 
@@ -876,14 +697,7 @@ def main(argv: List[str]) -> int:
             raise UsageError("design-system のディレクトリ `%s` がありません。" % root)
         if args.cmd == "check":
             return cmd_check(root, args.names, args.spec_root)
-        if args.cmd == "tokens-css":
-            return cmd_tokens_css(root, args.name, args.write)
-        if args.cmd == "files":
-            return cmd_files(root, args.name)
-        prefix = args.prefix.strip("/")
-        if not prefix and not args.partial:
-            raise UsageError("--prefix が空です。")
-        return cmd_compare(root, args.name, args.fetched, prefix, args.partial, args.skip_assets)
+        return cmd_tokens_css(root, args.name, args.write)
     except UsageError as e:
         print(str(e), file=sys.stderr)
         return 2

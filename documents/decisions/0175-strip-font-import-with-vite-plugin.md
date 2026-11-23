@@ -2,6 +2,8 @@
 type: Decision
 title: "ADR 0175"
 description: "デザインシステムの `bundle.css` の、書体を外部から読み込む `@import` の行を、Vite のプラグインで取り除いて読み込み、教材チェックツールの描画でも同じように取り除く"
+status: deprecated
+superseded_by: /decisions/0197-remove-font-import-from-design-system-css.md
 ---
 
 - 日付: 2026-11-23

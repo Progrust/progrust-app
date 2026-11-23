@@ -1,5 +1,3 @@
-@import url("https://fonts.googleapis.com/css2?family=Murecho:wght@400;500;700;800&family=Red+Hat+Mono:wght@400;500;600&display=swap");
-
 /* ===== 土台 ===== */
 body { margin: 0; font-family: var(--font-sans); background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; }
 .pg-demo { padding: var(--space-16); display: flex; flex-wrap: wrap; gap: var(--space-12); align-items: center; }

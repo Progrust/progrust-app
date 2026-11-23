@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0153"
-description: "アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す"
+description: "アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す（ADR 0197 で `@import` の行をデザインシステムのファイルから消した）"
 ---
 
 - 日付: 2026-11-22

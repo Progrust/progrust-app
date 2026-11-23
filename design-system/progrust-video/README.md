@@ -436,7 +436,7 @@ Progrust Video は、Progrust のレッスンの動画（仕様書 `content-form
 9. **柱**: `.video-stage` に `data-lesson-label`（例「4-4 所有権のムーブ」）を付けると、左上に柱が出る。表紙（`title`）では `data-chapter-label`（例「第4章 所有権」）を付けると、レッスン名の上に章名が出る。値は `useLesson()` から得る（動画のコードに書き写さない。仕様の `content-format/video/scenes.md`「共通部品」）。
 10. **表紙**: `LessonTitle` は、表紙のステージの `h1` としてレッスン名を出力する。章カラーの飾りは、CSS が `::after` で描く。飾りを動かすときは、ステージに `deco-as-elements` を付けて `::after` を消し、`div.title-deco-soft` と `div.title-deco`（中に `span.title-deco-bar` を 3 つ）を置く（LayoutTitle）。
 11. **CSS の注意**: `accent` に依存する `video-*`（`video-primary` など）は `.video-stage` の上で宣言し直している。CSS のカスタムプロパティは宣言した要素で解決されるので、`:root` だけで宣言すると `[data-chapter]` の差し替えが届かない。
-12. **書体**: 見本の `bundle.css` は Murecho と Red Hat Mono を Google Fonts から読み込んでいる。アプリでは書体を同梱する（仕様の `screens/appearance.md`「書体のファイル」）。動画のコードから外部の URL は参照できない（仕様の `content-format/video/prohibited-code.md`）。
+12. **書体**: `bundle.css` は書体を読み込まない。Murecho と Red Hat Mono は、アプリに同梱したファイルから読む（仕様の `screens/appearance.md`「書体のファイル」）。CSS には、外部から読み込む指定を書かない（仕様の `screens/appearance.md`「デザインシステムの CSS とアイコン」）。動画のコードから外部の URL は参照できない（仕様の `content-format/video/prohibited-code.md`）。
 
 ## 未決事項
 

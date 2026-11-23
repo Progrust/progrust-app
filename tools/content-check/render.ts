@@ -3,7 +3,7 @@
 // documents/verification/issue-7-render-check-in-ci.md）。
 //
 // - レッスンごとに、入口（render-entry.tsx）を Remotion のバンドラーでバンドルする。レッスン専用の CSS の
-//   変換と、デザインシステムの CSS の書体の `@import` の取り除きは、アプリの Vite のプラグインと同じものを使う。
+//   変換は、アプリの Vite のプラグインと同じものを使う。
 // - シーンごとに、最初のフレーム、各文の開始位置のフレーム、最後のフレームを描画する。音声は鳴らさない。
 // - 描画で起きたエラー（例外と、ブラウザの console のエラー）を、レッスン・シーン・フレームとともに報告する。
 // - 最初のシーンで表示している LessonTitle の数を数え、1 つでないと「表紙」のエラーにする。
@@ -26,7 +26,6 @@ import {
   type Durations,
   type Timeline,
 } from "../../src/video/timeline.ts";
-import { isDesignSystemBundleCss } from "../design-system-css.ts";
 import { isFile, readLessonJson, type LessonEntry } from "./lesson-files.ts";
 import type { RenderCssLoaderOptions } from "./render-css-loader.ts";
 import type { CheckOptions, Finding } from "./types.ts";
@@ -219,12 +218,7 @@ function overrideWebpack<T extends WebpackConfig>(
           test: /\.css$/i,
           include: videoDir,
           enforce: "pre",
-          use: [loader({ mode: "lesson", lessonId: target.entry.id })],
-        },
-        {
-          test: (path: string) => isDesignSystemBundleCss(path),
-          enforce: "pre",
-          use: [loader({ mode: "font" })],
+          use: [loader({ lessonId: target.entry.id })],
         },
         ...(config.module?.rules ?? []),
       ],
