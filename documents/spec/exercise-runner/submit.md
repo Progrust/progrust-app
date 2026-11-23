@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "コードの提出（submit）"
-description: "提出を学習者が途中で止められないこと、`stdout` 方式と `test` 方式それぞれの判定手順とテストケースの結果の決め方（`stdout` 方式で出力が一致しても終了コード 0 以外なら `runtime_error`、`test` 方式で隠しテストの入ったテスト実行ファイルの選び方）、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）と途中で止めた提出（`stopped`）の扱いを定める。"
+description: "提出を学習者が途中で止められないこと、`stdout` 方式と `test` 方式それぞれの判定手順とテストケースの結果の決め方（`stdout` 方式で出力が一致しても終了コード 0 以外なら `runtime_error`、`test` 方式で隠しテストの入ったテスト実行ファイルの選び方）、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と `detail` の形と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）と途中で止めた提出（`stopped`）の扱いを定める。"
 ---
 
 提出中はコンソールにビルドの出力（[コードの実行（run）](run.md)「ビルドの出力の表示」）と判定の進み具合だけを表示し、プログラムの出力は表示しない。
@@ -84,6 +84,12 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
 - stdout 方式の `fail`: 入力・期待する出力・実際の出力
 - test 方式の `fail`: panic メッセージ（`assert_eq!` の左辺・右辺を含む）。学習者のテストの判定の `fail` は「学習者のテストの判定」に従う
 - `timeout` / `runtime_error`: 標準エラー出力の先頭
+
+`detail` の形:
+
+- `pass` では `null`。
+- stdout 方式の `fail` では、オブジェクト `{ "input": string, "expected": string, "actual": string }`。`input` はテストケースの `stdin`、`expected` は `expected_stdout`、`actual` は受け取った標準出力で、どれも正規化する前のものとする。出力過多のときの `actual` は、上限までの標準出力とする。
+- ほかは文字列。
 
 画面には、通過数と失敗したテストケースの名前をすべて表示し、最初に失敗したテストケースの `detail` を表示する。表示する場所と、詳細の開閉は [演習画面](../screens/exercise-screen.md) に従う。
 

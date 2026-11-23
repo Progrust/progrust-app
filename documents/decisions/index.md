@@ -118,6 +118,7 @@
 * [ADR 0205](0205-pick-hidden-test-executable-from-build-json.md) - `test` 方式で隠しテストを入れたテスト実行ファイルを、ビルドの JSON の出力のうち、`judge.target` のファイルを根に持つテスト用の成果物から決める
 * [ADR 0214](0214-stdout-case-output-limit-ignores-stderr.md) - `stdout` 方式の 1 テストケースの出力量の上限を標準出力だけで数え、標準エラー出力は `detail` に使う先頭だけを受け取って、残りはプログラムを止めずに捨てる
 * [ADR 0215](0215-pick-run-executable-from-build-json.md) - 実行で起動する実行ファイルを、ビルドの JSON の出力のうち、`src/main.rs` を根に持つテスト用でない bin の成果物から決める
+* [ADR 0216](0216-stdout-fail-detail-as-object.md) - 判定結果の `cases[].detail` を、`stdout` 方式の `fail` では入力・期待する出力・実際の出力を分けたオブジェクトにし、`pass` では `null`、ほかでは文字列にする
 
 # レッスン進行・進捗管理
 
