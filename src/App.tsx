@@ -1,36 +1,71 @@
-import { useEffect, useState } from "react";
+import { Hourglass } from "lucide-react";
+import { useMemo, useState } from "react";
 import "./App.css";
-import { getAppVersion } from "./commands/settings";
+import { AppHeader } from "./AppHeader";
+import { NavigationContext } from "./router";
+import type { Route } from "./router";
 
-// 仮のページ。M1 で画面に置き換える。
-export function App() {
-  const version = useAppVersion();
+// 画面全体がスクロールしない画面。ほかの画面は、縦に長いページとしてスクロールする。
+function isFixedHeight(route: Route): boolean {
   return (
-    <main className="placeholder">
-      <h1>Progrust</h1>
-      <p>Rust プログラミング学習アプリ（準備中）</p>
-      {version !== null && <p>バージョン {version}</p>}
-    </main>
+    route.name === "home" || route.name === "video" || route.name === "exercise"
   );
 }
 
-// バックエンドから受け取ったバージョン。受け取るまでと、受け取れなかったときは null。
-function useAppVersion(): string | null {
-  const [version, setVersion] = useState<string | null>(null);
-  useEffect(() => {
-    let active = true;
-    getAppVersion()
-      .then((result) => {
-        if (active) {
-          setVersion(result.version);
-        }
-      })
-      .catch((error: unknown) => {
-        console.error("get_app_version に失敗した", error);
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  return version;
+export function App() {
+  const [route, setRoute] = useState<Route>({ name: "home" });
+  const navigation = useMemo(() => ({ route, navigate: setRoute }), [route]);
+  return (
+    <NavigationContext value={navigation}>
+      <div
+        className={`app ${isFixedHeight(route) ? "app-window" : "app-page"}`}
+      >
+        <AppHeader />
+        <Screen route={route} />
+      </div>
+    </NavigationContext>
+  );
+}
+
+// いまの画面。各画面の中身は、後のタスクで作る。
+function Screen({ route }: { route: Route }) {
+  switch (route.name) {
+    case "home":
+      return <Placeholder title="トップページ" />;
+    case "lessons":
+      return <Placeholder title="レッスン一覧" />;
+    case "video":
+      return <Placeholder title="動画画面" detail={route.lessonId} />;
+    case "exercise":
+      return <Placeholder title="演習画面" detail={route.lessonId} preparing />;
+    case "generated":
+      return <Placeholder title="生成問題一覧" preparing />;
+    case "settings":
+      return <Placeholder title="設定画面" />;
+  }
+}
+
+function Placeholder({
+  title,
+  detail,
+  preparing = false,
+}: {
+  title: string;
+  detail?: string;
+  preparing?: boolean;
+}) {
+  return (
+    <main className="app-main">
+      <div className="app-placeholder">
+        <Hourglass aria-hidden="true" size={18} strokeWidth={2.2} />
+        <h1 className="app-placeholder-title">{title}</h1>
+        {detail !== undefined && (
+          <p className="app-placeholder-note">{detail}</p>
+        )}
+        <p className="app-placeholder-note">
+          {preparing ? "準備中" : "仮の画面"}
+        </p>
+      </div>
+    </main>
+  );
 }

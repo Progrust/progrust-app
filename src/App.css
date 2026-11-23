@@ -5,9 +5,55 @@ body,
   margin: 0;
 }
 
-.placeholder {
+/* アプリ全体。最小の幅は 1024px。 */
+.app {
+  min-width: 1024px;
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ウィンドウの高さに合わせ、画面全体はスクロールしない。 */
+.app-window {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 700px;
+  overflow: hidden;
+}
+
+/* 縦に長いページとして、画面全体がスクロールする。 */
+.app-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.app-main {
+  flex: 1;
+  min-height: 0;
   display: grid;
   place-content: center;
-  min-height: 100%;
-  text-align: center;
+}
+
+.app-placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-8);
+  color: var(--muted);
+}
+
+.app-placeholder-title {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.4;
+  color: var(--ink);
+}
+
+.app-placeholder-note {
+  margin: 0;
+  font-size: 13px;
 }

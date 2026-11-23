@@ -1,41 +1,53 @@
-import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
-import { render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { fireEvent, render, screen, within } from "@testing-library/react";
+import { expect, it } from "vitest";
 import { App } from "./App";
 
-// バックエンドの呼び出しの記録。
-let calls: { cmd: string; args: unknown }[] = [];
+const MENU_LABELS = ["ホーム", "レッスン", "問題生成", "設定"];
 
-beforeEach(() => {
-  calls = [];
-  mockIPC((cmd, args) => {
-    calls.push({ cmd, args });
-    if (cmd === "get_app_version") {
-      return { version: "9.8.7" };
-    }
-    throw new Error(`想定していないコマンド: ${cmd}`);
-  });
-});
+function menu() {
+  return within(screen.getByRole("navigation", { name: "メインメニュー" }));
+}
 
-afterEach(() => {
-  clearMocks();
-});
-
-it("仮のページを表示する", async () => {
+it("ヘッダーにロゴとメインメニューを表示し、最初はホームを選ぶ", () => {
   render(<App />);
+  const header = screen.getByRole("banner");
+  expect(within(header).getByText("Progrust")).toBeInTheDocument();
   expect(
-    screen.getByRole("heading", { level: 1, name: "Progrust" }),
-  ).toBeInTheDocument();
-  // 受け取りを待ち、テストの後に状態が変わらないようにする。
-  expect(await screen.findByText("バージョン 9.8.7")).toBeInTheDocument();
+    menu()
+      .getAllByRole("link")
+      .map((link) => link.textContent),
+  ).toEqual(MENU_LABELS);
+  expect(menu().getByRole("link", { name: "ホーム" })).toHaveAttribute(
+    "aria-current",
+    "page",
+  );
+  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
+    "トップページ",
+  );
 });
 
-it("get_app_version で受け取ったバージョンを表示する", async () => {
+it("メニューで各画面に移り、選んでいる項目だけに aria-current を付ける", () => {
   render(<App />);
-  expect(await screen.findByText("バージョン 9.8.7")).toBeInTheDocument();
-  expect(calls.map((call) => call.cmd)).toContain("get_app_version");
-  // 引数の無いコマンドは、引数を渡さずに呼ぶ。
-  expect(calls.find((call) => call.cmd === "get_app_version")?.args).toEqual(
-    {},
-  );
+  const cases = [
+    ["レッスン", "レッスン一覧"],
+    ["問題生成", "生成問題一覧"],
+    ["設定", "設定画面"],
+    ["ホーム", "トップページ"],
+  ] as const;
+  for (const [label, title] of cases) {
+    fireEvent.click(menu().getByRole("link", { name: label }));
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(title);
+    // ヘッダーは、どの画面でも表示される。
+    expect(screen.getByRole("banner")).toBeInTheDocument();
+    const current = menu()
+      .getAllByRole("link")
+      .filter((link) => link.getAttribute("aria-current") === "page");
+    expect(current.map((link) => link.textContent)).toEqual([label]);
+  }
+});
+
+it("生成問題一覧は準備中と表示する", () => {
+  render(<App />);
+  fireEvent.click(menu().getByRole("link", { name: "問題生成" }));
+  expect(screen.getByText("準備中")).toBeInTheDocument();
 });
