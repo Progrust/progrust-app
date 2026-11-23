@@ -5,4 +5,5 @@
 
 pub mod content;
 pub mod error;
+pub mod progress;
 pub mod settings;
