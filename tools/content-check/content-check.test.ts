@@ -35,13 +35,13 @@ const chapters: Chapter[] = [
   },
 ];
 
-// 一覧のレッスンの主要素。ch02-01 だけ、主要素が 2 つある。
+// 一覧のレッスンの主要素。ch01-01 と ch02-01 は、主要素が 2 つある。
 // ch01-02 は動画のみのレッスン。
 const VIDEO_ONLY = "ch01-02";
 function primaryOf(id: string): string[] {
   if (id === VIDEO_ONLY || id.endsWith("-review")) return [];
   const base = `x.${id.replace("-", "_")}`;
-  return id === "ch02-01" ? [base, `${base}_b`] : [base];
+  return id === "ch01-01" || id === "ch02-01" ? [base, `${base}_b`] : [base];
 }
 
 interface Element {
@@ -429,7 +429,7 @@ function fullLesson(id: string): Json {
     return {
       ...base,
       kind: "chapter_review",
-      primary_elements: ["x.ch01_01", "x.ch02_01"],
+      primary_elements: [`x.${chapter}_01`, `x.${chapter}_01_b`],
       secondary_elements: [],
       exercise,
     };
@@ -814,6 +814,169 @@ describe("定義", () => {
           case_labels: { empty_input: "空の入力" },
         };
       }),
+    ).toEqual([]);
+  });
+});
+
+describe("既習要素", () => {
+  function learned(
+    change: (lesson: Json) => void,
+    id: string,
+    prepared?: string[],
+  ) {
+    return only(
+      checkFull({
+        prepared,
+        lessons: (lesson, lessonId) => {
+          if (lessonId === id) change(lesson);
+          return lesson;
+        },
+      }),
+      "既習要素",
+    );
+  }
+
+  it("副要素が既習の要素だけなら、エラーにならない", () => {
+    expect(
+      learned((l) => (l.secondary_elements = ["x.ch01_01"]), "ch02-01"),
+    ).toEqual([]);
+  });
+
+  it("副要素が既習でない（後のレッスンで導入する）と、エラーになる", () => {
+    const findings = learned(
+      (l) => (l.secondary_elements = ["x.ch02_01"]),
+      "ch01-01",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "error",
+      check: "既習要素",
+      lesson: "ch01-01",
+      file: "lessons/ch01-01/lesson.json",
+    });
+    expect(findings[0].message).toContain("x.ch02_01");
+  });
+
+  it("そのレッスン自身の主要素を副要素にすると、エラーになる", () => {
+    expect(
+      learned((l) => (l.secondary_elements = ["x.ch01_01"]), "ch01-01"),
+    ).toHaveLength(1);
+  });
+
+  it("一覧のどのレッスンの主要素でもない要素は、エラーになる", () => {
+    expect(
+      learned((l) => (l.secondary_elements = ["x.nowhere"]), "ch02-01"),
+    ).toHaveLength(1);
+  });
+
+  it("準備中のレッスンが主要素とする要素も、学習順で前にあれば既習になる", () => {
+    expect(
+      learned((l) => (l.secondary_elements = ["x.ch01_01"]), "ch02-01", [
+        "ch01-01",
+      ]),
+    ).toEqual([]);
+  });
+
+  it("準備中のレッスンが主要素とする要素でも、学習順で後ろにあれば既習でない", () => {
+    expect(
+      learned((l) => (l.secondary_elements = ["x.ch02_01"]), "ch01-01", [
+        "ch02-01",
+      ]),
+    ).toHaveLength(1);
+  });
+
+  it("準備中のレッスンは、検査しない", () => {
+    expect(
+      only(
+        checkFull({
+          prepared: ["ch01-01"],
+          lessons: (lesson, id) => {
+            if (id === "ch01-02") lesson.secondary_elements = ["x.ch02_01"];
+            return lesson;
+          },
+        }),
+        "既習要素",
+      ).map((f) => f.lesson),
+    ).toEqual(["ch01-02"]);
+  });
+});
+
+describe("要素マスタ", () => {
+  const orphan = { id: "x.orphan", chapter: "ch01" };
+
+  it("すべての要素がどれかのレッスンの主要素なら、エラーにならない", () => {
+    expect(only(checkFull(), "要素マスタ")).toEqual([]);
+  });
+
+  it("どのレッスンの primary_elements にも含まれない要素があると、エラーになる", () => {
+    const findings = only(
+      checkFull({ masters: [...elements, orphan] }),
+      "要素マスタ",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "error",
+      file: "elements.json",
+    });
+    expect(findings[0].message).toContain("x.orphan");
+  });
+
+  it("deprecated の要素は、エラーにならない", () => {
+    expect(
+      only(
+        checkFull({ masters: [...elements, { ...orphan, deprecated: true }] }),
+        "要素マスタ",
+      ),
+    ).toEqual([]);
+  });
+
+  it("準備中のレッスンが 1 つでもあるときは、検査しない", () => {
+    expect(
+      only(
+        checkFull({ masters: [...elements, orphan], prepared: ["ch02-01"] }),
+        "要素マスタ",
+      ),
+    ).toEqual([]);
+  });
+});
+
+describe("章末復習の主要素", () => {
+  function review(primary: string[]) {
+    return checkFull({
+      lessons: (lesson, id) => {
+        if (id === "ch01-review") lesson.primary_elements = primary;
+        return lesson;
+      },
+    });
+  }
+
+  it("その章のレッスンの主要素なら、エラーにならない", () => {
+    expect(review(["x.ch01_01", "x.ch01_01_b"])).toEqual([]);
+  });
+
+  it("ほかの章のレッスンの主要素を含むと、エラーになる", () => {
+    const findings = only(
+      review(["x.ch01_01", "x.ch02_01"]),
+      "章末復習の主要素",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "error",
+      lesson: "ch01-review",
+      file: "lessons/ch01-review/lesson.json",
+    });
+    expect(findings[0].message).toContain("x.ch02_01");
+  });
+
+  it("primary_elements が 1 件だと、エラーになる", () => {
+    const findings = review(["x.ch01_01"]);
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({ severity: "error", check: "定義" });
+  });
+
+  it("準備中の章末復習レッスンは、検査しない", () => {
+    expect(
+      only(checkFull({ prepared: ["ch01-review"] }), "章末復習の主要素"),
     ).toEqual([]);
   });
 });

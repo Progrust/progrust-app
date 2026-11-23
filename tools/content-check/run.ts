@@ -2,6 +2,11 @@
 import { curriculumCheck } from "./curriculum.ts";
 import { definitionCheck } from "./definition.ts";
 import { elementsCheck } from "./elements.ts";
+import {
+  learnedElementsCheck,
+  masterElementsUsedCheck,
+  reviewPrimaryElementsCheck,
+} from "./elements-in-lessons.ts";
 import { structureCheck } from "./structure.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
 
@@ -9,7 +14,10 @@ export const checks: Check[] = [
   curriculumCheck,
   structureCheck,
   definitionCheck,
+  learnedElementsCheck,
+  masterElementsUsedCheck,
   elementsCheck,
+  reviewPrimaryElementsCheck,
 ];
 
 export function runChecks(
