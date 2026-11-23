@@ -1,0 +1,63 @@
+{
+  "code_blocks": [
+    {
+      "id": "main",
+      "language": "rust",
+      "code": "fn main() {\n    let a = 1;\n    let b = 2;\n}"
+    }
+  ],
+  "scenes": [
+    {
+      "id": "title",
+      "name": "表紙"
+    },
+    {
+      "id": "unknown",
+      "name": "台本にない文"
+    },
+    {
+      "id": "other",
+      "name": "ほかのシーンの文"
+    },
+    {
+      "id": "scopes",
+      "name": "重なる範囲"
+    },
+    {
+      "id": "image",
+      "name": "読み込めない画像"
+    }
+  ],
+  "sentences": [
+    {
+      "id": "t1",
+      "scene": "title",
+      "text": "文",
+      "say": "ぶん"
+    },
+    {
+      "id": "u1",
+      "scene": "unknown",
+      "text": "文",
+      "say": "ぶん"
+    },
+    {
+      "id": "o1",
+      "scene": "other",
+      "text": "文",
+      "say": "ぶん"
+    },
+    {
+      "id": "s1",
+      "scene": "scopes",
+      "text": "文",
+      "say": "ぶん"
+    },
+    {
+      "id": "i1",
+      "scene": "image",
+      "text": "文",
+      "say": "ぶん"
+    }
+  ]
+}

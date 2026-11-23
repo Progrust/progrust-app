@@ -1,0 +1,16 @@
+{
+  "scenes": [
+    {
+      "id": "title",
+      "name": "表紙"
+    }
+  ],
+  "sentences": [
+    {
+      "id": "t1",
+      "scene": "title",
+      "text": "文",
+      "say": "ぶん"
+    }
+  ]
+}

@@ -14,5 +14,9 @@
     "skipLibCheck": true,
     "noEmit": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "tools/content-check/render-entry.tsx",
+    "tools/content-check/render-lesson.d.ts"
+  ]
 }

@@ -1,7 +1,7 @@
 // `npm run content:check` の入口。
 // 引数: --content <教材のディレクトリ> --curriculum <章とレッスンの一覧のディレクトリ>
 import { fileURLToPath } from "node:url";
-import { report, runChecks } from "./run.ts";
+import { report, runAllChecks } from "./run.ts";
 
 const root = fileURLToPath(new URL("../..", import.meta.url));
 
@@ -10,7 +10,7 @@ function option(name: string, fallback: string): string {
   return i >= 0 && process.argv[i + 1] ? process.argv[i + 1] : fallback;
 }
 
-const findings = runChecks({
+const findings = await runAllChecks({
   contentDir: option("--content", `${root}content`),
   curriculumDir: option(
     "--curriculum",

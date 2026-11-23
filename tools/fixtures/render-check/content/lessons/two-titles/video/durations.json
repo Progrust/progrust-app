@@ -1,0 +1,12 @@
+{
+  "t1": {
+    "seconds": 1.0,
+    "say": "ぶん",
+    "voice": {
+      "narrator": "N",
+      "speed": 100,
+      "pause": 0.2,
+      "emotion": {}
+    }
+  }
+}

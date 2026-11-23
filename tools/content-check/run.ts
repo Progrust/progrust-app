@@ -9,6 +9,7 @@ import {
   reviewPrimaryElementsCheck,
 } from "./elements-in-lessons.ts";
 import { lintCheck } from "./lint.ts";
+import { checkRender } from "./render.ts";
 import { scriptCheck } from "./script.ts";
 import { structureCheck } from "./structure.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
@@ -33,6 +34,12 @@ export function runChecks(
   list: Check[] = checks,
 ): Finding[] {
   return list.flatMap((check) => check.run(options));
+}
+
+// checks のすべての項目と、動画を描画する「描画」「表紙」（render.ts）を検査する。
+// 描画は時間がかかり、非同期なので、checks に並べずに、ここで続けて行う。
+export async function runAllChecks(options: CheckOptions): Promise<Finding[]> {
+  return [...runChecks(options), ...(await checkRender(options))];
 }
 
 export function formatFinding(f: Finding): string {

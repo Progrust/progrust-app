@@ -76,6 +76,8 @@
 * [ADR 0095](0095-render-check-all-lessons-in-ci.md) - CI で、描画のチェックを毎回すべてのレッスンに行い、描画のチェックで見つかるのは描画したフレームのエラーだけだと仕様に書く（ADR 0145 で準備中のレッスンを描画の対象から外した）
 * [ADR 0146](0146-one-test-case-allowed-in-ch01-and-ch02.md) - ch01・ch02 のレッスン（章末復習レッスンを含む）の演習は、テストケースを 1 件以上でよいとし、ほかのレッスンは 3 件以上のままにする
 * [ADR 0156](0156-define-all-elements-before-lessons-one-per-lesson.md) - 要素マスタの要素をレッスンを作る前にすべて決め、1 レッスン 1 要素を基本にして 145 件を定め、要素 ID の分類を Rust の機能のまとまりで付ける
+* [ADR 0191](0191-count-lesson-title-on-rendered-frames.md) - 教材チェックツールの検査「表紙」で、最初のシーンの描画したフレームごとに、表示している `LessonTitle` を、`LessonTitle` 自身が知らせる数で数え、どのフレームでも表示していないときと、2 つ以上表示しているフレームがあるときをエラーにする
+* [ADR 0192](0192-report-browser-console-errors-in-render-check.md) - 教材チェックツールの描画のチェックで、描画時の例外に加えて、ブラウザの console に出たエラーもエラーにし、console の警告はエラーにしない
 
 # コード実行・判定
 

@@ -1,0 +1,7 @@
+:root {
+  --render-probe-gap: 8px;
+}
+
+.render-probe {
+  gap: var(--render-probe-gap);
+}
