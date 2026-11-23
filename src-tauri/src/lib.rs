@@ -1,13 +1,17 @@
 pub mod commands;
+pub mod content;
 pub mod storage;
 
 use tauri::{Builder, Context, Manager, Runtime};
 
+use content::ContentDir;
 use storage::AppDataDir;
 
 /// コマンドのハンドラを載せたビルダーを返す。`run` と、モックの実行環境のテストで使う。
 pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
     builder.invoke_handler(tauri::generate_handler![
+        commands::content::list_chapters,
+        commands::content::get_lesson,
         commands::settings::get_app_version,
     ])
 }
@@ -24,6 +28,8 @@ pub fn run() {
         .setup(|app| {
             let data_dir = AppDataDir::from_app(app.handle())?;
             app.manage(data_dir);
+            // 教材のディレクトリは、アプリでは `resource_dir()` の下の `content/` にする。同じく、テストでは差し替える。
+            app.manage(ContentDir::from_app(app.handle())?);
             Ok(())
         })
         .run(app_context())
