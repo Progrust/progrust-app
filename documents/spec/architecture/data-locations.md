@@ -33,6 +33,9 @@ description: "学習者データ（`{app_data_dir}`）とアプリ同梱デー�
 
 読み取り専用。リポジトリ上の原本をビルド時にリソースとして同梱する。
 
+- `content/` は、ビルドスクリプト（`src-tauri/build.rs`）が、リポジトリの `content/` から同梱するファイルだけを `src-tauri/gen/bundled/content/` に写し、Tauri がそれを `{app_resources}/content/` に入れる。写すときに、`.` で始まる名前のファイルとディレクトリ（`.DS_Store` など）も除く。
+- 開発時の起動（`npm run dev`）でも、同じものを読む。Tauri のビルドが、同梱するファイルを実行ファイルの隣に写し、そこが `{app_resources}` になる。
+
 ```
 {app_resources}/
 ├── content/                        # 教材（原本: リポジトリの content/。動画のコードと、動画が読み込む画像を除く。動画の音声は含める（spec/architecture/responsibilities.md）。形式は spec/content-format/index.md）

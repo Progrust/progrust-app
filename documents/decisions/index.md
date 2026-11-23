@@ -17,6 +17,7 @@
 * [ADR 0166](0166-choose-unlisted-deps-that-support-node-series.md) - 表にない依存は、Node.js の系列（25.9 系）を `engines` が含み、表の依存の版と peer 依存が合う版を入れ、そのために Vitest を 4 系、jsdom を 29 系、`@testing-library/jest-dom` を 6 系、`stylelint-config-standard` を 40 系にする
 * [ADR 0167](0167-allow-listening-to-backend-events.md) - フロントエンドに許可する Tauri の権限に、バックエンドが送るイベントの受け取り（listen・unlisten）を加え、それ以外の組み込みの API（フロントエンドからのイベントの送信を含む）は許可せず、本アプリのコマンドは権限の一覧に書かずに呼べるままにする
 * [ADR 0185](0185-name-temp-and-broken-files-and-define-unreadable.md) - 学習者データの一時ファイルを同じディレクトリの `.{ファイル名}.{プロセス ID}.tmp` にし、退避の `{日時}` を現地時刻の `YYYYMMDDTHHMMSS`（重なるときは `-2`…）にし、読み込めない場合を JSON・形・`schema_version` の誤りに限り、読み込みの失敗とファイルが無い場合は退避しない
+* [ADR 0187](0187-stage-bundled-content-in-build-script.md) - 同梱する教材を、ビルドスクリプトがリポジトリの content/ から選んで src-tauri/gen/bundled/content/ に写し、Tauri の bundle.resources はそのディレクトリだけを {app_resources}/content/ に入れる
 
 # 教材データ形式
 

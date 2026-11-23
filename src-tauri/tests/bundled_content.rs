@@ -1,0 +1,188 @@
+//! アプリに同梱する教材（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）を確かめる。
+//! 同梱するファイルは、ビルドスクリプトが `build/bundled_content.rs` で選んで写す。
+
+#[path = "../build/bundled_content.rs"]
+mod bundled_content;
+
+use std::collections::BTreeSet;
+use std::fs;
+use std::path::Path;
+
+use serde_json::{Value, json};
+
+/// 同梱するファイル。
+const BUNDLED: [&str; 14] = [
+    "chapters.json",
+    "elements.json",
+    "voice.json",
+    "readings.json",
+    "lessons/ch01-hello/lesson.json",
+    "lessons/ch01-hello/video/script.json",
+    "lessons/ch01-hello/video/voice/s1.m4a",
+    "lessons/ch01-hello/video/voice/s2.m4a",
+    "lessons/ch01-hello/exercise/problem.md",
+    "lessons/ch01-hello/exercise/explanation.md",
+    "lessons/ch01-hello/exercise/starter/src/main.rs",
+    "lessons/ch01-hello/exercise/solution/src/main.rs",
+    "lessons/ch01-hello/exercise/cases.json",
+    "lessons/ch02-test/exercise/judge_tests.rs",
+];
+
+/// 同梱しないファイル（動画のコードと、動画が読み込む画像と、`.` で始まる名前のファイル）。
+const NOT_BUNDLED: [&str; 11] = [
+    "assets/common.png",
+    "lessons/ch01-hello/assets/scene.png",
+    "lessons/ch01-hello/video/index.tsx",
+    "lessons/ch01-hello/video/scenes/Intro.tsx",
+    "lessons/ch01-hello/video/timeline.ts",
+    "lessons/ch01-hello/video/lesson.css",
+    "lessons/ch01-hello/video/durations.json",
+    "lessons/ch01-hello/video/cue-reference.json",
+    ".DS_Store",
+    "lessons/ch01-hello/video/voice/.DS_Store",
+    "lessons/.hidden/lesson.json",
+];
+
+fn write_files(root: &Path, files: &[&str]) {
+    for file in files {
+        let path = root.join(file);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, format!("{file} の中身")).unwrap();
+    }
+}
+
+/// `root` の下のファイルを、`root` からの相対パス（`/` 区切り）で集める。
+fn list_files(root: &Path) -> BTreeSet<String> {
+    fn walk(root: &Path, dir: &Path, files: &mut BTreeSet<String>) {
+        for entry in fs::read_dir(dir).unwrap() {
+            let path = entry.unwrap().path();
+            if path.is_dir() {
+                walk(root, &path, files);
+            } else {
+                let relative = path.strip_prefix(root).unwrap();
+                files.insert(relative.to_str().unwrap().replace('\\', "/"));
+            }
+        }
+    }
+    let mut files = BTreeSet::new();
+    walk(root, root, &mut files);
+    files
+}
+
+fn strings(files: &[&str]) -> BTreeSet<String> {
+    files.iter().map(|file| file.to_string()).collect()
+}
+
+#[test]
+fn stages_content_without_video_code_and_images() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = temp.path().join("content");
+    let dest = temp.path().join("staged");
+    write_files(&source, &BUNDLED);
+    write_files(&source, &NOT_BUNDLED);
+
+    bundled_content::stage(&source, &dest).unwrap();
+
+    assert_eq!(list_files(&dest), strings(&BUNDLED));
+    for file in BUNDLED {
+        assert_eq!(
+            fs::read_to_string(dest.join(file)).unwrap(),
+            format!("{file} の中身")
+        );
+    }
+}
+
+/// `content/lessons/` にレッスンが 1 つも無くても写せる。
+#[test]
+fn stages_content_without_lessons() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = temp.path().join("content");
+    let dest = temp.path().join("staged");
+    write_files(&source, &["chapters.json", "elements.json"]);
+
+    bundled_content::stage(&source, &dest).unwrap();
+
+    assert_eq!(
+        list_files(&dest),
+        strings(&["chapters.json", "elements.json"])
+    );
+}
+
+/// 写し直すと、変わったファイルを書き直し、消えたファイルと同梱しないファイルを消す。
+#[test]
+fn restaging_follows_changes_in_source() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = temp.path().join("content");
+    let dest = temp.path().join("staged");
+    write_files(&source, &BUNDLED);
+    bundled_content::stage(&source, &dest).unwrap();
+
+    fs::write(source.join("chapters.json"), "変えた中身").unwrap();
+    fs::remove_dir_all(source.join("lessons/ch02-test")).unwrap();
+    fs::remove_file(source.join("lessons/ch01-hello/video/voice/s2.m4a")).unwrap();
+    // 前に写したもののうち、同梱しないファイル（前の版で写したものなど）も消す。
+    write_files(&dest, &["lessons/ch01-hello/video/index.tsx"]);
+
+    bundled_content::stage(&source, &dest).unwrap();
+
+    let expected: BTreeSet<String> = strings(&BUNDLED)
+        .into_iter()
+        .filter(|file| !file.starts_with("lessons/ch02-test/") && !file.ends_with("voice/s2.m4a"))
+        .collect();
+    assert_eq!(list_files(&dest), expected);
+    assert_eq!(
+        fs::read_to_string(dest.join("chapters.json")).unwrap(),
+        "変えた中身"
+    );
+    assert!(
+        !dest.join("lessons/ch02-test").exists(),
+        "空になったディレクトリを消す"
+    );
+}
+
+/// 中身が同じファイルは書き直さない（cargo がビルドスクリプトを実行し直し続けないように）。
+#[test]
+fn restaging_keeps_unchanged_files() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = temp.path().join("content");
+    let dest = temp.path().join("staged");
+    write_files(&source, &BUNDLED);
+    bundled_content::stage(&source, &dest).unwrap();
+    let staged = dest.join("lessons/ch01-hello/lesson.json");
+    let old_time = std::time::SystemTime::UNIX_EPOCH + std::time::Duration::from_secs(1_000_000);
+    fs::File::options()
+        .write(true)
+        .open(&staged)
+        .unwrap()
+        .set_modified(old_time)
+        .unwrap();
+
+    bundled_content::stage(&source, &dest).unwrap();
+
+    assert_eq!(fs::metadata(&staged).unwrap().modified().unwrap(), old_time);
+}
+
+fn tauri_conf() -> Value {
+    serde_json::from_str(include_str!("../tauri.conf.json")).expect("tauri.conf.json を読めない")
+}
+
+/// `bundle.resources` は、写したディレクトリだけを `{app_resources}/content/` に入れる。
+#[test]
+fn bundle_resources_point_to_staging_dir() {
+    assert_eq!(
+        tauri_conf()["bundle"]["resources"],
+        json!({ (bundled_content::STAGING_DIR): "content/" })
+    );
+}
+
+/// ビルドスクリプトが、リポジトリの `content/` から写したものと、写したディレクトリの中身が同じである。
+#[test]
+fn staging_dir_matches_repository_content() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let temp = tempfile::tempdir().unwrap();
+    bundled_content::stage(&manifest_dir.join("../content"), temp.path()).unwrap();
+    assert_eq!(
+        list_files(&manifest_dir.join(bundled_content::STAGING_DIR)),
+        list_files(temp.path())
+    );
+}

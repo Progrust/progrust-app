@@ -20,12 +20,21 @@
       }
     ],
     "security": {
-      "csp": "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; media-src 'self' asset: data:"
+      "csp": "default-src 'self'; script-src 'self'; worker-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data:; connect-src 'self' ipc: http://ipc.localhost; media-src 'self' asset: data:",
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["$RESOURCE/content/lessons/*/video/voice/*.m4a"]
+        }
+      }
     }
   },
   "bundle": {
     "active": true,
     "targets": ["app"],
+    "resources": {
+      "gen/bundled/content/": "content/"
+    },
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
