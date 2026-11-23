@@ -1,8 +1,9 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vitest/config";
+import { stripDesignSystemFontImport } from "./tools/design-system-css.ts";
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [stripDesignSystemFontImport(), react()],
   // Tauri の出力（Rust のエラー）を消さない。
   clearScreen: false,
   server: {
