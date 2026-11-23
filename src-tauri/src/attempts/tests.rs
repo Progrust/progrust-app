@@ -211,7 +211,9 @@ fn a_run_event_is_appended_with_the_output_rules() {
         exit_code: Some(101),
         stdin: "3\n4\n".into(),
     };
-    let session_id = dir.append_run("ch04-04", record).unwrap().unwrap();
+    let session_id = dir
+        .append_run("ch04-04", SessionKind::Lesson, record)
+        .unwrap();
     assert_eq!(session_id, session.session_id);
 
     let saved = saved_json(&temp, &session_id);
@@ -246,7 +248,9 @@ fn a_compile_error_run_keeps_error_codes_in_order_without_duplicates() {
     record.mode = RunMode::Test;
     record.error_codes = ["E0382", "E0499", "E0382"].map(String::from).to_vec();
     record.build.cargo_stderr = "error: could not compile `exercise`\n".into();
-    let session_id = dir.append_run("ch04-04", record).unwrap().unwrap();
+    let session_id = dir
+        .append_run("ch04-04", SessionKind::Lesson, record)
+        .unwrap();
     let result = &saved_json(&temp, &session_id)["events"][0]["result"];
     assert_eq!(result["error_codes"], json!(["E0382", "E0499"]));
     assert_eq!(result["exit_code"], Value::Null);
@@ -262,7 +266,11 @@ fn events_are_appended_in_order_to_the_same_session() {
         .start_or_continue_session_at("ch04-04", SessionKind::Lesson, at(13, 2, 0))
         .unwrap();
     let first = dir
-        .append_run("ch04-04", run_record(RunStatus::Success))
+        .append_run(
+            "ch04-04",
+            SessionKind::Lesson,
+            run_record(RunStatus::Success),
+        )
         .unwrap();
     // アプリを起動し直して開き直しても（別の `AppDataDir` でも）、同じセッションに追記する。
     let reopened = AppDataDir::new(temp.path());
@@ -273,6 +281,7 @@ fn events_are_appended_in_order_to_the_same_session() {
     let second = reopened
         .append_submit(
             "ch04-04",
+            SessionKind::Lesson,
             SubmitRecord {
                 at: "2026-10-31T14:10:00+09:00".into(),
                 files: files("fn main() {}\n"),
@@ -289,7 +298,7 @@ fn events_are_appended_in_order_to_the_same_session() {
             },
         )
         .unwrap();
-    assert_eq!(first.as_deref(), Some(session.session_id.as_str()));
+    assert_eq!(first, session.session_id);
     assert_eq!(second, first);
     let saved = saved_json(&temp, &session.session_id);
     let events = saved["events"].as_array().unwrap();
@@ -314,34 +323,42 @@ fn events_are_appended_in_order_to_the_same_session() {
     assert_eq!(attempt_names(&temp).len(), 1);
 }
 
-/// 正解の後に演習画面を離れて、セッションの終了が実行の停止より先に済んだときなど。
+/// 試行ログが壊れて退避された後などで、未完了のセッションが無いときも、学習者の試行を落とさない。
+/// 終わったセッションには追記しない。
 #[test]
-fn without_an_unfinished_session_nothing_is_appended() {
+fn without_an_unfinished_session_a_new_session_is_started_for_the_event() {
     let temp = tempfile::tempdir().unwrap();
     let dir = AppDataDir::new(temp.path());
-    assert_eq!(
-        dir.append_run("ch04-04", run_record(RunStatus::Stopped))
-            .unwrap(),
-        None
-    );
-    assert!(!temp.path().join("attempts").exists());
-
     let first = dir
         .start_or_continue_session_at("ch04-04", SessionKind::Lesson, at(13, 2, 0))
-        .unwrap();
-    dir.mark_session_passed(&first.session_id, "2026-10-31T13:25:00+09:00")
         .unwrap();
     dir.end_attempt_session(&first.session_id, "2026-10-31T13:31:00+09:00")
         .unwrap();
     let before = saved_json(&temp, &first.session_id);
-    assert_eq!(
-        dir.append_run("ch04-04", run_record(RunStatus::Stopped))
-            .unwrap(),
-        None
-    );
-    // 終わったセッションにも追記せず、新しいセッションも始めない。
+    let session_id = dir
+        .append_run(
+            "ch04-04",
+            SessionKind::Lesson,
+            run_record(RunStatus::Stopped),
+        )
+        .unwrap();
+    assert_ne!(session_id, first.session_id);
     assert_eq!(saved_json(&temp, &first.session_id), before);
-    assert_eq!(attempt_names(&temp), [format!("{}.json", first.session_id)]);
+    let log = dir.read_attempt_log(&session_id).unwrap().unwrap();
+    assert_eq!(log.ended_at, None);
+    assert_eq!(log.events.len(), 1);
+
+    // 試行ログが無いレッスンでも、新しいセッションに追記する。
+    let other = dir
+        .append_run(
+            "ch05-01",
+            SessionKind::ChapterReview,
+            run_record(RunStatus::Success),
+        )
+        .unwrap();
+    let log = dir.read_attempt_log(&other).unwrap().unwrap();
+    assert_eq!(log.kind, SessionKind::ChapterReview);
+    assert_eq!(log.events.len(), 1);
 }
 
 #[test]

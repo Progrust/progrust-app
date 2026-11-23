@@ -326,28 +326,33 @@ impl AppDataDir {
     }
 
     /// 実行・テスト実行が終わったときに呼ぶ。レッスン `lesson_id` の未完了のセッションに `run` イベントを追記し、
-    /// そのセッションの ID を返す。未完了のセッションが無いとき（正解の後に演習画面を離れて、セッションの終了が
-    /// 先に済んだときなど）は、追記せずに `None` を返す。新しいセッションは始めない。
+    /// そのセッションの ID を返す。未完了のセッションが無いとき（試行ログが壊れて退避された後など）は、
+    /// `kind` の新しいセッションを始めて追記する。
     ///
     /// `crates_unavailable` の実行と、アプリの終了で止めた実行は、呼ばない（spec/exercise-runner/attempt-log.md）。
+    /// 画面の操作でセッションを終えるときは、動いている実行を止めて、この追記を終えてから終える
+    /// （spec/architecture/commands/progress.md「end_session」）。
     pub fn append_run(
         &self,
         lesson_id: &str,
+        kind: SessionKind,
         record: RunRecord,
-    ) -> Result<Option<String>, StorageError> {
-        self.append_event(lesson_id, record.into_event())
+    ) -> Result<String, StorageError> {
+        self.append_event(lesson_id, kind, record.into_event())
     }
 
     /// 提出の判定が終わったときに呼ぶ。レッスン `lesson_id` の未完了のセッションに `submit` イベントを追記し、
-    /// そのセッションの ID を返す。未完了のセッションが無いときは、追記せずに `None` を返す（[`AppDataDir::append_run`] と同じ）。
+    /// そのセッションの ID を返す。未完了のセッションが無いときは、`kind` の新しいセッションを始めて追記する
+    /// （[`AppDataDir::append_run`] と同じ）。
     ///
     /// `crates_unavailable` の提出と、途中で止めた提出は、呼ばない（spec/exercise-runner/attempt-log.md）。
     pub fn append_submit(
         &self,
         lesson_id: &str,
+        kind: SessionKind,
         record: SubmitRecord,
-    ) -> Result<Option<String>, StorageError> {
-        self.append_event(lesson_id, record.into_event())
+    ) -> Result<String, StorageError> {
+        self.append_event(lesson_id, kind, record.into_event())
     }
 
     /// 提出で正解したときに呼ぶ。セッション `session_id` の `passed_at` を `at` にし、更新した後の試行ログを返す。
@@ -378,14 +383,17 @@ impl AppDataDir {
         })
     }
 
-    fn append_event(&self, lesson_id: &str, event: Event) -> Result<Option<String>, StorageError> {
+    fn append_event(
+        &self,
+        lesson_id: &str,
+        kind: SessionKind,
+        event: Event,
+    ) -> Result<String, StorageError> {
         let _guard = lock_sessions();
-        let Some(mut log) = self.find_unfinished_session(lesson_id)? else {
-            return Ok(None);
-        };
+        let mut log = self.start_or_continue_session_at(lesson_id, kind, Local::now())?;
         log.events.push(event);
         self.write_json(attempt_file(&log.session_id), &log)?;
-        Ok(Some(log.session_id))
+        Ok(log.session_id)
     }
 
     fn update_attempt_log(

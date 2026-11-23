@@ -42,6 +42,7 @@ description: "進捗のコマンド `get_progress`（進捗と推奨レッスン
 - 引数: `lesson_id`（`string`）。
 - 戻り値: `null`。
 - そのレッスンの試行セッションに `passed_at` があり `ended_at` が無いときに、セッションを終了する（`ended_at` の記録、記録ジョブの登録、下書きの削除（[演習コードの下書き](../../lesson-flow/drafts.md)））。それ以外のときは何もしない。
+- そのレッスンの実行・テスト実行が動いているときは、それを止め（[コードの実行（run）](../../exercise-runner/run.md)「停止」）、`stopped` の `run` イベントを試行ログに追記し終えてから、セッションを終了する（[実行・提出の試行ログへの記録](../../exercise-runner/attempt-log.md)）。フロントエンドが `stop_run` と `end_session` をどの順で呼んでも、止めた実行は、終了する前のセッションに記録される。
 - アプリの終了と、起動時の救済による終了は、バックエンドが自分で行う。
 
 ## save_draft
