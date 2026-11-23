@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod content;
+pub mod settings;
 pub mod storage;
 
 use tauri::{Builder, Context, Manager, Runtime};
@@ -13,6 +14,8 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         commands::content::list_chapters,
         commands::content::get_lesson,
         commands::settings::get_app_version,
+        commands::settings::get_settings,
+        commands::settings::update_settings,
     ])
 }
 
