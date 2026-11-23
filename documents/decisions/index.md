@@ -120,6 +120,7 @@
 * [ADR 0215](0215-pick-run-executable-from-build-json.md) - 実行で起動する実行ファイルを、ビルドの JSON の出力のうち、`src/main.rs` を根に持つテスト用でない bin の成果物から決める
 * [ADR 0216](0216-stdout-fail-detail-as-object.md) - 判定結果の `cases[].detail` を、`stdout` 方式の `fail` では入力・期待する出力・実際の出力を分けたオブジェクトにし、`pass` では `null`、ほかでは文字列にする
 * [ADR 0217](0217-no-hidden-tests-is-app-failure.md) - `test` 方式で、隠しテストの名前を得る起動（`--list`）が失敗したときと、隠しテストが 1 件も得られなかったときは、判定せずにアプリの側の失敗として終える
+* [ADR 0218](0218-read-should-panic-test-results.md) - `test` 方式で、名前の後に ` - should panic` などのテストの種類の表示が付いた行も結果の行とし、`#[should_panic]` のテストの失敗では、libtest の説明を `fail` の `detail` に入れる
 
 # レッスン進行・進捗管理
 

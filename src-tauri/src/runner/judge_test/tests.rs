@@ -176,6 +176,79 @@ fn result_lines_may_have_learner_output_before_them() {
 }
 
 #[test]
+fn result_lines_may_have_the_kind_of_test_after_the_name() {
+    // #[should_panic] のテストの結果の行（ADR 0218）。
+    let ok = "running 1 test\ntest progrust_judge::panics - should panic ... ok\n";
+    assert!(has_result_line(ok, "progrust_judge::panics", "ok"));
+    assert!(!has_result_line(ok, "progrust_judge::panics", "FAILED"));
+    assert!(has_result_line(
+        "junktest progrust_judge::panics - should panic ... FAILED\n",
+        "progrust_judge::panics",
+        "FAILED"
+    ));
+    // 種類の表示の前の名前が違う行と、種類の表示でないものが付いた行は、結果の行にしない。
+    assert!(!has_result_line(
+        "test progrust_judge::panics2 - should panic ... ok\n",
+        "progrust_judge::panics",
+        "ok"
+    ));
+    assert!(!has_result_line(
+        "test progrust_judge::panics - ... ok\n",
+        "progrust_judge::panics",
+        "ok"
+    ));
+    assert!(!has_result_line(
+        "test progrust_judge::panics - Should Panic! ... ok\n",
+        "progrust_judge::panics",
+        "ok"
+    ));
+}
+
+#[test]
+fn should_panic_failures_have_the_libtest_explanation() {
+    // panic の内容が expected と違った（rustc stable の libtest の出力の形）。
+    let wrong_message = "\nrunning 1 test\n\
+test progrust_judge::panics - should panic ... FAILED\n\
+\n\
+failures:\n\
+\n\
+---- progrust_judge::panics stdout ----\n\
+\n\
+thread 'progrust_judge::panics' (1410024) panicked at src/main.rs:3:9:\n\
+負の数です: -1\n\
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace\n\
+note: panic did not contain expected string\n      \
+panic message: \"負の数です: -1\",\n \
+expected substring: \"期待する文\"\n\
+\n\
+failures:\n    progrust_judge::panics\n\
+\n\
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s\n";
+    assert_eq!(
+        panic_message(wrong_message, "progrust_judge::panics"),
+        "負の数です: -1\n\
+         note: panic did not contain expected string\n      \
+         panic message: \"負の数です: -1\",\n \
+         expected substring: \"期待する文\""
+    );
+
+    // panic しなかった。学習者の出力の後に改行なしで出ても、説明から取り出す。
+    let did_not_panic = "\nrunning 1 test\n\
+test progrust_judge::panics - should panic ... FAILED\n\
+\n\
+failures:\n\
+\n\
+---- progrust_judge::panics stdout ----\n\
+途中まで書いたnote: test did not panic as expected at src/../progrust_judge_tests.rs:21:8\n\
+\n\
+failures:\n    progrust_judge::panics\n";
+    assert_eq!(
+        panic_message(did_not_panic, "progrust_judge::panics"),
+        "note: test did not panic as expected at src/../progrust_judge_tests.rs:21:8"
+    );
+}
+
+#[test]
 fn the_panic_message_is_the_last_panic_after_failures_without_the_note() {
     assert_eq!(
         panic_message(FAILED_OUTPUT, "progrust_judge::sums"),
@@ -524,6 +597,78 @@ fn each_hidden_test_runs_in_its_own_process_and_learner_tests_do_not_count() {
     assert_eq!(editor, before);
     let copy = fs::read_to_string(built.workspace.project().join("src/main.rs")).unwrap();
     assert_eq!(copy, format!("{LEARNER_MAIN}{HIDDEN_TESTS_DECLARATION}"));
+}
+
+#[test]
+fn should_panic_hidden_tests_pass_when_the_answer_panics_and_fail_otherwise() {
+    // ch09-01 の演習の形（spec/curriculum/exercise-constraints.md、ADR 0218）。学習者のコードは、負の数で panic するが、
+    // 0 では panic しない。
+    let built = build_with_hidden_tests(
+        &files(&[(
+            "src/main.rs",
+            "fn check(n: i32) {\n    if n < 0 {\n        panic!(\"負の数です: {n}\");\n    }\n}\n\nfn main() {\n    check(1);\n}\n",
+        )]),
+        "src/main.rs",
+        r#"use super::*;
+
+#[test]
+#[should_panic]
+fn a_panics_on_negative() {
+    check(-1);
+}
+
+#[test]
+#[should_panic(expected = "負の数")]
+fn b_panics_with_message() {
+    check(-1);
+}
+
+#[test]
+#[should_panic]
+fn c_panics_on_zero() {
+    println!("学習者の出力");
+    check(0);
+}
+
+#[test]
+#[should_panic(expected = "0 以上の数を渡してください")]
+fn d_panics_with_other_message() {
+    check(-1);
+}
+"#,
+    );
+    let spec = built.spec("src/main.rs", &[], limits(10, 2));
+    let result = judge_hidden_tests(&spec, |_| {}).unwrap();
+    assert_eq!(
+        statuses(&result),
+        [
+            ("a_panics_on_negative", CaseStatus::Pass),
+            ("b_panics_with_message", CaseStatus::Pass),
+            ("c_panics_on_zero", CaseStatus::Fail),
+            ("d_panics_with_other_message", CaseStatus::Fail),
+        ]
+    );
+    assert_eq!((result.passed, result.total), (2, 4));
+
+    // panic しなかったときは、libtest の説明が detail に入る。
+    let CaseDetail::PanicMessage(did_not_panic) = detail_of(&result, "c_panics_on_zero") else {
+        panic!("fail の detail が panic メッセージでない");
+    };
+    assert!(
+        did_not_panic.starts_with("note: test did not panic as expected"),
+        "{did_not_panic}"
+    );
+    // panic の内容が expected と違ったときは、panic メッセージと、期待した内容が detail に入る。
+    let CaseDetail::PanicMessage(other_message) = detail_of(&result, "d_panics_with_other_message")
+    else {
+        panic!("fail の detail が panic メッセージでない");
+    };
+    assert!(other_message.contains("負の数です: -1"), "{other_message}");
+    assert!(
+        other_message.contains("0 以上の数を渡してください"),
+        "{other_message}"
+    );
+    assert!(!other_message.contains("RUST_BACKTRACE"), "{other_message}");
 }
 
 #[test]

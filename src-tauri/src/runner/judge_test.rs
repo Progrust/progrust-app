@@ -346,33 +346,64 @@ fn case_result(test: &HiddenTest, collected: &CollectedOutput) -> Option<CaseRes
     })
 }
 
-/// `stdout` に、`name` の結果の行があるか。結果の行は、行末が ` ... {result}` で、その直前に `test {name}` がある行
-/// とする。行頭に学習者の出力が付いていてもよい。
+/// `stdout` に、`name` の結果の行があるか（spec/exercise-runner/submit.md「test 方式」の 6、ADR 0218）。結果の行は、
+/// 行末が ` ... {result}` で、その直前に `test {name}` か、`test {name} - {テストの種類}`（`#[should_panic]` のテストの
+/// `test {name} - should panic` など）がある行とする。行頭に学習者の出力が付いていてもよい。
 fn has_result_line(stdout: &str, name: &str, result: &str) -> bool {
-    let suffix = format!("test {name} ... {result}");
-    stdout.lines().any(|line| line.ends_with(&suffix))
+    let test = format!("test {name}");
+    let suffix = format!(" ... {result}");
+    stdout
+        .lines()
+        .filter_map(|line| line.strip_suffix(&suffix))
+        .any(|head| {
+            head.ends_with(&test)
+                || head
+                    .rsplit_once(" - ")
+                    .is_some_and(|(before, mode)| before.ends_with(&test) && is_test_mode(mode))
+        })
 }
 
-/// `fail` の panic メッセージを取り出す（spec/exercise-runner/submit.md「test 方式」の 7）。`failures:` の行より後で
-/// 最後の `thread '{name}' ... panicked at` の行の、次の行から、`note: run with` で始まる行か、次の節の見出しの
-/// 前までとする。末尾の空行は除く。見つからないときは空の文字列にする。
+/// libtest が名前の後に付けるテストの種類の表示（`should panic` など）か。小文字の英語と空白・`_` だけでできている。
+fn is_test_mode(mode: &str) -> bool {
+    !mode.is_empty()
+        && mode
+            .chars()
+            .all(|c| c.is_ascii_lowercase() || c == ' ' || c == '_')
+}
+
+/// `#[should_panic]` のテストが panic しなかったときに、libtest が出す説明の始まり。
+const DID_NOT_PANIC: &str = "note: test did not panic as expected";
+
+/// `fail` の panic メッセージを取り出す（spec/exercise-runner/submit.md「test 方式」の 7、ADR 0218）。
+///
+/// - `failures:` の行より後で最後の `thread '{name}' ... panicked at` の行の、次の行から、次の節の見出しの前までとし、
+///   `note: run with` で始まる行を除く。末尾の空行も除く。`#[should_panic(expected = ...)]` のテストで、panic の内容が
+///   `expected` と違ったときの libtest の説明も、これに含まれる。
+/// - `panicked at` の行が無いときは、`failures:` の行より後の、[`DID_NOT_PANIC`] から行末までとする
+///   （`#[should_panic]` のテストが panic しなかったとき）。
+/// - どちらも見つからないときは、空の文字列にする。
 fn panic_message(stdout: &str, name: &str) -> String {
     let lines: Vec<&str> = stdout.lines().collect();
     let Some(failures) = lines.iter().position(|line| *line == "failures:") else {
         return String::new();
     };
+    let after = &lines[failures + 1..];
     let thread = format!("thread '{name}'");
-    let Some(panicked) = lines[failures + 1..]
+    let Some(panicked) = after
         .iter()
         .rposition(|line| line.contains(&thread) && line.contains("panicked at"))
-        .map(|offset| failures + 1 + offset)
     else {
-        return String::new();
+        return after
+            .iter()
+            .find_map(|line| line.find(DID_NOT_PANIC).map(|start| &line[start..]))
+            .unwrap_or_default()
+            .to_string();
     };
-    let mut message: Vec<&str> = lines[panicked + 1..]
+    let mut message: Vec<&str> = after[panicked + 1..]
         .iter()
         .copied()
-        .take_while(|line| !line.starts_with("note: run with") && !is_section_heading(line))
+        .take_while(|line| !is_section_heading(line))
+        .filter(|line| !line.starts_with("note: run with"))
         .collect();
     while message.last().is_some_and(|line| line.trim().is_empty()) {
         message.pop();
