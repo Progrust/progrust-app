@@ -3,11 +3,22 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
+export interface ListedLesson {
+  id: string;
+  title: string;
+  // 「主に扱う内容」の末尾に「（動画のみのレッスン）」がある。
+  videoOnly: boolean;
+  // 「主要素」の列の要素 ID（書いた順）。
+  primaryElements: string[];
+}
+
 export interface ListedChapter {
   id: string;
   title: string;
   description: string;
   lessons: string[];
+  // 表の行ごとの内容（lessons と同じ順）。
+  rows: ListedLesson[];
   // 章ごとのファイル名。
   file: string;
 }
@@ -42,16 +53,29 @@ export function readChapterFile(dir: string, file: string): ListedChapter {
   if (description === undefined) {
     throw new Error(`${file}: 本文に章の説明がない`);
   }
-  const lessons: string[] = [];
+  const rows: ListedLesson[] = [];
   for (const line of lines) {
-    const cell = /^\|\s*(ch\d+-[A-Za-z0-9]+)\s*\|/.exec(line);
-    if (cell) lessons.push(cell[1]);
+    if (!/^\|\s*ch\d+-[A-Za-z0-9]+\s*\|/.test(line)) continue;
+    const cells = line.split(/(?<!\\)\|/).map((c) => c.trim());
+    // 先頭と末尾の「|」の外側は空になる。
+    const primary = cells[4] ?? "";
+    rows.push({
+      id: cells[1],
+      title: cells[2] ?? "",
+      videoOnly: (cells[3] ?? "").endsWith("（動画のみのレッスン）"),
+      primaryElements: primary
+        .split("、")
+        .map((e) => e.replace(/`/g, "").trim())
+        .filter((e) => e !== ""),
+    });
   }
+  const lessons = rows.map((r) => r.id);
   return {
     id: title.slice(0, space),
     title: title.slice(space + 1).trim(),
     description,
     lessons,
+    rows,
     file,
   };
 }
