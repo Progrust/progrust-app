@@ -78,6 +78,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 | CSS | stylelint | Prettier |
 | Rust（`src-tauri/`） | Clippy（警告をエラーとして扱う） | rustfmt |
 
+- TypeScript の型検査は、アプリのコードと、教材の動画のコード（`content/lessons/{lesson_id}/video/` の `.ts`・`.tsx`）を、同じ設定（`tsconfig.json`）で検査する。
 - 動画のコードの禁止事項の検査は、教材チェックツールの lint で行う（[動画のコードの禁止事項](../content-format/video/prohibited-code.md)）。アプリの lint と同じ ESLint・stylelint の版を使う。
 - Clippy と rustfmt は、Rust ツールチェーンに付いているものを使う。
 - デザインシステムのファイル（`design-system/`。[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)）は、lint と整形の対象から外す。

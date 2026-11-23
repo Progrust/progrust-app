@@ -4,7 +4,7 @@ title: "教材チェックツール"
 description: "`tools/` の教材チェックツールで検証するチェック項目（エラーとして扱うもの）と、準備中のレッスンの扱い、警告として扱う項目（動画の長さ、文の長さ、読み）を定める。"
 ---
 
-`tools/` に教材チェックツールを用意し、教材を追加・変更したら実行する。CI でも実行する。実行するコマンドは `npm run content:check`（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」）とする。
+`tools/` に教材チェックツールを用意し、教材を追加・変更したら実行する。CI でも実行する。実行するコマンドは `npm run content:check`（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」）とする。動画のコードの型は、このツールでは検査せず、`npm run lint` の型検査で検査する（[開発環境と依存の版](../architecture/development-environment.md)「lint と整形」）。
 
 | チェック項目 | 内容 |
 |---|---|

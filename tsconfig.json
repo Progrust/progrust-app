@@ -16,6 +16,8 @@
   },
   "include": [
     "src",
+    "content/lessons/*/video/**/*.ts",
+    "content/lessons/*/video/**/*.tsx",
     "tools/content-check/render-entry.tsx",
     "tools/content-check/render-lesson.d.ts"
   ]
