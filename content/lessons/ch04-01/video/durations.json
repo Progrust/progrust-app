@@ -1,0 +1,242 @@
+{
+  "t1": {
+    "seconds": 4.072583,
+    "say": "このレッスンでは、プログラムがメモリをどう使うのかを学びます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "k1": {
+    "seconds": 5.114667,
+    "say": "メインが始まると、スタックという領域に、メインのスタックフレームが積まれます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "k2": {
+    "seconds": 5.99825,
+    "say": "六行目でアドを呼ぶと、その上にアドのフレームが積まれ、引数のエーとビーが置かれます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "k3": {
+    "seconds": 5.493958,
+    "say": "アドから戻ると、アドのフレームはまるごと消え、もどりちのさんが、ワイに入ります。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "k4": {
+    "seconds": 5.515625,
+    "say": "スタックの確保と解放は、フレームを積んで外すだけなので、とても速く済みます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "h1": {
+    "seconds": 5.2855,
+    "say": "いっぽう、実行するまで大きさが決まらないデータは、ヒープという領域に置きます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "h2": {
+    "seconds": 4.772229,
+    "say": "スタックには、データがヒープのどこにあるかを指すあたい、ポインタを置きます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "h3": {
+    "seconds": 5.117917,
+    "say": "使い終わったヒープの領域は、解放して、次のデータに使えるようにします。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "h4": {
+    "seconds": 5.854896,
+    "say": "ラストには、パイソンやジャバスクリプトのように、自動で解放するガベージコレクションがありません。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "h5": {
+    "seconds": 6.618604,
+    "say": "シーのように手で解放する言語では、同じ領域を二回解放する、二重解放が起こりえます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "h6": {
+    "seconds": 8.878167,
+    "say": "解放したあとの領域を使ってしまう、解放後の使用も起こりえます。どちらも、プログラムを壊す深刻な不具合です。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z1": {
+    "seconds": 4.12725,
+    "say": "関数のスタックフレームは、呼ぶと積まれ、戻ると消えます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z2": {
+    "seconds": 5.026292,
+    "say": "大きさが決まらないデータはヒープに置き、使い終わったら解放が必要です。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z3": {
+    "seconds": 2.730854,
+    "say": "ラストには、ガベージコレクションがありません。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z4": {
+    "seconds": 5.040854,
+    "say": "手で解放する方式では、二重解放や、解放後の使用が起こりえます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  }
+}

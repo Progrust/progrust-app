@@ -1068,11 +1068,12 @@ describe("npm run content:check のコマンド", () => {
     );
   });
 
+  // 準備中でないレッスンがあると、描画の検査で動画を描画するので、時間がかかる。
   it("いまのリポジトリの教材は、エラー 0 件で終わる", () => {
     const result = run([]);
     expect(result.status, result.stdout + result.stderr).toBe(0);
     expect(result.stdout).toContain("エラー 0 件");
-  });
+  }, 600_000);
 });
 
 // ch01-01 の動画のファイルを書き換えて検査し、指定した項目の結果だけを返す。

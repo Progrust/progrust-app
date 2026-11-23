@@ -1,0 +1,19 @@
+{
+  "id": "ch04-01",
+  "chapter": "ch04",
+  "kind": "video_only",
+  "title": "メモリの仕組み",
+  "summary": "スタックとヒープの違いと、メモリを手で解放する言語で起きる問題を学ぶ",
+  "tags": [
+    "メモリ",
+    "スタック",
+    "ヒープ",
+    "スタックフレーム",
+    "ガベージコレクション",
+    "二重解放",
+    "解放後の使用"
+  ],
+  "primary_elements": [],
+  "secondary_elements": [],
+  "estimated_minutes": 5
+}

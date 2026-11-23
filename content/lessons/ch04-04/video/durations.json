@@ -1,0 +1,210 @@
+{
+  "t1": {
+    "seconds": 4.713417,
+    "say": "このレッスンでは、代入で所有権が移る、ムーブの仕組みを学びます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m1": {
+    "seconds": 3.627708,
+    "say": "二行目で、変数エスワンにストリングのあたいを入れます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m2": {
+    "seconds": 5.695021,
+    "say": "ラストの変数は、あたいそのものを持ち、エスワンは、このあたいの所有者になります。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m3": {
+    "seconds": 6.199667,
+    "say": "パイソンやジャバスクリプトの代入は、同じオブジェクトを共有するだけですが、ラストは違います。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m4": {
+    "seconds": 7.277417,
+    "say": "三行目でエスワンをエスツーに代入すると、所有権がエスツーに移ります。これをムーブと呼びます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m5": {
+    "seconds": 6.9195,
+    "say": "コピーされるのは、スタック上のポインタ、長さ、容量だけで、ヒープ上の文字列は複製されません。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m6": {
+    "seconds": 5.717729,
+    "say": "ムーブしたあとのエスワンは、もう使えません。使えるのは、エスツーだけです。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e1": {
+    "seconds": 4.665813,
+    "say": "四行目のように、ムーブしたあとのエスワンを使うと、コンパイルできません。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e2": {
+    "seconds": 5.324229,
+    "say": "コンパイラは、四行目のエスワンを、ムーブ済みのあたいを使ったエラーとして示します。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e3": {
+    "seconds": 5.410042,
+    "say": "その上の行では、三行目の代入で、あたいがムーブされたことも示しています。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z1": {
+    "seconds": 6.531938,
+    "say": "代入すると、ストリングの所有権は、新しい変数に移ります。これがムーブです。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z2": {
+    "seconds": 3.491604,
+    "say": "ムーブでコピーされるのは、スタック上の部分だけです。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z3": {
+    "seconds": 4.857938,
+    "say": "ムーブした元の変数を使うと、ムーブ済みのあたいを使ったエラーになります。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  }
+}

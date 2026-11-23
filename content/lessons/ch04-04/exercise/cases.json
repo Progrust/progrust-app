@@ -1,0 +1,22 @@
+[
+  {
+    "name": "例と同じ入力",
+    "stdin": "Alice\n",
+    "expected_stdout": "Alice\nAliceさん、こんにちは\n"
+  },
+  {
+    "name": "日本語の名前",
+    "stdin": "太郎\n",
+    "expected_stdout": "太郎\n太郎さん、こんにちは\n"
+  },
+  {
+    "name": "1 文字の名前",
+    "stdin": "a\n",
+    "expected_stdout": "a\naさん、こんにちは\n"
+  },
+  {
+    "name": "20 文字の名前",
+    "stdin": "abcdefghijklmnopqrst\n",
+    "expected_stdout": "abcdefghijklmnopqrst\nabcdefghijklmnopqrstさん、こんにちは\n"
+  }
+]

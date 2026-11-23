@@ -1,0 +1,18 @@
+{
+  "id": "ch04-04",
+  "chapter": "ch04",
+  "kind": "lesson",
+  "title": "所有権のムーブ",
+  "summary": "代入で所有権が移動する仕組みと、ムーブ済みの値を使ったエラーを学ぶ",
+  "tags": ["ムーブ", "move", "代入", "所有権", "所有者", "E0382"],
+  "primary_elements": ["ownership.move"],
+  "secondary_elements": ["string.basic", "var.mutability"],
+  "estimated_minutes": 15,
+  "exercise": {
+    "layout": "single",
+    "judge": { "mode": "stdout", "target": "src/main.rs" },
+    "dependencies": [],
+    "readonly_files": [],
+    "case_labels": {}
+  }
+}

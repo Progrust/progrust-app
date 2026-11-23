@@ -294,7 +294,8 @@ body { background: var(--bg); color: var(--ink); font-family: var(--font-sans); 
 .video-stage .fill-on, .video-stage text.fill-on { fill: var(--video-on-primary); }
 .video-stage .stroke-on { stroke: var(--video-on-primary); }
 .video-stage .fill-surface { fill: var(--video-bg); }
-.video-stage text.code, .video-stage tspan.code { font-family: var(--font-mono); font-weight: 600; }
+/* 大きさも書く（video-fig-code）。アプリ側の tokens.css のクラス .code（14px）が、動画の図の text.code にも当たるため */
+.video-stage text.code, .video-stage tspan.code { font-family: var(--font-mono); font-size: 20px; font-weight: 600; }
 
 /* ===== 11. 動きの状態（動画） =====
    絵は現在のフレームだけから決める（content-format.md §5.5）。CSS のアニメーションとトランジションは使わない。
