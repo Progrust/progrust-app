@@ -57,13 +57,13 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
 
 学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）を、テストケース 1 件として判定する。
 
-1. 3 でビルドした `project/` で、`cargo test --offline --no-fail-fast -- --skip progrust_judge::` を新しいプロセスグループで起動する。隠しテストは `--skip` で除く。
+1. 3 でビルドした `project/` で、`cargo test --offline --no-fail-fast -- --skip progrust_judge::` を、環境変数 `CARGO_TERM_COLOR=never` を付けて、新しいプロセスグループで起動する。隠しテストは `--skip` で除く。
 2. 標準出力から、行頭が `test ` で、行末が ` ... ok` または ` ... FAILED` の行を、学習者のテストの結果の行として数える。` ... ignored` の行は数えない。
 3. 次のとおり結果を決める。
 
    | 結果 | 条件 |
    |---|---|
-   | `pass` | cargo が終了コード 0 で終わり、` ... ok` の行が `min_learner_tests` 件以上ある |
+   | `pass` | cargo が終了コード 0 で終わり、` ... FAILED` の行が無く、` ... ok` の行が `min_learner_tests` 件以上ある |
    | `fail` | ` ... FAILED` の行がある、または ` ... ok` の行が `min_learner_tests` 件より少ない |
    | `runtime_error` | 上のどちらでもなく、cargo が終了コード 0 以外で終わった |
    | `timeout` | 学習者のテスト全体の制限時間（[実行・判定の制限値](limits.md)）で止めた |

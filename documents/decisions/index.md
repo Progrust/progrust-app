@@ -121,6 +121,7 @@
 * [ADR 0216](0216-stdout-fail-detail-as-object.md) - 判定結果の `cases[].detail` を、`stdout` 方式の `fail` では入力・期待する出力・実際の出力を分けたオブジェクトにし、`pass` では `null`、ほかでは文字列にする
 * [ADR 0217](0217-no-hidden-tests-is-app-failure.md) - `test` 方式で、隠しテストの名前を得る起動（`--list`）が失敗したときと、隠しテストが 1 件も得られなかったときは、判定せずにアプリの側の失敗として終える
 * [ADR 0218](0218-read-should-panic-test-results.md) - `test` 方式で、名前の後に ` - should panic` などのテストの種類の表示が付いた行も結果の行とし、`#[should_panic]` のテストの失敗では、libtest の説明を `fail` の `detail` に入れる
+* [ADR 0219](0219-learner-tests-fail-on-any-failed-line.md) - `test` 方式の学習者のテストの判定で、` ... FAILED` の行が 1 つでもあれば cargo の終了コードが 0 でも `pass` にせず、cargo を `CARGO_TERM_COLOR=never` を付けて起動する
 
 # レッスン進行・進捗管理
 

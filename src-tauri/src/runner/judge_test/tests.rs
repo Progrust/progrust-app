@@ -1,4 +1,4 @@
-//! `test` 方式の隠しテストの判定の部品のテスト。出力の読み方と結果の決め方は作った値で、判定の全体は実物の `cargo`
+//! `test` 方式の判定の部品のテスト。出力の読み方と結果の決め方は作った値で、判定の全体は実物の `cargo`
 //! （このテストを動かしている cargo）でビルドしたテスト実行ファイルで確かめる。
 
 use super::*;
@@ -30,8 +30,10 @@ fn collected(termination: Termination, stdout: &str, stderr: &str) -> CollectedO
 #[test]
 fn limits_and_the_declaration_follow_the_spec() {
     assert_eq!(TESTS_TIME_LIMIT, Duration::from_secs(10));
+    assert_eq!(LEARNER_TESTS_TIME_LIMIT, Duration::from_secs(10));
     let limits = TestLimits::default();
     assert_eq!(limits.time, Duration::from_secs(10));
+    assert_eq!(limits.learner_time, Duration::from_secs(10));
     assert_eq!(
         limits.parallelism,
         thread::available_parallelism().unwrap_or(NonZeroUsize::MIN)
@@ -414,19 +416,14 @@ fn build_with_hidden_tests(
 }
 
 impl Built {
-    fn spec(
-        &self,
-        target: &str,
-        labels: &[(&str, &str)],
-        limits: TestLimits,
-    ) -> HiddenTestJudgeSpec {
+    fn spec(&self, target: &str, labels: &[(&str, &str)], limits: TestLimits) -> TestJudgeSpec {
         assert_eq!(
             self.outcome.status,
             BuildStatus::Succeeded,
             "{:?}",
             self.outcome.output
         );
-        HiddenTestJudgeSpec {
+        TestJudgeSpec {
             executable: hidden_test_executable(&self.outcome, target).unwrap(),
             project_dir: self.workspace.project(),
             envs: build_env(&self.workspace, &[])
@@ -437,6 +434,7 @@ impl Built {
                 .iter()
                 .map(|(name, label)| (name.to_string(), label.to_string()))
                 .collect(),
+            learner_tests: None,
             limits,
         }
     }
@@ -470,6 +468,7 @@ fn limits(seconds: u64, parallelism: usize) -> TestLimits {
     TestLimits {
         time: Duration::from_secs(seconds),
         parallelism: NonZeroUsize::new(parallelism).unwrap(),
+        learner_time: LEARNER_TESTS_TIME_LIMIT,
     }
 }
 
@@ -546,7 +545,7 @@ fn each_hidden_test_runs_in_its_own_process_and_learner_tests_do_not_count() {
 
     let mut progress = Vec::new();
     let started = Instant::now();
-    let result = judge_hidden_tests(&spec, |step| progress.push(step)).unwrap();
+    let result = judge_tests(&spec, |step| progress.push(step)).unwrap();
     let elapsed = started.elapsed();
 
     // exit(0) とスタックオーバーフローのテストだけが runtime_error になり、ほかのテストの結果は正しく出る。
@@ -638,7 +637,7 @@ fn d_panics_with_other_message() {
 "#,
     );
     let spec = built.spec("src/main.rs", &[], limits(10, 2));
-    let result = judge_hidden_tests(&spec, |_| {}).unwrap();
+    let result = judge_tests(&spec, |_| {}).unwrap();
     assert_eq!(
         statuses(&result),
         [
@@ -683,7 +682,7 @@ fn tests_not_started_before_the_time_limit_are_timeouts() {
     );
     let spec = built.spec("src/main.rs", &[], limits(2, 1));
     let mut progress = Vec::new();
-    let result = judge_hidden_tests(&spec, |step| progress.push(step)).unwrap();
+    let result = judge_tests(&spec, |step| progress.push(step)).unwrap();
     assert_eq!(
         statuses(&result),
         [
@@ -736,7 +735,7 @@ fn with_main_and_lib_the_hidden_tests_run_from_the_lib_test_executable() {
         &[("answer_is_two", "答えは 2")],
         limits(10, 2),
     );
-    let result = judge_hidden_tests(&spec, |_| {}).unwrap();
+    let result = judge_tests(&spec, |_| {}).unwrap();
     assert_eq!(statuses(&result), [("答えは 2", CaseStatus::Pass)]);
     assert_eq!(result.status, JudgeStatus::Passed);
     assert_eq!((result.passed, result.total), (1, 1));
@@ -828,12 +827,442 @@ fn a_missing_test_executable_or_no_hidden_tests_is_an_error() {
 
     let spec = built.spec("src/main.rs", &[], limits(10, 2));
     let mut progress = Vec::new();
-    assert!(judge_hidden_tests(&spec, |step| progress.push(step)).is_err());
+    assert!(judge_tests(&spec, |step| progress.push(step)).is_err());
     assert!(progress.is_empty());
 
-    let missing = HiddenTestJudgeSpec {
+    let missing = TestJudgeSpec {
         executable: built.workspace.project().join("無い"),
         ..spec
     };
-    assert!(judge_hidden_tests(&missing, |_| {}).is_err());
+    assert!(judge_tests(&missing, |_| {}).is_err());
+}
+
+// ---- 学習者のテストの判定 ----
+
+fn min_tests(value: u32) -> NonZeroU32 {
+    NonZeroU32::new(value).unwrap()
+}
+
+#[test]
+fn the_learner_tests_case_and_command_follow_the_spec() {
+    assert_eq!(
+        learner_tests_label(min_tests(3)),
+        "自分で書いたテスト（3 件以上）"
+    );
+    assert_eq!(
+        learner_tests_args(),
+        [
+            "test",
+            "--offline",
+            "--no-fail-fast",
+            "--",
+            "--skip",
+            "progrust_judge::"
+        ]
+        .map(OsString::from)
+    );
+}
+
+/// 単体テスト・統合テスト・ドキュメントテストの実行ファイルを続けて動かした cargo の標準出力の形。
+const LEARNER_OUTPUT: &str = "\nrunning 4 tests\n\
+test tests::doubles_two ... ok\n\
+test tests::ignored ... ignored\n\
+test tests::panics - should panic ... ok\n\
+test tests::wrong ... FAILED\n\
+\n\
+failures:\n\
+\n\
+---- tests::wrong stdout ----\n\
+test tests::fake ... ok\n\
+\n\
+thread 'tests::wrong' (1) panicked at src/lib.rs:20:9:\n\
+assertion `left == right` failed\n\
+\n\
+failures:\n    tests::wrong\n\
+\n\
+test result: FAILED. 2 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\
+\n\
+\n\
+running 1 test\n\
+学習者の出力test it::from_outside ... ok\n\
+test it::doubles ... ok\n\
+\n\
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\
+\n\
+\n\
+running 2 tests\n\
+test src/lib.rs - double (line 3) ... ok\n\
+test src/lib.rs - double (line 9) ... ignored\n\
+test src/lib.rs - half (line 15) ... FAILED\n\
+\n\
+test result: FAILED. 1 passed; 1 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s\n";
+
+#[test]
+fn learner_result_lines_start_with_test_and_ignored_lines_are_not_counted() {
+    // 失敗したテストの出力に入っていた `test tests::fake ... ok` も、行頭が `test ` なので数える
+    // （spec/exercise-runner/submit.md「学習者のテストの判定」の 2）。行頭に学習者の出力が付いた行は数えない。
+    assert_eq!(
+        read_learner_test_lines(LEARNER_OUTPUT),
+        LearnerTestLines {
+            passed: 5,
+            failed: vec!["tests::wrong".into(), "src/lib.rs - half (line 15)".into()],
+        }
+    );
+    assert_eq!(
+        read_learner_test_lines("test a ... ignored\ntest b ... ignored\n"),
+        LearnerTestLines::default()
+    );
+    assert_eq!(
+        read_learner_test_lines("test result: ok. 3 passed; 0 failed\ntest a ... ok junk\n"),
+        LearnerTestLines::default()
+    );
+}
+
+#[test]
+fn learner_case_results_follow_the_table_in_the_spec() {
+    let ok_lines = "test a ... ok\ntest b ... ok\ntest c ... ignored\n";
+    let result = |min: u32, termination: Termination, stdout: &str| {
+        learner_case_result(
+            min_tests(min),
+            &collected(termination, stdout, "cargo の標準エラー出力\n"),
+        )
+    };
+
+    // cargo が終了コード 0 で終わり、ok の行が必要な件数以上ある。
+    assert_eq!(
+        result(2, Termination::Exited(0), ok_lines),
+        Some(CaseResult {
+            name: "自分で書いたテスト（2 件以上）".into(),
+            status: CaseStatus::Pass,
+            detail: None,
+        })
+    );
+
+    // ok の行が足りない。ignored の行は数えない。
+    let too_few = result(3, Termination::Exited(0), ok_lines).unwrap();
+    assert_eq!(too_few.status, CaseStatus::Fail);
+    assert_eq!(
+        too_few.detail,
+        Some(CaseDetail::LearnerTests(
+            "通ったテスト: 2 件（3 件以上必要）".into()
+        ))
+    );
+
+    // FAILED の行がある。
+    let failed = result(1, Termination::Exited(101), LEARNER_OUTPUT).unwrap();
+    assert_eq!(failed.status, CaseStatus::Fail);
+    assert_eq!(
+        failed.detail,
+        Some(CaseDetail::LearnerTests(
+            "通ったテスト: 5 件（1 件以上必要）\n\
+             失敗したテスト:\n  \
+             tests::wrong\n  \
+             src/lib.rs - half (line 15)"
+                .into()
+        ))
+    );
+
+    // FAILED の行があれば、cargo が終了コード 0 で終わり、ok の行が足りていても fail（同じ実行ファイルの別のテストが
+    // process::exit(0) を呼んだ。ADR 0219）。
+    let exited_after_failure = result(
+        2,
+        Termination::Exited(0),
+        "test a ... ok\ntest b ... FAILED\ntest c ... ok\n",
+    )
+    .unwrap();
+    assert_eq!(exited_after_failure.status, CaseStatus::Fail);
+    assert_eq!(
+        exited_after_failure.detail,
+        Some(CaseDetail::LearnerTests(
+            "通ったテスト: 2 件（2 件以上必要）\n失敗したテスト:\n  b".into()
+        ))
+    );
+
+    // 終了コード 0 以外で、ok の行が足りない（テストの実行ファイルが途中で落ちた）。
+    let crashed_too_few = result(3, Termination::Exited(101), ok_lines).unwrap();
+    assert_eq!(crashed_too_few.status, CaseStatus::Fail);
+
+    // FAILED の行が無く、ok の行が足りているが、cargo が終了コード 0 以外で終わった。
+    let crashed = result(2, Termination::Exited(101), ok_lines).unwrap();
+    assert_eq!(crashed.status, CaseStatus::RuntimeError);
+    assert_eq!(
+        crashed.detail,
+        Some(CaseDetail::Stderr("cargo の標準エラー出力\n".into()))
+    );
+    let signaled = result(2, Termination::Signaled(9), ok_lines).unwrap();
+    assert_eq!(signaled.status, CaseStatus::RuntimeError);
+
+    // 制限時間で止めたものは、ok の行が足りていても時間切れ。
+    let timed_out = result(1, Termination::TimedOut, ok_lines).unwrap();
+    assert_eq!(timed_out.status, CaseStatus::Timeout);
+    assert_eq!(
+        timed_out.detail,
+        Some(CaseDetail::Stderr("cargo の標準エラー出力\n".into()))
+    );
+
+    assert_eq!(result(1, Termination::Stopped, ok_lines), None);
+}
+
+#[test]
+fn the_learner_tests_detail_serializes_as_a_string() {
+    let result = JudgeResult::from_cases(vec![CaseResult {
+        name: "自分で書いたテスト（2 件以上）".into(),
+        status: CaseStatus::Fail,
+        detail: Some(CaseDetail::LearnerTests(
+            "通ったテスト: 1 件（2 件以上必要）".into(),
+        )),
+    }]);
+    assert_eq!(
+        serde_json::to_value(&result).unwrap()["cases"][0],
+        serde_json::json!({
+            "name": "自分で書いたテスト（2 件以上）",
+            "status": "fail",
+            "detail": "通ったテスト: 1 件（2 件以上必要）",
+        })
+    );
+}
+
+/// 学習者のテストの判定を付けた判定のもの。学習者のテストの制限時間は `learner_seconds` 秒にする。
+/// ドキュメントテストは判定のときにビルドするので、時間切れを確かめるとき以外は、長めにする。
+fn learner_spec(built: &Built, min: u32, learner_seconds: u64) -> TestJudgeSpec {
+    let mut spec = built.spec(
+        "src/lib.rs",
+        &[],
+        TestLimits {
+            learner_time: Duration::from_secs(learner_seconds),
+            ..limits(10, 2)
+        },
+    );
+    spec.learner_tests = Some(LearnerTestsSpec {
+        cargo: PathBuf::from(env!("CARGO")),
+        min_tests: min_tests(min),
+    });
+    spec
+}
+
+/// 学習者のテストのテストケース（`cases[]` の最後）。
+fn learner_case(result: &JudgeResult) -> &CaseResult {
+    result.cases.last().expect("テストケースが無い")
+}
+
+const MAIN_RS: &str = "fn main() {}\n";
+
+/// 学習者のテストがすべて通る `src/lib.rs`。通る単体テストが 2 件、`#[ignore]` のテストが 1 件、
+/// 通るドキュメントテストが 1 件、`ignore` のドキュメントテストが 1 件ある。
+const PASSING_LIB: &str = "/// 2 倍にする。\n\
+///\n\
+/// ```\n\
+/// assert_eq!(progrust_exercise::double(2), 4);\n\
+/// ```\n\
+///\n\
+/// ```ignore\n\
+/// 動かさない例\n\
+/// ```\n\
+pub fn double(n: i32) -> i32 {\n\
+    n * 2\n\
+}\n\
+\n\
+#[cfg(test)]\n\
+mod tests {\n\
+    use super::*;\n\
+\n\
+    #[test]\n\
+    fn doubles_two() {\n\
+        assert_eq!(double(2), 4);\n\
+    }\n\
+\n\
+    #[test]\n\
+    fn doubles_zero() {\n\
+        assert_eq!(double(0), 0);\n\
+    }\n\
+\n\
+    #[test]\n\
+    #[ignore]\n\
+    fn ignored() {\n\
+        assert_eq!(double(1), 3);\n\
+    }\n\
+}\n";
+
+/// 通る統合テストが 1 件ある `tests/it.rs`。
+const PASSING_INTEGRATION_TEST: &str = "#[test]\n\
+fn doubles_from_outside() {\n\
+    assert_eq!(progrust_exercise::double(3), 6);\n\
+}\n";
+
+/// 隠しテスト。1 件は通り、1 件は失敗する。
+const HIDDEN_TESTS_FOR_LIB: &str = "use super::*;\n\
+\n\
+#[test]\n\
+fn a_doubles() {\n\
+    assert_eq!(double(5), 10);\n\
+}\n\
+\n\
+#[test]\n\
+fn b_expects_wrongly() {\n\
+    assert_eq!(double(1), 3);\n\
+}\n";
+
+#[test]
+fn learner_tests_pass_only_when_enough_of_them_pass_and_hidden_and_ignored_tests_do_not_count() {
+    let built = build_with_hidden_tests(
+        &files(&[
+            ("src/main.rs", MAIN_RS),
+            ("src/lib.rs", PASSING_LIB),
+            ("tests/it.rs", PASSING_INTEGRATION_TEST),
+        ]),
+        "src/lib.rs",
+        HIDDEN_TESTS_FOR_LIB,
+    );
+
+    // 通る学習者のテストは、単体テスト 2 件、統合テスト 1 件、ドキュメントテスト 1 件の 4 件。隠しテスト 2 件と、
+    // ignored の 2 件は数えないので、4 件以上なら pass になり、5 件以上なら fail になる。
+    let mut progress = Vec::new();
+    let enough = judge_tests(&learner_spec(&built, 4, 60), |step| progress.push(step)).unwrap();
+    assert_eq!(
+        statuses(&enough),
+        [
+            ("a_doubles", CaseStatus::Pass),
+            ("b_expects_wrongly", CaseStatus::Fail),
+            ("自分で書いたテスト（4 件以上）", CaseStatus::Pass),
+        ]
+    );
+    assert_eq!(learner_case(&enough).detail, None);
+    assert_eq!((enough.passed, enough.total), (2, 3));
+    assert_eq!(enough.status, JudgeStatus::Wrong);
+    // 進み具合の全テストケースの数には、学習者のテストのテストケースも数える。
+    assert_eq!(
+        progress,
+        (1..=3)
+            .map(|completed| JudgeProgress {
+                completed,
+                total: 3
+            })
+            .collect::<Vec<_>>()
+    );
+
+    let too_few = judge_tests(&learner_spec(&built, 5, 60), |_| {}).unwrap();
+    assert_eq!(
+        learner_case(&too_few),
+        &CaseResult {
+            name: "自分で書いたテスト（5 件以上）".into(),
+            status: CaseStatus::Fail,
+            detail: Some(CaseDetail::LearnerTests(
+                "通ったテスト: 4 件（5 件以上必要）".into()
+            )),
+        }
+    );
+    assert_eq!((too_few.passed, too_few.total), (1, 3));
+}
+
+#[test]
+fn failed_learner_tests_of_every_kind_are_named_in_the_detail() {
+    let built = build_with_hidden_tests(
+        &files(&[
+            ("src/main.rs", MAIN_RS),
+            (
+                "src/lib.rs",
+                "/// 2 倍にする。\n\
+                 ///\n\
+                 /// ```\n\
+                 /// assert_eq!(progrust_exercise::double(2), 5);\n\
+                 /// ```\n\
+                 pub fn double(n: i32) -> i32 {\n    n * 2\n}\n\
+                 \n\
+                 #[cfg(test)]\n\
+                 mod tests {\n    use super::*;\n\n    \
+                 #[test]\n    fn doubles_two() {\n        assert_eq!(double(2), 4);\n    }\n\n    \
+                 #[test]\n    fn expects_wrongly() {\n        assert_eq!(double(2), 5);\n    }\n}\n",
+            ),
+            (
+                "tests/it.rs",
+                "#[test]\nfn passes() {\n    assert_eq!(progrust_exercise::double(3), 6);\n}\n\n\
+                 #[test]\nfn fails() {\n    assert_eq!(progrust_exercise::double(3), 7);\n}\n",
+            ),
+        ]),
+        "src/lib.rs",
+        "use super::*;\n\n#[test]\nfn doubles() {\n    assert_eq!(double(5), 10);\n}\n",
+    );
+    let result = judge_tests(&learner_spec(&built, 1, 60), |_| {}).unwrap();
+    assert_eq!(
+        statuses(&result),
+        [
+            ("doubles", CaseStatus::Pass),
+            ("自分で書いたテスト（1 件以上）", CaseStatus::Fail),
+        ]
+    );
+    assert_eq!(result.status, JudgeStatus::Wrong);
+    // 1 件失敗しても、残りの実行ファイルのテストも実行する（--no-fail-fast）。
+    assert_eq!(
+        learner_case(&result).detail,
+        Some(CaseDetail::LearnerTests(
+            "通ったテスト: 2 件（1 件以上必要）\n\
+             失敗したテスト:\n  \
+             tests::expects_wrongly\n  \
+             fails\n  \
+             src/lib.rs - double (line 3)"
+                .into()
+        ))
+    );
+}
+
+#[test]
+fn a_crashed_learner_test_executable_is_a_runtime_error() {
+    // 統合テストの実行ファイルが abort で落ち、結果の行が出ない。ほかの学習者のテストは通っている。
+    let built = build_with_hidden_tests(
+        &files(&[
+            ("src/main.rs", MAIN_RS),
+            ("src/lib.rs", PASSING_LIB),
+            (
+                "tests/it.rs",
+                "#[test]\nfn aborts() {\n    std::process::abort();\n}\n",
+            ),
+        ]),
+        "src/lib.rs",
+        HIDDEN_TESTS_FOR_LIB,
+    );
+    let result = judge_tests(&learner_spec(&built, 1, 60), |_| {}).unwrap();
+    let case = learner_case(&result);
+    assert_eq!(case.status, CaseStatus::RuntimeError, "{case:?}");
+    let Some(CaseDetail::Stderr(stderr)) = &case.detail else {
+        panic!("runtime_error の detail が標準エラー出力でない: {case:?}");
+    };
+    // cargo の標準エラー出力の先頭に、統合テストの実行ファイルが落ちたことが入る。
+    assert!(stderr.contains("SIGABRT"), "{stderr}");
+}
+
+#[test]
+fn learner_tests_that_do_not_finish_in_time_are_a_timeout() {
+    let built = build_with_hidden_tests(
+        &files(&[
+            ("src/main.rs", MAIN_RS),
+            (
+                "src/lib.rs",
+                "pub fn double(n: i32) -> i32 {\n    n * 2\n}\n\n\
+                 #[cfg(test)]\n\
+                 mod tests {\n    #[test]\n    fn hangs() {\n        \
+                 loop {\n            std::thread::sleep(std::time::Duration::from_millis(50));\n        }\n    }\n}\n",
+            ),
+        ]),
+        "src/lib.rs",
+        "use super::*;\n\n#[test]\nfn doubles() {\n    assert_eq!(double(5), 10);\n}\n",
+    );
+    let started = Instant::now();
+    let result = judge_tests(&learner_spec(&built, 1, 3), |_| {}).unwrap();
+    let elapsed = started.elapsed();
+    assert_eq!(
+        statuses(&result),
+        [
+            ("doubles", CaseStatus::Pass),
+            ("自分で書いたテスト（1 件以上）", CaseStatus::Timeout),
+        ]
+    );
+    assert!(matches!(
+        learner_case(&result).detail,
+        Some(CaseDetail::Stderr(_))
+    ));
+    // 学習者のテスト全体の制限時間（ここでは 3 秒）で止めた。
+    assert!(
+        elapsed >= Duration::from_secs(3) && elapsed < Duration::from_secs(20),
+        "{elapsed:?}"
+    );
 }
