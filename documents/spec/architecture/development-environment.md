@@ -90,6 +90,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 |---|---|
 | `npm run dev` | 開発時の起動（`tauri dev --config src-tauri/tauri.dev.conf.json`。開発時の識別子を使う） |
 | `npm run build` | 本番ビルド（`tauri build --bundles app`）。`.app` だけを作り、インストーラー（`.dmg` など）は作らない（[公開範囲と配布](../non-functional/distribution.md)）。できた `.app` は `src-tauri/target/release/bundle/macos/Progrust.app` に置かれる |
+| `npm run icon` | アプリのアイコンのファイルを、元の絵から作り直す（[アプリのアイコン](../screens/app-icon.md)「変える手順」） |
 | `npm run lint` | lint と型検査（上の表の lint のすべて） |
 | `npm run format` | 整形（上の表の整形のすべて）。`npm run format:check` は、整形が済んでいるかを確かめるだけで、ファイルを変えない |
 | `npm test` | 自動テスト（Vitest と `cargo test`。[テストの方針](../non-functional/testing.md)） |

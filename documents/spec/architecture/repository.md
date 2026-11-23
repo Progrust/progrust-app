@@ -19,6 +19,8 @@ progrust-app/
 ├── src/                 # フロントエンド
 │   └── video/           # 動画の共通部品（プレーヤー・タイムライン・教材用の部品。spec/content-format/video/scenes.md）
 ├── src-tauri/           # バックエンド
+│   ├── app-icon.svg     # アプリのアイコンの元の絵（spec/screens/app-icon.md）
+│   ├── icons/           # アプリに入れるアイコンのファイル。元の絵から作る（spec/screens/app-icon.md「変える手順」）
 │   └── tests/           # バックエンドのテストと、テスト用の偽のツール（spec/non-functional/testing.md）
 ├── package.json         # JavaScript の依存と npm のコマンド（spec/architecture/development-environment.md）
 └── package-lock.json    # JavaScript の依存のロックファイル

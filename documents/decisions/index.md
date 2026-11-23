@@ -178,6 +178,7 @@
 * [ADR 0177](0177-load-both-design-systems-and-write-app-css-with-classes.md) - 「Progrust」と「Progrust Video」の CSS をどちらもアプリ全体に読み込み、アプリの画面の CSS は動画の枠の中の要素に当たらないように書き、デザインシステムの土台の規則はそのまま両方に効かせる
 * [ADR 0179](0179-define-initial-settings-values.md) - `settings.json` が無いときの初期値を定め、テーマは「システムに合わせる」、エディタの文字サイズは 14px、動画は音量 1.0・ミュートなし・1 倍・字幕なしにする
 * [ADR 0181](0181-keep-ui-design-files-in-repository.md) - 画面デザイン「Progrust UIデザイン」のファイルをリポジトリの `design-system/ui-design/` に置いてリポジトリのファイルを正とし、claude.ai のアーティファクトは表示用としてデザインシステムと同じやり方で送り、実装のループと計画と実装とレビューはリポジトリのファイルを読む
+* [ADR 0182](0182-app-icon-p-in-chapter-colors-on-white.md) - アプリのアイコンを、白い地に第1〜4章の章カラーで塗り分けた「P」を置いた絵にし、元の絵を `src-tauri/app-icon.svg` に置いて、アプリに入れるファイルを Tauri CLI で作る
 
 # 非機能要件
 

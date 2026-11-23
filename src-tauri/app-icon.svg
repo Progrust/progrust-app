@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Progrust</title>
+  <defs>
+    <linearGradient id="ground" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#ECEFF3"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 地: 1024 のキャンバスの中央に置いた 824 の角丸四角。まわりの 100 は透明な余白 -->
+  <rect x="100" y="100" width="824" height="824" rx="185" fill="url(#ground)"/>
+  <rect x="102" y="102" width="820" height="820" rx="183" fill="none" stroke="#1A1F2B" stroke-opacity="0.1" stroke-width="4"/>
+
+  <!-- P: 太さ 112 の線を、下から順に 4 つの色で塗り分ける。色の境目が透けないように、上の区切りから順に重ねる -->
+  <g fill="none" stroke-width="112" stroke-linejoin="round">
+    <!-- 第4章（マゼンタ）: 丸い部分の下半分 -->
+    <path d="M655.97,439.07 A140 140 0 0 1 516,582 L386,582" stroke="#D6246E"/>
+    <!-- 第3章（橙）: 丸い部分の上半分 -->
+    <path d="M457,302 L516,302 A140 140 0 0 1 656,442" stroke="#E5A15A"/>
+    <!-- 第2章（緑）: 縦の線の上半分と、左上の角 -->
+    <path d="M386,545 L386,302 L460,302" stroke="#007A56"/>
+    <!-- 第1章（青）: 縦の線の下半分 -->
+    <path d="M386,722 L386,542" stroke="#0B6FC6"/>
+  </g>
+  <circle cx="386" cy="722" r="56" fill="#0B6FC6"/>
+</svg>

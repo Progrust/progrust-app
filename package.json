@@ -12,6 +12,7 @@
     "dev:web": "vite",
     "build": "tauri build --bundles app",
     "build:web": "vite build",
+    "icon": "rm -rf src-tauri/target/app-icon && tauri icon src-tauri/app-icon.svg -o src-tauri/target/app-icon && cd src-tauri/target/app-icon && cp 32x32.png 128x128.png 128x128@2x.png icon.icns icon.png ../../icons/",
     "lint": "npm run lint:ts && npm run lint:css && npm run lint:rust",
     "lint:ts": "eslint src tools \"*.config.ts\" && tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",
     "lint:css": "stylelint \"{src,tools}/**/*.css\"",
