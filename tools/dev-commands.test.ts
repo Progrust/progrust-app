@@ -64,9 +64,10 @@ describe("Clippy の警告", () => {
     temps.push(dir);
     cpSync(join(root, "package.json"), join(dir, "package.json"));
     mkdirSync(join(dir, "src-tauri", "src"), { recursive: true });
+    // `npm run lint:rust` は feature `content-check` を付けるので、src-tauri/ と同じく feature を置く。
     writeFileSync(
       join(dir, "src-tauri", "Cargo.toml"),
-      '[package]\nname = "clippy-fixture"\nversion = "0.1.0"\nedition = "2024"\n',
+      '[package]\nname = "clippy-fixture"\nversion = "0.1.0"\nedition = "2024"\n\n[features]\ncontent-check = []\n',
     );
     writeFileSync(
       join(dir, "src-tauri", "Cargo.lock"),

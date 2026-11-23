@@ -11,16 +11,20 @@
 //! - 止める操作（`stop_run`）で止めた提出は `stopped` にし、試行ログに追記せず、レッスンを完了にしない。アプリの終了で
 //!   止めたときは、`run_finished` も送らない（spec/exercise-runner/submit.md「途中で止めた提出」）。
 //! - `crates_unavailable`（初回準備のやり直しが要る失敗）は、まだ見分けない（M3 で作る）。
+//! - 組み立てから判定までの手順は [`judge_submission`] にまとめ、判定だけを行うコマンドラインのプログラム
+//!   （[`super::lesson_judge`]。ADR 0208）も同じ手順・制限値で判定する。止める操作とイベントの送信は、
+//!   [`JudgeHooks`] でつなぐ。
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
+use std::time::Duration;
 
 use serde::Serialize;
 
 use super::RunnerDir;
-use super::build::{BuildCommand, BuildOutcome, BuildSpec, BuildStatus, start_build};
+use super::build::{BuildCommand, BuildHandle, BuildOutcome, BuildSpec, BuildStatus, start_build};
 use super::judge::{
     CaseDetail, CaseLimits, CaseResult, CaseStatus, JudgeProgress, JudgeResult, JudgeStatus,
     StdoutJudgeSpec, judge_stdout,
@@ -94,7 +98,7 @@ pub struct SubmitJudgement {
 
 impl SubmitJudgement {
     /// テストケースを 1 件も実行しなかった結果（`compile_error`・`stopped`）。`passed`・`total` は 0、`cases` は空にする。
-    fn without_cases(status: SubmitResultStatus) -> Self {
+    pub(crate) fn without_cases(status: SubmitResultStatus) -> Self {
         Self {
             status,
             passed: 0,
@@ -104,7 +108,7 @@ impl SubmitJudgement {
     }
 
     /// 判定の部品の結果から作る。
-    fn judged(result: JudgeResult) -> Self {
+    pub(crate) fn judged(result: JudgeResult) -> Self {
         Self {
             status: match result.status {
                 JudgeStatus::Passed => SubmitResultStatus::Passed,
@@ -260,75 +264,190 @@ pub fn execute(job: SubmitJob, events: Arc<dyn RunEvents>) {
 
 /// `project/` の組み立てから、判定の終わりまで。アプリの側の失敗は `Err` で返す。
 fn submit_steps(job: &SubmitJob, events: &dyn RunEvents) -> Result<Outcome, CommandError> {
-    if job.active.stop_cause().is_some() {
-        return Ok(Outcome::stopped());
+    let request = JudgeRequest {
+        cargo: &job.cargo,
+        workspace: &job.workspace,
+        runner: &job.runner,
+        dependencies: &job.dependencies,
+        files: &job.files,
+        judge: &job.judge,
+        build_time: job.runs.limits().build_time,
+    };
+    let hooks = AppHooks { job, events };
+    Ok(match judge_submission(&request, &hooks)? {
+        Judged::Stopped => Outcome::stopped(),
+        Judged::CompileError(built) => compile_error(&built),
+        Judged::Done { result, built } => Outcome {
+            judgement: SubmitJudgement::judged(result),
+            error_codes: built.error_codes.clone(),
+            build: built.attempt_output(),
+        },
+    })
+}
+
+/// 提出の要求（[`ActiveRun`]）とイベントの送り先を、判定の手順（[`judge_submission`]）につなぐ。
+struct AppHooks<'a> {
+    job: &'a SubmitJob,
+    events: &'a dyn RunEvents,
+}
+
+impl JudgeHooks for AppHooks<'_> {
+    fn stop_requested(&self) -> bool {
+        self.job.active.stop_cause().is_some()
     }
-    send_progress(job, events, SubmitPhase::Build, 0, None);
-    assemble_project(&job.workspace, &job.runner, &job.dependencies, &job.files)?;
-    let project_dir = job.workspace.project();
-    let command = match &job.judge {
+
+    fn building(&self, build: BuildHandle) {
+        self.job.active.set_building(build);
+    }
+
+    fn built(&self, built: &BuildOutcome) {
+        send_output(
+            self.events,
+            self.job.active.request_id(),
+            build_output_chunks(built),
+        );
+    }
+
+    fn judging(&self, stopper: Stopper) {
+        self.job.active.set_judging(stopper);
+    }
+
+    fn judged(&self) {
+        self.job.active.set_finished();
+    }
+
+    fn progress(&self, phase: SubmitPhase, completed: usize, total: Option<usize>) {
+        send_progress(self.job, self.events, phase, completed, total);
+    }
+}
+
+/// 判定するもの（[`judge_submission`]）。
+pub struct JudgeRequest<'a> {
+    /// `cargo` の絶対パス。
+    pub cargo: &'a Path,
+    pub workspace: &'a WorkspaceDir,
+    pub runner: &'a RunnerDir,
+    /// 演習の `dependencies`。
+    pub dependencies: &'a [String],
+    /// 判定するファイル。キーは cargo パッケージのルートからの相対パス（`/` 区切り）。
+    pub files: &'a BTreeMap<String, String>,
+    /// 演習の判定方式と、判定に使うもの。
+    pub judge: &'a ExerciseJudge,
+    /// ビルド時間の制限。
+    pub build_time: Duration,
+}
+
+/// 判定の手順の途中で呼ぶもの。アプリの提出は、止める操作の受け付けと、イベントの送信に使う。
+/// 判定だけを行うコマンドラインのプログラムは、何もしない既定の実装を使う。
+pub trait JudgeHooks {
+    /// 止める指示があったか。
+    fn stop_requested(&self) -> bool {
+        false
+    }
+    /// ビルドを始めた。
+    fn building(&self, _build: BuildHandle) {}
+    /// ビルドが終わった（成功と失敗。止めたときは呼ばない）。`test` 方式の隠しテストの側のエラーの案内は、付けた後。
+    fn built(&self, _built: &BuildOutcome) {}
+    /// テストケースの実行を始めた。
+    fn judging(&self, _stopper: Stopper) {}
+    /// テストケースの実行が終わった。
+    fn judged(&self) {}
+    /// 判定の進み具合が変わった。
+    fn progress(&self, _phase: SubmitPhase, _completed: usize, _total: Option<usize>) {}
+}
+
+/// 何もしない [`JudgeHooks`]。
+pub struct NoHooks;
+
+impl JudgeHooks for NoHooks {}
+
+/// 判定の手順の結果。
+#[derive(Debug)]
+pub enum Judged {
+    /// 途中で止めた。
+    Stopped,
+    /// ビルドに失敗した（ビルド時間の制限を超えたときを含む）。テストケースは 1 件も実行していない。
+    CompileError(BuildOutcome),
+    /// テストケースを実行した。
+    Done {
+        result: JudgeResult,
+        built: BuildOutcome,
+    },
+}
+
+/// 提出の判定の手順（spec/exercise-runner/submit.md）。`project/` を組み立て（`test` 方式では隠しテストを組み込み）、
+/// ビルドし、`judge.mode` に従って `stdout` 方式か `test` 方式で判定する。アプリの提出と、判定だけを行うコマンドラインの
+/// プログラム（ADR 0208）が、同じ手順・制限値で判定するために使う。アプリの側の失敗は `Err` で返す。
+pub fn judge_submission(
+    request: &JudgeRequest<'_>,
+    hooks: &dyn JudgeHooks,
+) -> Result<Judged, CommandError> {
+    if hooks.stop_requested() {
+        return Ok(Judged::Stopped);
+    }
+    hooks.progress(SubmitPhase::Build, 0, None);
+    assemble_project(
+        request.workspace,
+        request.runner,
+        request.dependencies,
+        request.files,
+    )?;
+    let project_dir = request.workspace.project();
+    let command = match request.judge {
         ExerciseJudge::Stdout { .. } => BuildCommand::Build,
         ExerciseJudge::Test {
             target,
             judge_tests,
             ..
         } => {
-            // 変えるのは project/ の中の写しだけで、エディタ上の学習者のファイル（job.files）は変えない。
+            // 変えるのは project/ の中の写しだけで、エディタ上の学習者のファイル（request.files）は変えない。
             embed_hidden_tests(&project_dir, target, judge_tests)
                 .map_err(|error| app_failure("隠しテストを組み込めませんでした。", error))?;
             BuildCommand::TestNoRun
         }
     };
 
-    let envs = build_env(&job.workspace, &job.dependencies);
-    let mut build_spec = BuildSpec::new(&job.cargo, &project_dir, command, envs.clone());
-    build_spec.time_limit = job.runs.limits().build_time;
+    let envs = build_env(request.workspace, request.dependencies);
+    let mut build_spec = BuildSpec::new(request.cargo, &project_dir, command, envs.clone());
+    build_spec.time_limit = request.build_time;
     let running = start_build(build_spec)
         .map_err(|error| app_failure("cargo を起動できませんでした。", error))?;
-    job.active.set_building(running.handle());
+    hooks.building(running.handle());
     let mut built = running
         .wait()
         .map_err(|error| app_failure("ビルドの結果を受け取れませんでした。", error))?;
     // ビルドが終わる直前に止める指示が来たときも、ビルドの出力を送らず、記録もしない。
-    if job.active.stop_cause().is_some() {
-        return Ok(Outcome::stopped());
+    if hooks.stop_requested() {
+        return Ok(Judged::Stopped);
     }
 
     match built.status {
         // 止める操作で止めたときは、ビルドの出力を捨てている。
-        BuildStatus::Stopped => return Ok(Outcome::stopped()),
+        BuildStatus::Stopped => return Ok(Judged::Stopped),
         BuildStatus::Failed { .. } | BuildStatus::TimedOut => {
-            if matches!(job.judge, ExerciseJudge::Test { .. }) {
+            if matches!(request.judge, ExerciseJudge::Test { .. }) {
                 add_hidden_test_error_hint(&mut built);
             }
-            send_output(events, job.active.request_id(), build_output_chunks(&built));
-            return Ok(compile_error(&built));
+            hooks.built(&built);
+            return Ok(Judged::CompileError(built));
         }
-        BuildStatus::Succeeded => {
-            send_output(events, job.active.request_id(), build_output_chunks(&built))
-        }
+        BuildStatus::Succeeded => hooks.built(&built),
     }
 
     // ビルドが終わってから判定を始めるまでに止める指示が来ていたら、判定しない。
-    if job.active.stop_cause().is_some() {
-        return Ok(Outcome::stopped());
+    if hooks.stop_requested() {
+        return Ok(Judged::Stopped);
     }
     let envs: Vec<(OsString, OsString)> = envs
         .into_iter()
         .map(|(key, value)| (OsString::from(key), value))
         .collect();
     let stopper = Stopper::new();
-    job.active.set_judging(stopper.clone());
+    hooks.judging(stopper.clone());
     let on_progress = |step: JudgeProgress| {
-        send_progress(
-            job,
-            events,
-            SubmitPhase::Judge,
-            step.completed,
-            Some(step.total),
-        );
+        hooks.progress(SubmitPhase::Judge, step.completed, Some(step.total));
     };
-    let result = match &job.judge {
+    let result = match request.judge {
         ExerciseJudge::Stdout { cases } => {
             let executable = built.main_executable().ok_or_else(|| CommandError {
                 code: ErrorCode::Internal,
@@ -342,7 +461,7 @@ fn submit_steps(job: &SubmitJob, events: &dyn RunEvents) -> Result<Outcome, Comm
                 cases: cases.clone(),
                 limits: CaseLimits::default(),
             };
-            send_progress(job, events, SubmitPhase::Judge, 0, Some(cases.len()));
+            hooks.progress(SubmitPhase::Judge, 0, Some(cases.len()));
             judge_stdout(&spec, &stopper, on_progress)
         }
         ExerciseJudge::Test {
@@ -363,32 +482,28 @@ fn submit_steps(job: &SubmitJob, events: &dyn RunEvents) -> Result<Outcome, Comm
                 envs,
                 case_labels: case_labels.clone(),
                 learner_tests: min_learner_tests.map(|min_tests| LearnerTestsSpec {
-                    cargo: job.cargo.clone(),
+                    cargo: request.cargo.to_path_buf(),
                     min_tests,
                 }),
                 limits: TestLimits::default(),
             };
             // 隠しテストの名前を得る前なので、全テストケースの数はまだ決まらない。
-            send_progress(job, events, SubmitPhase::Judge, 0, None);
+            hooks.progress(SubmitPhase::Judge, 0, None);
             judge_tests(&spec, &stopper, on_progress)
         }
     };
-    job.active.set_finished();
+    hooks.judged();
 
     // 判定の途中か、最後のテストケースが終わった直後に止める指示が来たときは、判定の結果にかかわらず止めた提出にする。
     // 止めた提出を正解として記録すると、正解の画面を見ないままレッスンが完了になる（ADR 0202）。
-    if job.active.stop_cause().is_some() {
-        return Ok(Outcome::stopped());
+    if hooks.stop_requested() {
+        return Ok(Judged::Stopped);
     }
     let result = result.map_err(|error| app_failure("判定できませんでした。", error))?;
     if result.status == JudgeStatus::Stopped {
-        return Ok(Outcome::stopped());
+        return Ok(Judged::Stopped);
     }
-    Ok(Outcome {
-        judgement: SubmitJudgement::judged(result),
-        error_codes: built.error_codes.clone(),
-        build: built.attempt_output(),
-    })
+    Ok(Judged::Done { result, built })
 }
 
 /// ビルドに失敗した結果。テストケースは 1 件も実行していない（ADR 0220）。

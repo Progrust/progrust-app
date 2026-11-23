@@ -94,7 +94,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 | `npm run icon` | アプリのアイコンのファイルを、元の絵から作り直す（[アプリのアイコン](../screens/app-icon.md)「変える手順」） |
 | `npm run lint` | lint と型検査（上の表の lint のすべて） |
 | `npm run format` | 整形（上の表の整形のすべて）。`npm run format:check` は、整形が済んでいるかを確かめるだけで、ファイルを変えない |
-| `npm test` | 自動テスト（Vitest と `cargo test`。[テストの方針](../non-functional/testing.md)） |
+| `npm test` | 自動テスト（Vitest と `cargo test`。[テストの方針](../non-functional/testing.md)）。`cargo test` と、`npm run lint` の Clippy は、Cargo の feature `content-check` を付けて、教材チェックツールが使う判定のプログラム（[教材チェックツール](../content-guidelines/check-tool.md)）も対象にする |
 | `npm run check` | コミット前の確認。`npm run lint`、`npm run format:check`、`npm test` を順に実行する |
 | `npm run content:check` | 教材チェックツール（[教材チェックツール](../content-guidelines/check-tool.md)）。`content/` のすべての教材を検査する |
 | `npm run runner:lock` | 許可クレートの `Cargo.lock`（`runner/Cargo.lock`）を、`runner/allowed-crates.toml` から作り直す（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「許可クレート」）。クレートの索引を読むので、ネットワークが要ることがある |

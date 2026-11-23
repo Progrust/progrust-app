@@ -3,6 +3,7 @@ import { audioCheck } from "./audio.ts";
 import { curriculumCheck } from "./curriculum.ts";
 import { definitionCheck } from "./definition.ts";
 import { elementsCheck } from "./elements.ts";
+import { checkJudge } from "./judge.ts";
 import {
   learnedElementsCheck,
   masterElementsUsedCheck,
@@ -36,10 +37,15 @@ export function runChecks(
   return list.flatMap((check) => check.run(options));
 }
 
-// checks のすべての項目と、動画を描画する「描画」「表紙」（render.ts）を検査する。
-// 描画は時間がかかり、非同期なので、checks に並べずに、ここで続けて行う。
+// checks のすべての項目と、演習を判定する「模範解答」「初期コード」（judge.ts）と、動画を描画する
+// 「描画」「表紙」（render.ts）を検査する。判定と描画は時間がかかり（判定は実物の cargo を使い、描画は非同期で
+// ある）、checks に並べずに、ここで続けて行う。
 export async function runAllChecks(options: CheckOptions): Promise<Finding[]> {
-  return [...runChecks(options), ...(await checkRender(options))];
+  return [
+    ...runChecks(options),
+    ...checkJudge(options),
+    ...(await checkRender(options)),
+  ];
 }
 
 export function formatFinding(f: Finding): string {

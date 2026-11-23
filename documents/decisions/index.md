@@ -86,6 +86,7 @@
 * [ADR 0191](0191-count-lesson-title-on-rendered-frames.md) - 教材チェックツールの検査「表紙」で、最初のシーンの描画したフレームごとに、表示している `LessonTitle` を、`LessonTitle` 自身が知らせる数で数え、どのフレームでも表示していないときと、2 つ以上表示しているフレームがあるときをエラーにする
 * [ADR 0192](0192-report-browser-console-errors-in-render-check.md) - 教材チェックツールの描画のチェックで、描画時の例外に加えて、ブラウザの console に出たエラーもエラーにし、console の警告はエラーにしない
 * [ADR 0208](0208-content-check-runs-judge-via-backend-cli.md) - 教材チェックツールの「模範解答」「初期コード」の判定を、バックエンドのクレートに置いた判定だけを行うコマンドラインのプログラム（`src-tauri/src/bin/`）を `cargo run` で起動して行い、作業領域を `src-tauri/target/` の下の専用のディレクトリにする
+* [ADR 0222](0222-build-judge-cli-only-with-content-check-feature.md) - 教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない
 
 # コード実行・判定
 
