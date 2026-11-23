@@ -1,5 +1,5 @@
 // 検査「カリキュラム」のうち、chapters.json と章とレッスンの一覧の照合。
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readChapterList, type ListedChapter } from "./curriculum-list.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
@@ -124,7 +124,93 @@ export function checkChaptersJson({
   return out;
 }
 
+function sameList(a: unknown, b: string[]): boolean {
+  return (
+    isStringArray(a) && a.length === b.length && a.every((v, i) => v === b[i])
+  );
+}
+
+function show(value: unknown): string {
+  return Array.isArray(value)
+    ? value.join("、") || "（なし）"
+    : JSON.stringify(value);
+}
+
+// 章末復習レッスンと準備中のレッスン（ディレクトリが無いレッスン）以外の
+// lesson.json の title・kind・primary_elements を、一覧と照合する。
+export function checkLessonJsons({
+  contentDir,
+  curriculumDir,
+}: CheckOptions): Finding[] {
+  const out: Finding[] = [];
+  let listed: ListedChapter[];
+  try {
+    listed = readChapterList(curriculumDir);
+  } catch {
+    // 一覧を読めないことは checkChaptersJson が報告する。
+    return out;
+  }
+  for (const chapter of listed) {
+    for (const row of chapter.rows) {
+      if (row.id.endsWith("-review")) continue;
+      const dir = join(contentDir, "lessons", row.id);
+      if (!existsSync(dir)) continue;
+      const file = `lessons/${row.id}/lesson.json`;
+      const error = (message: string) =>
+        out.push({
+          severity: "error",
+          check: NAME,
+          file,
+          lesson: row.id,
+          message,
+        });
+      let lesson: {
+        title?: unknown;
+        kind?: unknown;
+        primary_elements?: unknown;
+      };
+      try {
+        lesson = JSON.parse(readFileSync(join(dir, "lesson.json"), "utf8"));
+      } catch (e) {
+        // ファイルが無いことは「構成」の検査の対象。
+        if ((e as NodeJS.ErrnoException).code === "ENOENT") continue;
+        error(`lesson.json を読めない: ${(e as Error).message}`);
+        continue;
+      }
+      if (typeof lesson !== "object" || lesson === null) {
+        error("lesson.json がオブジェクトでない");
+        continue;
+      }
+      if (lesson.title !== row.title) {
+        error(
+          `title が一覧と違う（一覧: ${JSON.stringify(row.title)}、lesson.json: ${JSON.stringify(lesson.title)}）`,
+        );
+      }
+      const isVideoOnly = lesson.kind === "video_only";
+      if (isVideoOnly !== row.videoOnly) {
+        error(
+          row.videoOnly
+            ? `一覧では動画のみのレッスンだが、kind が video_only でない（${JSON.stringify(lesson.kind)}）`
+            : "kind が video_only だが、一覧では動画のみのレッスンでない",
+        );
+      }
+      if (
+        lesson.kind === "lesson" &&
+        !sameList(lesson.primary_elements, row.primaryElements)
+      ) {
+        error(
+          `primary_elements が一覧の「主要素」と違う（一覧: ${show(row.primaryElements)}、lesson.json: ${show(lesson.primary_elements)}）`,
+        );
+      }
+    }
+  }
+  return out;
+}
+
 export const curriculumCheck: Check = {
   name: NAME,
-  run: checkChaptersJson,
+  run: (options) => [
+    ...checkChaptersJson(options),
+    ...checkLessonJsons(options),
+  ],
 };

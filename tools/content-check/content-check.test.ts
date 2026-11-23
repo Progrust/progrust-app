@@ -35,11 +35,37 @@ const chapters: Chapter[] = [
   },
 ];
 
+// 一覧のレッスンの主要素。ch02-01 だけ、主要素が 2 つある。
+// ch01-02 は動画のみのレッスン。
+const VIDEO_ONLY = "ch01-02";
+function primaryOf(id: string): string[] {
+  if (id === VIDEO_ONLY || id.endsWith("-review")) return [];
+  const base = `x.${id.replace("-", "_")}`;
+  return id === "ch02-01" ? [base, `${base}_b`] : [base];
+}
+
+interface Element {
+  id: string;
+  chapter: string;
+  deprecated?: boolean;
+}
+
+// 一覧と食い違わない要素マスタ。
+const elements: Element[] = chapters.flatMap((c) =>
+  c.lessons.flatMap((id) =>
+    primaryOf(id).map((eid) => ({ id: eid, chapter: c.id })),
+  ),
+);
+
 function chapterFile(chapter: Chapter): string {
   const rows = chapter.lessons.map((id) =>
     id.endsWith("-review")
       ? `| ${id} | 章末復習 | | |`
-      : `| ${id} | タイトル | 内容 | \`x.${id}\` |`,
+      : id === VIDEO_ONLY
+        ? `| ${id} | タイトル${id} | 内容（動画のみのレッスン） | |`
+        : `| ${id} | タイトル${id} | 内容 | ${primaryOf(id)
+            .map((e) => `\`${e}\``)
+            .join("、")} |`,
   );
   return [
     "---",
@@ -69,7 +95,11 @@ afterEach(() => {
 // `MISSING` を渡すと、chapters.json を置かない。
 const MISSING = Symbol("missing");
 
-function setup(actual: unknown = chapters) {
+function setup(
+  actual: unknown = chapters,
+  masters: unknown = elements,
+  lessons: Record<string, unknown> = {},
+) {
   const dir = mkdtempSync(join(tmpdir(), "progrust-content-check-"));
   dirs.push(dir);
   const contentDir = join(dir, "content");
@@ -94,11 +124,39 @@ function setup(actual: unknown = chapters) {
       typeof actual === "string" ? actual : JSON.stringify(actual),
     );
   }
+  writeFileSync(join(contentDir, "elements.json"), JSON.stringify(masters));
+  for (const [id, lesson] of Object.entries(lessons)) {
+    mkdirSync(join(contentDir, "lessons", id), { recursive: true });
+    writeFileSync(
+      join(contentDir, "lessons", id, "lesson.json"),
+      JSON.stringify(lesson),
+    );
+  }
   return { contentDir, curriculumDir };
 }
 
 function check(actual: unknown): Finding[] {
   return runChecks(setup(actual));
+}
+
+function lessonJson(id: string, change: Record<string, unknown> = {}) {
+  return {
+    id,
+    kind: id === VIDEO_ONLY ? "video_only" : "lesson",
+    title: `タイトル${id}`,
+    primary_elements: primaryOf(id),
+    ...change,
+  };
+}
+
+function checkLessons(lessons: Record<string, unknown>): Finding[] {
+  return runChecks(setup(chapters, elements, lessons));
+}
+
+function checkElements(change: (copy: Element[]) => void): Finding[] {
+  const copy = structuredClone(elements);
+  change(copy);
+  return runChecks(setup(chapters, copy));
 }
 
 function modified(change: (copy: Chapter[]) => void): Chapter[] {
@@ -198,6 +256,139 @@ describe("chapters.json と一覧の照合", () => {
     expect(check({}).map((f) => f.message)).toEqual([
       "chapters.json が配列でない",
     ]);
+  });
+});
+
+describe("lesson.json と一覧の照合", () => {
+  it("一覧と一致すれば、エラーにならない", () => {
+    expect(
+      checkLessons({
+        "ch01-01": lessonJson("ch01-01"),
+        "ch01-02": lessonJson("ch01-02"),
+        "ch02-01": lessonJson("ch02-01"),
+      }),
+    ).toEqual([]);
+  });
+
+  it("title が一覧と違うと、エラーになる", () => {
+    const findings = checkLessons({
+      "ch01-01": lessonJson("ch01-01", { title: "違う" }),
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "error",
+      check: "カリキュラム",
+      file: "lessons/ch01-01/lesson.json",
+      lesson: "ch01-01",
+    });
+    expect(findings[0].message).toContain("title が一覧と違う");
+  });
+
+  it("primary_elements が一覧の「主要素」と違うと、エラーになる", () => {
+    const findings = checkLessons({
+      "ch01-01": lessonJson("ch01-01", { primary_elements: ["x.other"] }),
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain(
+      "primary_elements が一覧の「主要素」と違う",
+    );
+  });
+
+  it("primary_elements の順序が違うと、エラーになる", () => {
+    const findings = checkLessons({
+      "ch02-01": lessonJson("ch02-01", {
+        primary_elements: [...primaryOf("ch02-01")].reverse(),
+      }),
+    });
+    expect(findings).toHaveLength(1);
+  });
+
+  it("一覧で動画のみのレッスンが video_only でないと、エラーになる", () => {
+    const findings = checkLessons({
+      "ch01-02": lessonJson("ch01-02", { kind: "lesson" }),
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("video_only でない");
+  });
+
+  it("一覧で動画のみでないレッスンが video_only だと、エラーになる", () => {
+    const findings = checkLessons({
+      "ch01-01": lessonJson("ch01-01", {
+        kind: "video_only",
+        primary_elements: [],
+      }),
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("動画のみのレッスンでない");
+  });
+
+  it("章末復習レッスンは照合しない", () => {
+    expect(
+      checkLessons({
+        "ch01-review": { kind: "chapter_review", title: "何でも" },
+      }),
+    ).toEqual([]);
+  });
+
+  it("準備中のレッスン（ディレクトリが無いレッスン）は照合しない", () => {
+    expect(checkLessons({})).toEqual([]);
+  });
+});
+
+describe("要素マスタと一覧の照合（要素と一覧）", () => {
+  it("一覧と一致すれば、エラーにならない", () => {
+    expect(checkElements(() => {})).toEqual([]);
+  });
+
+  it("一覧のどの「主要素」にも無い要素があると、準備中のレッスンがあってもエラーになる", () => {
+    const findings = checkElements((e) =>
+      e.push({ id: "x.orphan", chapter: "ch01" }),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0]).toMatchObject({
+      severity: "error",
+      check: "要素と一覧",
+    });
+    expect(findings[0].message).toContain("x.orphan");
+  });
+
+  it("deprecated の要素は、一覧になくてもエラーにならない", () => {
+    expect(
+      checkElements((e) =>
+        e.push({ id: "x.old", chapter: "ch01", deprecated: true }),
+      ),
+    ).toEqual([]);
+  });
+
+  it("一覧の「主要素」が要素マスタに無いと、エラーになる", () => {
+    const findings = checkElements((e) => e.shift());
+    expect(findings).toHaveLength(1);
+    expect(findings[0].lesson).toBe("ch01-01");
+    expect(findings[0].message).toContain("要素マスタにない");
+  });
+
+  it("一覧の「主要素」が deprecated だと、エラーになる", () => {
+    const findings = checkElements((e) => (e[0].deprecated = true));
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("deprecated");
+  });
+
+  it("chapter が、最初に主要素とするレッスンの章と違うと、エラーになる", () => {
+    const findings = checkElements((e) => (e[0].chapter = "ch02"));
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("chapter が一覧と違う");
+  });
+
+  it("要素 ID が重複すると、エラーになる", () => {
+    const findings = checkElements((e) => e.push({ ...e[0] }));
+    expect(findings.map((f) => f.message)).toEqual([
+      `要素 ID ${elements[0].id} が重複している`,
+    ]);
+  });
+
+  it("要素 ID の形式が違うと、エラーになる", () => {
+    const findings = checkElements((e) => (e[0].id = "Bad-ID"));
+    expect(findings.some((f) => f.message.includes("snake_case"))).toBe(true);
   });
 });
 
