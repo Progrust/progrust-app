@@ -1,0 +1,76 @@
+/* レッスン一覧画面の配置（design-system/ui-design/styles/app.css の配置に合わせる）。 */
+.lessons-wrap {
+  width: 100%;
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: var(--space-28) var(--space-28) 56px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-24);
+}
+
+.lessons-head {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-16);
+}
+
+.lessons-head h1 {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+
+.lessons-head p {
+  margin: 2px 0 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.lessons-head p b {
+  color: var(--ink);
+}
+
+.lessons-head-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.lessons-body {
+  display: flex;
+  gap: var(--space-32);
+  align-items: flex-start;
+}
+
+.lessons-body .pg-index {
+  position: sticky;
+  top: var(--space-16);
+}
+
+.lessons-chapters {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* 準備中のレッスンの行。番号と文字を淡い色にし、マウスを乗せても見た目を変えない。 */
+.lessons-row-preparing {
+  grid-template-columns: 52px minmax(0, 1fr);
+  color: var(--muted);
+}
+
+.lessons-row-preparing:hover {
+  color: var(--muted);
+  background-image: none;
+}
+
+.lessons-row-preparing .pg-lesson-no {
+  color: var(--muted);
+}
