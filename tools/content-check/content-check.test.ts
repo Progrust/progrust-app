@@ -462,15 +462,19 @@ function lessonFiles(lesson: Json): Record<string, string> {
     files["video/voice/t1.m4a"] = "";
   }
   if (lesson.kind !== "video_only") {
-    files["exercise/problem.md"] = "";
-    files["exercise/explanation.md"] = "";
+    // 「問題文・解説」「テストケース」の検査に通る中身にする（ch01・ch02 はテストケース 1 件でよい）。
+    files["exercise/problem.md"] = "## 問題\n\n## 出力\n\n## 例\n";
+    files["exercise/explanation.md"] =
+      "## 考え方\n\n## 模範解答\n\n## ポイント\n\n## よくある間違い\n";
     files["exercise/starter/src/main.rs"] = "";
     files["exercise/solution/src/main.rs"] = "";
-    files[
-      lesson.exercise?.judge?.mode === "test"
-        ? "exercise/judge_tests.rs"
-        : "exercise/cases.json"
-    ] = "";
+    if (lesson.exercise?.judge?.mode === "test") {
+      files["exercise/judge_tests.rs"] = "#[test]\nfn a() {}\n";
+    } else {
+      files["exercise/cases.json"] = JSON.stringify([
+        { name: "例", stdin: "", expected_stdout: "x\n" },
+      ]);
+    }
   }
   return files;
 }
