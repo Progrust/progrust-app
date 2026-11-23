@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   currentSentence,
   formatTime,
+  frameAtRatio,
   hasReachedEnd,
   lastFrame,
   sceneMarkRatios,
@@ -94,6 +95,18 @@ describe("シークバー", () => {
 
   it("シーンの開始位置を印の割合にする", () => {
     expect(sceneMarkRatios(timeline)).toEqual([0, 0.25]);
+  });
+
+  it("押した位置の割合から、移す先のフレームを決める", () => {
+    expect(frameAtRatio(timeline, 0)).toBe(0);
+    expect(frameAtRatio(timeline, 0.25)).toBe(100);
+    expect(frameAtRatio(timeline, 0.5012)).toBe(200);
+  });
+
+  it("末尾を越えるときは末尾、先頭より前は先頭", () => {
+    expect(frameAtRatio(timeline, 1)).toBe(399);
+    expect(frameAtRatio(timeline, 1.5)).toBe(399);
+    expect(frameAtRatio(timeline, -0.2)).toBe(0);
   });
 
   it("長さが 0 のときは 0", () => {

@@ -70,6 +70,15 @@ export function seekBarRatio(timeline: Timeline, frame: number): number {
   return Math.min(Math.max(frame / timeline.durationInFrames, 0), 1);
 }
 
+// シークバーの位置（0 から 1 の割合）を押したときの移動先。末尾を越えるときは、末尾にする。
+export function frameAtRatio(timeline: Timeline, ratio: number): number {
+  const clamped = Math.min(Math.max(ratio, 0), 1);
+  return Math.min(
+    Math.round(clamped * timeline.durationInFrames),
+    lastFrame(timeline),
+  );
+}
+
 // シークバーに印を出す、各シーンの開始位置（0 から 1 の割合）。
 export function sceneMarkRatios(timeline: Timeline): number[] {
   return timeline.scenes.map((scene) => seekBarRatio(timeline, scene.from));
