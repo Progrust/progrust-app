@@ -78,6 +78,10 @@ PROMPT_FIX = "/implement-task {number} --loop fix\n\n{findings}"
 PROMPT_REVIEW = "/review-task {number} --loop"
 PROMPT_TRIAGE = "/triage-issues --loop {numbers}"
 
+# ループの仕分けが、ユーザーの判断が要るとして `未判断` のまま残した Issue に書くコメントの、1 行目の始まり。
+# このコメントがあり、`未判断` が付いたままの Issue は、ループでは仕分け直さない（ADR 0193）
+LEFT_FOR_USER_PREFIX = "ユーザーの判断が要るので、未判断のまま残した（"
+
 # 権限の設定（main にあるものを使う）
 SETTINGS_IMPLEMENT = ".claude/loop-settings.json"
 SETTINGS_REVIEW = ".claude/loop-review-settings.json"
@@ -326,6 +330,8 @@ class Loop:
         self.lock_handle: Any = None
         self.attempted: Set[int] = set()
         self.triaged: Set[int] = set()
+        # 仕分けの会話で権限に拒否された操作があったので、もう一度仕分けることにした Issue（ADR 0194）
+        self.triage_retried: Set[int] = set()
         self.merged: List[str] = []
         self.stuck: List[str] = []
         self.blocked: List[str] = []
@@ -450,7 +456,7 @@ class Loop:
         raw = self.gh_json(
             [
                 "issue", "list", "--state", "open", "--label", LABEL_AI_FILED,
-                "--limit", "200", "--json", "number,labels",
+                "--limit", "200", "--json", "number,labels,comments",
             ]
         )
         # 開いているタスクが「前提」で待っている Issue は、ユーザーの判断を求めるものなので、
@@ -464,6 +470,13 @@ class Loop:
             if LABEL_HOLD in labels or LABEL_TASK in labels:
                 continue
             if int(item["number"]) in self.triaged or int(item["number"]) in awaited:
+                continue
+            # 前の実行の仕分けがユーザーに回した Issue は、ユーザーが答えるまで、ループでは仕分け直さない
+            if LABEL_UNDECIDED in labels and any(
+                str(comment.get("body") or "").lstrip().startswith(LEFT_FOR_USER_PREFIX)
+                for comment in item.get("comments") or []
+                if isinstance(comment, dict)
+            ):
                 continue
             numbers.append(int(item["number"]))
         return sorted(numbers)
@@ -525,6 +538,37 @@ class Loop:
             raise InfraError(
                 f"`{MAIN_REF}` の `{WORKFLOWS_DIR}/` に CI の定義がありません。CI が通ったことを確かめられないので、始めません。"
             )
+
+    def check_engines(self) -> None:
+        """使われる node・npm の版が、package.json の engines の系列（`~X.Y` の形）に合うかを確かめる（ADR 0195）。
+
+        ループは、始めた端末の PATH で node・npm を探す。系列の違う node で、チェックと npm ci を進めないために、
+        始める前に比べる。
+        """
+        path = os.path.join(self.worktree, "package.json")
+        if not os.path.isfile(path):
+            return
+        try:
+            with open(path, encoding="utf-8") as handle:
+                engines = json.load(handle).get("engines") or {}
+        except (ValueError, AttributeError) as error:
+            raise InfraError(f"`package.json` の engines を読めません: {error}")
+        for tool in ("node", "npm"):
+            wanted = engines.get(tool)
+            match = re.fullmatch(r"~(\d+)\.(\d+)(?:\.\d+)?", wanted.strip()) if isinstance(wanted, str) else None
+            if match is None:
+                continue
+            found = shutil.which(tool)
+            if found is None:
+                raise InfraError(f"`{tool}` が見つかりません。")
+            result = self.run([tool, "--version"], self.worktree, GIT_TIMEOUT)
+            version = result.stdout.strip().lstrip("v")
+            if result.returncode != 0 or version.split(".")[:2] != [match.group(1), match.group(2)]:
+                raise InfraError(
+                    f"`{tool}` の版が {version or '不明'} で、package.json の engines（{wanted}）の系列に合いません。"
+                    f"使われる {tool} は {found} です。`which -a {tool}` で確かめ、engines の系列の {tool} が"
+                    f"先に見つかる端末から、始め直してください。"
+                )
 
     def settings_copy(self, path: str) -> str:
         """権限の設定を main から取り出して、作業ツリーの外に置く。"""
@@ -1112,8 +1156,19 @@ class Loop:
         self.git(["fetch", REMOTE])
         self.reset_worktree()
         prompt = PROMPT_TRIAGE.format(numbers=" ".join(str(n) for n in numbers))
-        self.call_claude("triage", prompt, TRIAGE_MODEL, SETTINGS_TRIAGE, None, TRIAGE_TIMEOUT)
-        self.triaged.update(numbers)
+        data = self.call_claude("triage", prompt, TRIAGE_MODEL, SETTINGS_TRIAGE, None, TRIAGE_TIMEOUT)
+        if data.get("permission_denials"):
+            # 仕分けが済んだかどうか分からないので、仕分け済みにせず、次の切れ目でもう一度だけ仕分ける（ADR 0194）
+            again = [n for n in numbers if n not in self.triage_retried]
+            self.triage_retried.update(again)
+            self.triaged.update(n for n in numbers if n not in again)
+            if again:
+                self.say(
+                    "  仕分けの会話で権限に拒否された操作があったので、次の切れ目で、もう一度だけ仕分ける: "
+                    + "、".join(f"#{n}" for n in again)
+                )
+        else:
+            self.triaged.update(numbers)
         self.discard_if_dirty("仕分けの後")
 
     # ---- 全体 ----
@@ -1143,6 +1198,7 @@ class Loop:
         self.say(f"実装のループを始める。記録: {self.run_dir}")
         self.ensure_worktree()
         self.preflight_files()
+        self.check_engines()
         self.triage()
         handled = 0
         while True:

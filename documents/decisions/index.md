@@ -221,11 +221,14 @@
 * [ADR 0161](0161-run-implementation-loop-locally-and-park-human-work.md) - 実装のループを、作者の Mac でスクリプトから、作業の単位ごとに新しい会話の claude を呼んで回し、人の判断や確認が要ることではループを止めずにラベルと前提で脇に置いて、マイルストーンの区切りにユーザーがまとめて見る（ADR 0189 で権限のモードを変えた）
 * [ADR 0162](0162-pick-model-by-difficulty-and-review-in-separate-session.md) - タスクの難易度（小・中・大）で実装のモデルを Haiku・Sonnet・Opus に分け、機械のチェックの後に、実装したのとは別の会話のモデルにレビューさせ、直しを同じモデルで 2 回と引き上げたモデルで 1 回までに限る
 * [ADR 0163](0163-loop-merges-pull-requests-by-itself.md) - 実装のループが、機械のチェック・レビュー・CI を通ったタスクの pull request を、ユーザーの承認を待たずに自分で squash マージし、ユーザーは後から pull request を見て、取り消したいものを取り消す
-* [ADR 0164](0164-loop-triages-issues-between-tasks.md) - 実装のループが、ユーザーがループを始めたことを仕分けの依頼として、タスクの切れ目に `AI起票` の Issue を仕分け、直すと決めたものを `実装タスク` を付けてループのタスクとして直し、`実装タスク` の付いた Issue をスキル `triage-issues` の対象から外す
+* [ADR 0164](0164-loop-triages-issues-between-tasks.md) - 実装のループが、ユーザーがループを始めたことを仕分けの依頼として、タスクの切れ目に `AI起票` の Issue を仕分け、直すと決めたものを `実装タスク` を付けてループのタスクとして直し、`実装タスク` の付いた Issue をスキル `triage-issues` の対象から外す（ADR 0193 でユーザーの判断が要るとして残す Issue の扱いを、ADR 0194 で同じ実行の中で仕分け直さないことを変えた）
 * [ADR 0165](0165-implementation-plan-excludes-content.md) - 実装計画と実装のループの対象を、アプリ本体・開発用ツール・CI とし、教材（レッスン・動画・音声）を作ることは対象にしない
 * [ADR 0183](0183-stop-loop-when-blocked-by-permission-denials.md) - 実装のループで、実装する側が判断を求める Issue を挙げずに進められないと答え、その会話で権限に拒否された操作があったときは、タスクを行き詰まりにせず、仕組みの失敗としてラベルを付けずに止める
 * [ADR 0184](0184-allow-loop-to-delete-files-with-git-clean.md) - 実装のループの実装する側に、作ったファイルを消す操作として、`rm` ではなく、リポジトリの中の git に入っていないファイルだけを消す `git clean -f -- （パス）` を許可する（ADR 0189 で `rm` を許可しないことを変えた）
 * [ADR 0189](0189-run-loop-claude-with-bypass-permissions.md) - 実装のループが呼ぶ claude を、実装・レビュー・仕分けのすべてで権限のモード bypassPermissions で動かし、コミット・push・ブランチの切り替え・pull request の操作・保護するパスの書き換えなどだけを deny で禁止し、claude を呼んだ前後で作業ツリーの HEAD が変わったらループを止める
+* [ADR 0193](0193-loop-does-not-retriage-issues-left-for-user.md) - 実装のループの仕分けで、ユーザーの判断が要るとして `未判断` のまま残す Issue には、そのことを示すコメントを書き、そのコメントがあって `未判断` が付いたままの Issue は、次の実行からもループでは仕分け直さない
+* [ADR 0194](0194-retry-loop-triage-once-after-permission-denials.md) - 実装のループで、Issue の仕分けの会話に権限で拒否された操作があったときは、その回の Issue を仕分け済みにせず、同じ実行の次のタスクの切れ目で、もう一度だけ仕分ける
+* [ADR 0195](0195-loop-checks-node-and-npm-series-before-start.md) - 実装のループは、始めるときに、始めた端末で見つかる node と npm の版が `package.json` の `engines` の系列に合うかを確かめ、合わないときは始めない
 
 # 置き換え済み・廃止
 

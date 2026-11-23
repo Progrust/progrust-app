@@ -99,6 +99,7 @@ def main():
             "state": issue["state"],
             "labels": [{"name": name} for name in issue["labels"]],
             "milestone": {"title": issue["milestone"]} if issue.get("milestone") else None,
+            "comments": [{"body": body} for body in issue.get("comments", [])],
         }
         return {key: full[key] for key in fields}
 
@@ -1038,6 +1039,64 @@ class FlowTest(LoopTestCase):
         self.assertEqual([c["prompt"] for c in triage], ["/triage-issues --loop 6"])
         self.assertEqual(self.claude_calls("implement"), [])
         self.assertEqual(self.issue(5)["state"], "OPEN")
+
+    def test_triage_skips_issues_left_for_user(self) -> None:
+        # #5 は、前の実行の仕分けが、ユーザーの判断が要るとして残した。ユーザーが答えるまで仕分け直さない。
+        # #7 は、同じコメントがあるが、ユーザーが答えて `未判断` が外れた（対応すると決めた）ので、仕分ける。
+        left = "ユーザーの判断が要るので、未判断のまま残した（2026-11-23、Claude の判断）。\n\n## ユーザーに決めてほしいこと\n\n…"
+        self.add_issue(5, ["AI起票", "未判断", "仕様"])
+        self.issue(5)["comments"].append(left)
+        self.add_issue(6, ["AI起票", "未判断", "仕様"])
+        self.add_issue(7, ["AI起票", "改善"])
+        self.issue(7)["comments"].append(left)
+        self.script["triage_default"] = {"result": "仕分けた"}
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual([c["prompt"] for c in self.claude_calls("triage")], ["/triage-issues --loop 6 7"])
+
+    def test_triage_with_permission_denial_is_retried_once(self) -> None:
+        self.add_issue(5, ["AI起票", "未判断", "仕様"])
+        self.task(8)
+        self.task(9)
+        denial = [{"tool_name": "Bash", "tool_input": {"command": "gh api repos"}}]
+        self.script["triage_default"] = {"result": "仕分けた", "permission_denials": denial}
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A\n"}},
+            {"structured_output": done(), "files": {"b.txt": "B\n"}},
+        ]
+        self.script["review"] = [review_pass(), review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        # 始めたとき（拒否された）と、#8 の後（もう一度だけ）。#9 の後は仕分けない
+        self.assertEqual([c["prompt"] for c in self.claude_calls("triage")], ["/triage-issues --loop 5"] * 2)
+        self.assertIn("もう一度だけ仕分ける: #5", self.output)
+
+    def write_engine_fakes(self, node: str, npm: str) -> None:
+        with open(os.path.join(self.repo, "package.json"), "w", encoding="utf-8") as handle:
+            json.dump({"name": "x", "engines": {"node": "~25.9", "npm": "~11.12"}}, handle)
+        self.sh(["git", "add", "-A"])
+        self.sh(["git", "commit", "--quiet", "-m", "package.json"])
+        self.sh(["git", "push", "--quiet", "origin", "main"])
+        for name, version in (("node", node), ("npm", npm)):
+            path = os.path.join(self.bin, name)
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(f"#!/bin/sh\necho {version}\n")
+            os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+
+    def test_engine_mismatch_stops_before_any_call(self) -> None:
+        self.task(1)
+        self.add_issue(5, ["AI起票", "未判断"])
+        self.write_engine_fakes("v26.13.1", "11.20.0")
+        self.assertEqual(self.run_loop(), 2)
+        self.assertIn("`node` の版が 26.13.1 で、package.json の engines（~25.9）の系列に合いません", self.output)
+        self.assertEqual(self.claude_calls(), [])
+
+    def test_engine_series_match_starts(self) -> None:
+        self.add_issue(5, ["AI起票", "未判断"])
+        self.write_engine_fakes("v25.9.3", "11.12.1")
+        self.script["triage_default"] = {"result": "仕分けた"}
+        self.assertEqual(self.run_loop(), 0, self.output)
+        self.assertEqual(len(self.claude_calls("triage")), 1)
 
     def test_triage_failure_stops(self) -> None:
         self.add_issue(5, ["AI起票", "未判断"])
