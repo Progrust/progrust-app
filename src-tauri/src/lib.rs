@@ -15,6 +15,8 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         commands::content::list_chapters,
         commands::content::get_lesson,
         commands::progress::get_progress,
+        commands::progress::open_lesson,
+        commands::progress::save_video_position,
         commands::settings::get_app_version,
         commands::settings::get_settings,
         commands::settings::update_settings,

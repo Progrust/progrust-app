@@ -2,8 +2,9 @@
 //! （spec/lesson-flow/order.md）の計算。
 
 use std::collections::BTreeMap;
+use std::sync::{Mutex, PoisonError};
 
-use chrono::{DateTime, FixedOffset};
+use chrono::{DateTime, FixedOffset, Local, SecondsFormat};
 use serde::{Deserialize, Serialize};
 
 use crate::content::ChapterList;
@@ -68,6 +69,78 @@ impl AppDataDir {
     /// 進捗を保存する。
     pub fn write_progress(&self, progress: &Progress) -> Result<(), StorageError> {
         self.write_json(PROGRESS_FILE, progress)
+    }
+}
+
+/// 進捗の「読んで、変えて、書く」を 1 つずつ行うためのロック。
+/// ファイル単位のロックは読み書きの 1 回ずつしか守らないので、更新の全体はこれで直列化する。
+static UPDATE_LOCK: Mutex<()> = Mutex::new(());
+
+/// いまの日時を、進捗に書く形（RFC 3339、秒まで。例: `2026-10-31T13:25:00+09:00`）で返す。
+pub fn now_string() -> String {
+    Local::now().to_rfc3339_opts(SecondsFormat::Secs, false)
+}
+
+impl Progress {
+    /// レッスンを開いた。初めて開くレッスンは `in_progress` で作り、`last_opened_at` を `now` にする。
+    /// 完了済みのレッスンの `status` は変えない。
+    pub fn open_lesson(&mut self, lesson_id: &str, now: &str) -> &LessonProgress {
+        let entry = self.entry_or_new(lesson_id, now);
+        entry.last_opened_at = now.to_string();
+        entry
+    }
+
+    /// 動画の再生位置を保存する。`video_watched` は、一度 `true` になったら `false` に戻さない。
+    /// `video_only` のレッスン（動画のみのレッスン）で初めて `video_watched` が `true` になったときは、完了にする。
+    pub fn save_video_position(
+        &mut self,
+        lesson_id: &str,
+        last_sentence_id: &str,
+        video_watched: bool,
+        video_only: bool,
+        now: &str,
+    ) -> &LessonProgress {
+        let entry = self.entry_or_new(lesson_id, now);
+        entry.last_sentence_id = Some(last_sentence_id.to_string());
+        if video_watched && !entry.video_watched {
+            entry.video_watched = true;
+            if video_only {
+                entry.status = LessonStatus::Completed;
+                entry.first_completed_at = Some(now.to_string());
+                entry.last_completed_at = Some(now.to_string());
+                entry.completion_count = 1;
+            }
+        }
+        entry
+    }
+
+    fn entry_or_new(&mut self, lesson_id: &str, now: &str) -> &mut LessonProgress {
+        self.lessons
+            .entry(lesson_id.to_string())
+            .or_insert_with(|| LessonProgress {
+                status: LessonStatus::InProgress,
+                first_completed_at: None,
+                last_completed_at: None,
+                completion_count: 0,
+                last_opened_at: now.to_string(),
+                last_sentence_id: None,
+                video_watched: false,
+                last_passed_session_id: None,
+            })
+    }
+}
+
+impl AppDataDir {
+    /// 進捗を読み、`change` で変え、保存して、`change` が返した値を返す。更新は 1 つずつ行う。
+    pub fn update_progress<T>(
+        &self,
+        change: impl FnOnce(&mut Progress) -> T,
+    ) -> Result<T, StorageError> {
+        let _guard = UPDATE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+        let mut progress = self.read_progress()?;
+        let result = change(&mut progress);
+        self.write_progress(&progress)?;
+        Ok(result)
     }
 }
 
@@ -301,6 +374,82 @@ mod tests {
             summary.lessons.keys().collect::<Vec<_>>(),
             vec![&"a".to_string()]
         );
+    }
+
+    const T1: &str = "2026-10-31T13:00:00+09:00";
+    const T2: &str = "2026-11-01T09:00:00+09:00";
+
+    #[test]
+    fn opening_a_new_lesson_starts_it() {
+        let mut progress = Progress::default();
+        let entry = progress.open_lesson("a", T1).clone();
+        assert_eq!(entry, entry_started(T1));
+    }
+
+    fn entry_started(at: &str) -> LessonProgress {
+        LessonProgress {
+            status: InProgress,
+            first_completed_at: None,
+            last_completed_at: None,
+            completion_count: 0,
+            last_opened_at: at.into(),
+            last_sentence_id: None,
+            video_watched: false,
+            last_passed_session_id: None,
+        }
+    }
+
+    #[test]
+    fn reopening_a_completed_lesson_keeps_it_completed() {
+        let mut progress = Progress::default();
+        progress.save_video_position("a", "m1", true, true, T1);
+        let entry = progress.open_lesson("a", T2);
+        assert_eq!(entry.status, Completed);
+        assert_eq!(entry.last_opened_at, T2);
+        assert_eq!(entry.first_completed_at.as_deref(), Some(T1));
+    }
+
+    #[test]
+    fn video_watched_never_goes_back_to_false() {
+        let mut progress = Progress::default();
+        progress.save_video_position("a", "m1", true, false, T1);
+        let entry = progress.save_video_position("a", "m2", false, false, T2);
+        assert!(entry.video_watched);
+        assert_eq!(entry.last_sentence_id.as_deref(), Some("m2"));
+    }
+
+    #[test]
+    fn watching_a_video_only_lesson_to_the_end_completes_it_once() {
+        let mut progress = Progress::default();
+        let entry = progress.save_video_position("a", "m1", false, true, T1);
+        assert_eq!(entry.status, InProgress);
+        assert_eq!(entry.completion_count, 0);
+
+        let entry = progress
+            .save_video_position("a", "m9", true, true, T1)
+            .clone();
+        assert_eq!(entry.status, Completed);
+        assert_eq!(entry.first_completed_at.as_deref(), Some(T1));
+        assert_eq!(entry.last_completed_at.as_deref(), Some(T1));
+        assert_eq!(entry.completion_count, 1);
+        assert_eq!(entry.last_passed_session_id, None);
+
+        // 再生し直しても、完了の項目は変わらない。
+        let entry = progress.save_video_position("a", "m3", true, true, T2);
+        assert_eq!(entry.first_completed_at.as_deref(), Some(T1));
+        assert_eq!(entry.last_completed_at.as_deref(), Some(T1));
+        assert_eq!(entry.completion_count, 1);
+        let entry = progress.save_video_position("a", "m3", false, true, T2);
+        assert_eq!(entry.status, Completed);
+    }
+
+    #[test]
+    fn watching_a_lesson_with_an_exercise_does_not_complete_it() {
+        let mut progress = Progress::default();
+        let entry = progress.save_video_position("a", "m9", true, false, T1);
+        assert!(entry.video_watched);
+        assert_eq!(entry.status, InProgress);
+        assert_eq!(entry.completion_count, 0);
     }
 
     #[test]

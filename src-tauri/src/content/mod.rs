@@ -170,6 +170,27 @@ impl ContentDir {
         Ok(ChapterList { chapters })
     }
 
+    /// レッスンの `kind`（`lesson`・`video_only`・`chapter_review` など）を返す。
+    /// レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn lesson_kind(&self, lesson_id: &str) -> Result<String, ContentError> {
+        let not_found = || ContentError::LessonNotFound {
+            lesson_id: lesson_id.to_string(),
+        };
+        if lesson_id.starts_with(GENERATED_PREFIX) || !self.is_listed(lesson_id)? {
+            return Err(not_found());
+        }
+        let dir = self.lesson_dir(lesson_id);
+        if !dir.is_dir() {
+            return Err(not_found());
+        }
+        let lesson = read_json(&dir.join("lesson.json"))?;
+        Ok(lesson
+            .get("kind")
+            .and_then(Value::as_str)
+            .unwrap_or("")
+            .to_string())
+    }
+
     /// レッスンの定義・台本・音声のディレクトリ・演習の内容を読む。
     /// 準備中のレッスン、`chapters.json` に無いレッスン、生成問題（`gen-` で始まる ID）は `LessonNotFound` にする。
     pub fn get_lesson(&self, lesson_id: &str) -> Result<LessonDetail, ContentError> {
