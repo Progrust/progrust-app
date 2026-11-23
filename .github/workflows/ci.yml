@@ -12,6 +12,9 @@ permissions:
 
 env:
   CARGO_TERM_COLOR: always
+  # 実行マシンのディスクの使用量を減らす（Issue #189）。CI では差分のビルドを使わず、デバッグ情報も作らない。
+  CARGO_INCREMENTAL: "0"
+  CARGO_PROFILE_DEV_DEBUG: "0"
 
 jobs:
   check:
@@ -53,20 +56,19 @@ jobs:
           cargo --version
           python3 --version
 
-      # 依存の取り直しとビルドの時間を減らす。キーに Cargo.lock と rustc の版を含める。
-      - name: cargo の依存とビルドの結果のキャッシュの準備
-        id: rust-version
-        run: echo "rustc=$(rustc --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v6
+      - name: ディスクの空き（キャッシュを戻す前）
+        run: df -h /
+
+      # 依存の取り直しとビルドの時間を減らす。キャッシュするのは、依存のクレートのビルドの結果と
+      # cargo のレジストリだけで、アプリ自身のビルドの結果と、使わなくなったものは保存の前に消える。
+      # キャッシュが大きくなり続けないように、保存は main への push のときだけにする（Issue #189）。
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
-          path: |
-            ~/.cargo/registry/index
-            ~/.cargo/registry/cache
-            ~/.cargo/git/db
-            src-tauri/target
-          key: cargo-${{ runner.os }}-${{ steps.rust-version.outputs.rustc }}-${{ hashFiles('src-tauri/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-${{ steps.rust-version.outputs.rustc }}-
+          workspaces: src-tauri -> target
+          save-if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+
+      - name: ディスクの空き（キャッシュを戻した後）
+        run: df -h /
 
       - run: npm ci
 
@@ -78,3 +80,9 @@ jobs:
       - run: npm run content:check
 
       - run: python3 tools/design-system.py check
+
+      - name: ディスクの空き（最後）
+        if: always()
+        run: |
+          df -h /
+          du -sh src-tauri/target 2>/dev/null || true
