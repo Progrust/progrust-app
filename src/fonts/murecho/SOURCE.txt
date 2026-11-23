@@ -1,0 +1,7 @@
+Murecho の可変フォント。配布元のファイルを、変換もサブセット化もせずに置いている。
+
+配布元: https://github.com/positype/Murecho-Project
+コミット: 0efba44c1c504efe50edc3ae30da5840461e5d49
+ファイル:
+  Murecho[wght].ttf  <- fonts/variable/Murecho[wght].ttf
+  OFL.txt            <- OFL.txt

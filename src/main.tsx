@@ -1,5 +1,6 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
+import "./fonts/fonts.css";
 import "../design-system/progrust/tokens.css";
 import "../design-system/progrust-video/tokens.css";
 import "../design-system/progrust/components/bundle.css";

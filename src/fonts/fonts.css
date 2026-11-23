@@ -1,0 +1,16 @@
+/* 同梱した書体。配布元と取得したコミットは、各ディレクトリの SOURCE.txt。 */
+@font-face {
+  font-family: Murecho;
+  src: url("./murecho/Murecho%5Bwght%5D.ttf") format("truetype");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Red Hat Mono";
+  src: url("./red-hat-mono/RedHatMono-VF.ttf") format("truetype");
+  font-weight: 300 700;
+  font-style: normal;
+  font-display: swap;
+}

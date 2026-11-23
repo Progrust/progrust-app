@@ -1,0 +1,7 @@
+Red Hat Mono の可変フォント。配布元のファイルを、変換もサブセット化もせずに置いている。
+
+配布元: https://github.com/RedHatOfficial/RedHatFont
+コミット: 6bb1048a6402b0076ea04f42951ec66263cd1437
+ファイル:
+  RedHatMono-VF.ttf  <- fonts/Mono/RedHatMono/variable/RedHatMono-VF.ttf
+  OFL.txt            <- OFL.txt
