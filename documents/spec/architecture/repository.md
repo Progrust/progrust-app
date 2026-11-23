@@ -21,7 +21,7 @@ progrust-app/
 ├── src-tauri/           # バックエンド
 │   ├── build.rs         # ビルドスクリプト。同梱する教材と許可クレートの定義（`runner/`）を選んで写す（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）
 │   ├── build/           # ビルドスクリプトの部品。テストからも使う
-│   ├── src/bin/         # 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム（spec/content-guidelines/check-tool.md）
+│   ├── src/bin/         # 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム。Cargo の feature `content-check` を付けたときだけビルドする（spec/content-guidelines/check-tool.md）
 │   ├── app-icon.svg     # アプリのアイコンの元の絵（spec/screens/app-icon.md）
 │   ├── icons/           # アプリに入れるアイコンのファイル。元の絵から作る（spec/screens/app-icon.md「変える手順」）
 │   └── tests/           # バックエンドのテストと、テスト用の偽のツール（spec/non-functional/testing.md）

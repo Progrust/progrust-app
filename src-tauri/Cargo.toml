@@ -5,6 +5,24 @@ description = "Rust プログラミング学習アプリ"
 edition = "2024"
 rust-version = "1.100.0"
 publish = false
+# src/bin/ に判定だけを行うプログラム（progrust-judge）があるので、`tauri dev`・`tauri build`・`cargo run` が起動する
+# 実行ファイルを、アプリ（src/main.rs）にする（ADR 0208）。
+default-run = "progrust"
+
+[features]
+# 教材チェックツールが使う、判定だけを行うプログラム（progrust-judge）をビルドする（ADR 0208、ADR 0222）。
+# `tauri build` は、ビルドした実行ファイルをすべて .app に入れるので、この feature を付けたときだけビルドし、
+# アプリには入れない。
+content-check = []
+
+[[bin]]
+name = "progrust-judge"
+path = "src/bin/progrust-judge.rs"
+required-features = ["content-check"]
+
+[[test]]
+name = "judge_cli"
+required-features = ["content-check"]
 
 [lib]
 # バイナリ（main.rs）と名前が重ならないように、ライブラリの名前に `_lib` を付ける。

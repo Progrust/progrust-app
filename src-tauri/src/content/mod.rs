@@ -228,27 +228,14 @@ impl ContentDir {
         if !dir.is_dir() {
             return Err(not_found());
         }
-        let lesson = read_json(&dir.join("lesson.json"))?;
-        Ok(lesson
-            .get("kind")
-            .and_then(Value::as_str)
-            .unwrap_or("")
-            .to_string())
+        read_lesson_kind(&dir)
     }
 
     /// 演習が使う許可クレートの名前（`lesson.json` の `exercise.dependencies`）を読む。書かれていないときは空。
     /// レッスンが無いときの扱いは `get_lesson` と同じ。
     pub fn exercise_dependencies(&self, lesson_id: &str) -> Result<Vec<String>, ContentError> {
         self.lesson_kind(lesson_id)?;
-        let path = self.lesson_dir(lesson_id).join("lesson.json");
-        let lesson = read_json(&path)?;
-        let Some(dependencies) = lesson.pointer("/exercise/dependencies") else {
-            return Ok(Vec::new());
-        };
-        serde_json::from_value(dependencies.clone()).map_err(|error| ContentError::Invalid {
-            path,
-            reason: format!("exercise.dependencies が文字列の配列でない: {error}"),
-        })
+        read_exercise_dependencies(&self.lesson_dir(lesson_id))
     }
 
     /// 演習の判定方式と、判定に使うもの（`lesson.json` の `exercise.judge`・`exercise.case_labels` と、
@@ -256,37 +243,7 @@ impl ContentDir {
     /// spec/content-format/exercise.md「判定方式」）。レッスンが無いときの扱いは `get_lesson` と同じ。
     pub fn exercise_judge(&self, lesson_id: &str) -> Result<ExerciseJudge, ContentError> {
         self.lesson_kind(lesson_id)?;
-        let dir = self.lesson_dir(lesson_id);
-        let path = dir.join("lesson.json");
-        let lesson = read_json(&path)?;
-        let exercise: RawExerciseJudge =
-            serde_json::from_value(lesson.get("exercise").cloned().unwrap_or(Value::Null))
-                .map_err(|error| ContentError::Invalid {
-                    path: path.clone(),
-                    reason: format!("exercise.judge・exercise.case_labels を読めない: {error}"),
-                })?;
-        let exercise_dir = dir.join("exercise");
-        Ok(match exercise.judge {
-            RawJudge::Stdout {} => {
-                let cases_path = exercise_dir.join("cases.json");
-                let cases = parse_cases(&read_text(&cases_path)?).map_err(|error| {
-                    ContentError::Invalid {
-                        path: cases_path,
-                        reason: format!("テストケースの配列として読めない: {error}"),
-                    }
-                })?;
-                ExerciseJudge::Stdout { cases }
-            }
-            RawJudge::Test {
-                target,
-                min_learner_tests,
-            } => ExerciseJudge::Test {
-                judge_tests: read_text(&exercise_dir.join("judge_tests.rs"))?,
-                target,
-                case_labels: exercise.case_labels,
-                min_learner_tests,
-            },
-        })
+        read_exercise_judge(&self.lesson_dir(lesson_id))
     }
 
     /// 演習の初期コード（`exercise/starter/` の全ファイル）を読む。キーは cargo パッケージのルートからの相対パス
@@ -300,9 +257,7 @@ impl ContentDir {
             return Ok(None);
         }
         let starter = self.lesson_dir(lesson_id).join("exercise").join("starter");
-        let mut files = BTreeMap::new();
-        collect_files(&starter, &starter, &mut files)?;
-        Ok(Some(files))
+        read_exercise_files(&starter).map(Some)
     }
 
     /// レッスンの定義・台本・音声のディレクトリ・演習の内容を読む。
@@ -404,6 +359,73 @@ pub fn has_exercise(kind: &str) -> bool {
     kind != "video_only"
 }
 
+/// レッスンのディレクトリ（`content/lessons/{lesson_id}/`）の `lesson.json` から、レッスンの `kind` を読む。
+/// `kind` が無いときは空文字列。
+pub fn read_lesson_kind(lesson_dir: &Path) -> Result<String, ContentError> {
+    let lesson = read_json(&lesson_dir.join("lesson.json"))?;
+    Ok(lesson
+        .get("kind")
+        .and_then(Value::as_str)
+        .unwrap_or("")
+        .to_string())
+}
+
+/// レッスンのディレクトリから、演習が使う許可クレートの名前（`lesson.json` の `exercise.dependencies`）を読む。
+/// 書かれていないときは空。
+pub fn read_exercise_dependencies(lesson_dir: &Path) -> Result<Vec<String>, ContentError> {
+    let path = lesson_dir.join("lesson.json");
+    let lesson = read_json(&path)?;
+    let Some(dependencies) = lesson.pointer("/exercise/dependencies") else {
+        return Ok(Vec::new());
+    };
+    serde_json::from_value(dependencies.clone()).map_err(|error| ContentError::Invalid {
+        path,
+        reason: format!("exercise.dependencies が文字列の配列でない: {error}"),
+    })
+}
+
+/// レッスンのディレクトリから、演習の判定方式と、判定に使うものを読む（[`ContentDir::exercise_judge`]）。
+pub fn read_exercise_judge(lesson_dir: &Path) -> Result<ExerciseJudge, ContentError> {
+    let path = lesson_dir.join("lesson.json");
+    let lesson = read_json(&path)?;
+    let exercise: RawExerciseJudge = serde_json::from_value(
+        lesson.get("exercise").cloned().unwrap_or(Value::Null),
+    )
+    .map_err(|error| ContentError::Invalid {
+        path: path.clone(),
+        reason: format!("exercise.judge・exercise.case_labels を読めない: {error}"),
+    })?;
+    let exercise_dir = lesson_dir.join("exercise");
+    Ok(match exercise.judge {
+        RawJudge::Stdout {} => {
+            let cases_path = exercise_dir.join("cases.json");
+            let cases =
+                parse_cases(&read_text(&cases_path)?).map_err(|error| ContentError::Invalid {
+                    path: cases_path,
+                    reason: format!("テストケースの配列として読めない: {error}"),
+                })?;
+            ExerciseJudge::Stdout { cases }
+        }
+        RawJudge::Test {
+            target,
+            min_learner_tests,
+        } => ExerciseJudge::Test {
+            judge_tests: read_text(&exercise_dir.join("judge_tests.rs"))?,
+            target,
+            case_labels: exercise.case_labels,
+            min_learner_tests,
+        },
+    })
+}
+
+/// 演習のディレクトリ（`exercise/`）の下の `starter/` か `solution/` の全ファイルを読む。キーは cargo パッケージの
+/// ルートからの相対パス（`/` 区切り）。
+pub fn read_exercise_files(files_dir: &Path) -> Result<BTreeMap<String, String>, ContentError> {
+    let mut files = BTreeMap::new();
+    collect_files(files_dir, files_dir, &mut files)?;
+    Ok(files)
+}
+
 fn read_text(path: &Path) -> Result<String, ContentError> {
     fs::read_to_string(path).map_err(|source| ContentError::Io {
         path: path.to_path_buf(),
@@ -420,13 +442,10 @@ fn read_json(path: &Path) -> Result<Value, ContentError> {
 
 /// 演習のディレクトリから、問題文・解説・初期コードだけを読む。
 fn read_exercise(dir: &Path) -> Result<Exercise, ContentError> {
-    let mut starter_files = BTreeMap::new();
-    let starter = dir.join("starter");
-    collect_files(&starter, &starter, &mut starter_files)?;
     Ok(Exercise {
         problem_md: read_text(&dir.join("problem.md"))?,
         explanation_md: read_text(&dir.join("explanation.md"))?,
-        starter_files,
+        starter_files: read_exercise_files(&dir.join("starter"))?,
     })
 }
 

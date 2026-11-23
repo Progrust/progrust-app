@@ -12,11 +12,14 @@
 //! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
 //!   イベント `run_output`・`run_finished` の内容は [`run`]、提出のタスクとイベント `submit_progress` と
 //!   `run_finished` の `submit` の内容は [`submit`]。
+//! - 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム（`src/bin/progrust-judge.rs`）の中身は
+//!   [`lesson_judge`]（ADR 0208）。
 
 pub mod build;
 pub mod file_path;
 pub mod judge;
 pub mod judge_test;
+pub mod lesson_judge;
 pub mod process;
 pub mod project;
 pub mod run;

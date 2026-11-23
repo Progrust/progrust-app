@@ -19,6 +19,9 @@ export interface CheckOptions {
   contentDir: string;
   // 章とレッスンの一覧のディレクトリ（既定は `documents/spec/curriculum/chapters/`）。
   curriculumDir: string;
+  // 「模範解答」「初期コード」の判定の作業領域。既定（省略したとき）は、判定だけを行うプログラムが決める
+  // `src-tauri/target/content-check/`。テストで差し替える。
+  judgeWorkspaceDir?: string;
 }
 
 // 検査の項目。項目を足すときは、この形の関数を checks に並べる。
