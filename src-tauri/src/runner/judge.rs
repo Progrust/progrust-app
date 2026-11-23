@@ -7,6 +7,7 @@
 //!   1 件失敗しても、残りをすべて実行する。
 //! - 出力の比較の前に、標準出力と期待値の両方を [`normalize`] で正規化する。
 //! - 判定結果（[`JudgeResult`]）は、spec/exercise-runner/submit.md「判定結果」の形（`detail` は ADR 0216）で JSON にできる。
+//!   `test` 方式の判定（[`super::judge_test`]）も、同じ判定結果と進み具合を使う。
 //!
 //! Tauri の実行時に頼らない（判定だけを行うコマンドラインのプログラムからも使う。ADR 0208）。
 
@@ -107,6 +108,9 @@ pub enum CaseDetail {
     },
     /// `timeout`・`runtime_error` の標準エラー出力の先頭（[`process::STDERR_HEAD_BYTES`] まで）。文字列にする。
     Stderr(String),
+    /// `test` 方式の `fail` の panic メッセージ（`assert_eq!` の左辺・右辺を含む）。文字列にする
+    /// （[`super::judge_test`]）。
+    PanicMessage(String),
 }
 
 /// テストケース 1 件の結果。

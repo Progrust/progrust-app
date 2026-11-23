@@ -9,6 +9,8 @@
 //! - ビルド時間の制限で止めたときは、それまでの出力の後に、タイムアウトの旨を付ける。止める操作で止めたときは、
 //!   出力を捨てる。
 //! - 実行ファイルは、cargo の JSON の `compiler-artifact` から決める（ADR 0205、ADR 0215）。
+//! - レベルが `error` の診断が指すファイルを残す。`test` 方式の判定で、隠しテストの側でエラーが出たかを見分けるのに使う
+//!   （spec/exercise-runner/submit.md「test 方式」の 3）。
 //!
 //! Tauri の実行時に頼らない（判定だけを行うコマンドラインのプログラムからも使う。ADR 0208）。
 
@@ -145,6 +147,9 @@ pub struct BuildOutcome {
     pub output: Vec<BuildOutputPiece>,
     /// レベルが `error` の診断の `code`。重複を除き、出現順に並ぶ（spec/exercise-runner/attempt-log.md）。
     pub error_codes: Vec<String>,
+    /// レベルが `error` の診断が指すファイル（診断の `spans` の `file_name` と、マクロの展開をさかのぼった
+    /// `expansion.span` の `file_name`。cargo の出したまま）。重複を除き、出現順に並ぶ。
+    pub error_files: Vec<PathBuf>,
     /// 実行できる成果物。受け取った順に並ぶ。
     pub artifacts: Vec<BuildArtifact>,
     project_dir: PathBuf,
@@ -161,6 +166,15 @@ impl BuildOutcome {
     /// `src_path` は、絶対パスか、プロジェクトのディレクトリからの相対パス（`src/lib.rs` など）。
     pub fn test_executable(&self, src_path: &Path) -> Option<&Path> {
         self.find_executable(src_path, true)
+    }
+
+    /// レベルが `error` の診断が、`file` を指しているか。`file` は、絶対パスか、プロジェクトのディレクトリからの
+    /// 相対パス。診断のパス（`src/../progrust_judge_tests.rs` など）は、シンボリックリンクと `..` をたどって比べる。
+    pub fn has_error_in(&self, file: &Path) -> bool {
+        let wanted = canonical(&self.project_dir.join(file));
+        self.error_files
+            .iter()
+            .any(|error_file| canonical(&self.project_dir.join(error_file)) == wanted)
     }
 
     fn find_executable(&self, src_path: &Path, test: bool) -> Option<&Path> {
@@ -229,6 +243,7 @@ impl RunningBuild {
             },
             output: collected.output,
             error_codes: collected.error_codes,
+            error_files: collected.error_files,
             artifacts: collected.artifacts,
             project_dir: self.project_dir,
         };
@@ -237,6 +252,7 @@ impl RunningBuild {
                 // 止める操作で止めたときは、ビルドの出力を捨てる（run.md「停止」）。
                 outcome.output.clear();
                 outcome.error_codes.clear();
+                outcome.error_files.clear();
                 outcome.artifacts.clear();
             }
             BuildStatus::TimedOut => outcome.output.push(BuildOutputPiece {
@@ -306,6 +322,7 @@ struct Collector {
     partial_line: String,
     output: Vec<BuildOutputPiece>,
     error_codes: Vec<String>,
+    error_files: Vec<PathBuf>,
     artifacts: Vec<BuildArtifact>,
 }
 
@@ -313,6 +330,7 @@ struct Collector {
 struct Collected {
     output: Vec<BuildOutputPiece>,
     error_codes: Vec<String>,
+    error_files: Vec<PathBuf>,
     artifacts: Vec<BuildArtifact>,
 }
 
@@ -342,6 +360,7 @@ impl Collector {
         Collected {
             output: self.output,
             error_codes: self.error_codes,
+            error_files: self.error_files,
             artifacts: self.artifacts,
         }
     }
@@ -371,11 +390,28 @@ impl Collector {
     }
 
     fn push_diagnostic(&mut self, diagnostic: Diagnostic) {
-        if diagnostic.level == "error"
-            && let Some(code) = diagnostic.code.map(|code| code.code)
-            && !self.error_codes.contains(&code)
-        {
-            self.error_codes.push(code);
+        if diagnostic.level == "error" {
+            if let Some(code) = diagnostic.code.map(|code| code.code)
+                && !self.error_codes.contains(&code)
+            {
+                self.error_codes.push(code);
+            }
+            for span in diagnostic.spans {
+                // マクロの中で出たエラー（`assert_eq!` の中の型の違いなど）の `file_name` はマクロを定義した
+                // ファイルになるので、展開した場所（`expansion.span`）もさかのぼって残す。
+                let mut span = Some(span);
+                while let Some(DiagnosticSpan {
+                    file_name,
+                    expansion,
+                }) = span
+                {
+                    let file = PathBuf::from(file_name);
+                    if !self.error_files.contains(&file) {
+                        self.error_files.push(file);
+                    }
+                    span = expansion.map(|expansion| expansion.span);
+                }
+            }
         }
         if let Some(rendered) = diagnostic.rendered {
             self.push_piece(BuildOutputKind::CompilerMessage, &rendered);
@@ -422,11 +458,26 @@ struct Diagnostic {
     code: Option<DiagnosticCode>,
     #[serde(default)]
     rendered: Option<String>,
+    #[serde(default)]
+    spans: Vec<DiagnosticSpan>,
 }
 
 #[derive(Deserialize)]
 struct DiagnosticCode {
     code: String,
+}
+
+#[derive(Deserialize)]
+struct DiagnosticSpan {
+    file_name: String,
+    #[serde(default)]
+    expansion: Option<Box<SpanExpansion>>,
+}
+
+/// マクロの展開。`span` は、マクロを呼んだ場所。
+#[derive(Deserialize)]
+struct SpanExpansion {
+    span: DiagnosticSpan,
 }
 
 /// `reason` が `compiler-artifact` の行。
