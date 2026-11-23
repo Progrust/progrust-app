@@ -1,0 +1,11 @@
+.box {
+  margin: 1px;
+}
+
+h5 {
+  margin: 2px;
+}
+
+:root {
+  --lesson-gap: 3px;
+}

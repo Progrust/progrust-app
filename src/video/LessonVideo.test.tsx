@@ -202,6 +202,14 @@ it("cue-reference.json の長さとの比を、合図の正の秒に掛ける", 
   expect(value("at")).toBe(String(90 + 15));
 });
 
+it("シーンを、レッスン ID の data-lesson を持つ要素の中に描く", () => {
+  const { container } = renderAt(40);
+  const root = container.querySelector('[data-lesson="ch04-02"]');
+  expect(root).not.toBeNull();
+  expect(root).toContainElement(screen.getByText("title", { selector: "dd" }));
+  expect(container.querySelectorAll("[data-lesson]")).toHaveLength(1);
+});
+
 it("useLesson() は、章の並びとレッスン定義から決めた番号と名前を返す", () => {
   renderAt(40);
   expect(value("lesson")).toBe("2 所有権 2-2 所有権のムーブ");
