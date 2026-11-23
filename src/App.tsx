@@ -6,6 +6,7 @@ import { HomeScreen } from "./home/HomeScreen";
 import { LessonsScreen } from "./lessons/LessonsScreen";
 import { NavigationContext } from "./router";
 import type { Route } from "./router";
+import { SettingsScreen } from "./settings/SettingsScreen";
 
 // 画面全体がスクロールしない画面。ほかの画面は、縦に長いページとしてスクロールする。
 function isFixedHeight(route: Route): boolean {
@@ -43,7 +44,7 @@ function Screen({ route }: { route: Route }) {
     case "generated":
       return <Placeholder title="生成問題一覧" preparing />;
     case "settings":
-      return <Placeholder title="設定画面" />;
+      return <SettingsScreen />;
   }
 }
 
