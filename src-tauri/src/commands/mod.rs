@@ -5,5 +5,6 @@
 
 pub mod content;
 pub mod error;
+pub mod learning_record;
 pub mod progress;
 pub mod settings;
