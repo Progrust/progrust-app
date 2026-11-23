@@ -126,6 +126,7 @@ fn output_over_the_limit_just_before_exiting_is_returned_as_over_the_limit() {
 fn exited_group() -> Group {
     Group {
         pgid: 0,
+        on_timeout: TimeoutOutput::Discard,
         state: Mutex::new(GroupState {
             stop: None,
             exited: true,
@@ -390,6 +391,69 @@ fn the_time_limit_includes_waiting_for_stdin() {
     spec.limits.time = Duration::from_millis(300);
     let (process, _received) = spawn_with_channel(spec);
     assert_eq!(process.wait().unwrap(), Termination::TimedOut);
+}
+
+/// 制限時間で止めたときに、まだ渡していない出力を、`on_timeout` のとおりに捨てるか渡す。
+/// 最初の出力を渡したところで受け取る側を止めておき、その間に 2 つ目の出力を書かせ、制限時間で止まるのを待つ。
+fn output_after_a_slow_delivery_and_timeout(on_timeout: TimeoutOutput) -> String {
+    let dir = tempfile::tempdir().unwrap();
+    let mut spec = sh(
+        "echo $$ > pid; printf first; \
+         while [ ! -e go ]; do sleep 0.01; done; \
+         printf second; touch printed; sleep 30",
+        dir.path(),
+    );
+    spec.limits.time = Duration::from_secs(2);
+    spec.on_timeout = on_timeout;
+    let (started, wait_started) = mpsc::channel();
+    let (release, released) = mpsc::channel::<()>();
+    let delivered = Arc::new(Mutex::new(String::new()));
+    let process = {
+        let delivered = Arc::clone(&delivered);
+        spawn(spec, move |chunks| {
+            let first = {
+                let mut delivered = lock(&delivered);
+                let first = delivered.is_empty();
+                for chunk in chunks {
+                    delivered.push_str(&chunk.text);
+                }
+                first
+            };
+            if first {
+                let _ = started.send(());
+                let _ = released.recv();
+            }
+        })
+        .unwrap()
+    };
+    wait_started.recv_timeout(WAIT).expect("出力が届かない");
+    assert_eq!(*lock(&delivered), "first");
+
+    std::fs::write(dir.path().join("go"), "").unwrap();
+    wait_for_file(&dir.path().join("printed"));
+    // 制限時間で止まるまで、受け取る側を止めたままにする。
+    for pid in read_pids(&dir.path().join("pid")) {
+        assert_terminates(pid);
+    }
+    release.send(()).unwrap();
+    assert_eq!(process.wait().unwrap(), Termination::TimedOut);
+    std::mem::take(&mut *lock(&delivered))
+}
+
+#[test]
+fn output_not_yet_delivered_is_discarded_on_timeout_by_default() {
+    assert_eq!(
+        output_after_a_slow_delivery_and_timeout(TimeoutOutput::Discard),
+        "first"
+    );
+}
+
+#[test]
+fn output_not_yet_delivered_is_delivered_on_timeout_when_asked() {
+    assert_eq!(
+        output_after_a_slow_delivery_and_timeout(TimeoutOutput::Deliver),
+        "firstsecond"
+    );
 }
 
 // ---- 標準入力 ----
