@@ -21,17 +21,21 @@ Issue の実装を、実装した側の説明に頼らずにレビューする�
 
 - 始める前に、`documents/conventions/implementation-review.md` を全部読む。
 - このスキルと運用ルールが食い違うときは、運用ルールに従い、食い違いを結果に書く。
+- Bash では、1 回に 1 つのコマンドを実行する。`;`・`&&`・`|`・`for` でつながず、`cd` もしない（作業ディレクトリは、はじめからリポジトリのルートである）。ループでは、許可されたコマンドの形に合わない Bash は、確認なしに拒否される。拒否されたら、1 つずつのコマンドに分けて実行し直す。
 
 ## 進め方
 
 ### 1. Issue と差分を読む
 
 ```bash
+gh issue view （番号）
 gh issue view （番号） --comments
 git status --short
 git diff origin/main...HEAD --stat
 git diff origin/main...HEAD
 ```
+
+- `--comments` を付けると、本文は出ず、コメントだけが出る（コメントが無ければ、何も出ない）。本文とコメントは、別々に読む。
 
 - ループでは、実装はコミット済みで、`origin/main...HEAD` が差分になる。
 - ユーザーのいる会話では、コミットされていない変更もレビューの対象にする（`git diff` と、`git status --short` に出た新しいファイル）。

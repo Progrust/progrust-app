@@ -845,6 +845,36 @@ class FlowTest(LoopTestCase):
             self.assertIn("変更が無いので push していない", self.issue(number)["comments"][0])
         self.assertEqual(self.issue(2)["body"], "前提の行が無い\n")
 
+    def test_blocked_by_permission_denial_stops_without_label(self) -> None:
+        self.task(1)
+        self.task(2)
+        denial = [{"tool_name": "Bash", "tool_input": {"command": "gh issue view 1; git branch --show-current"}}]
+        self.script["implement"] = [
+            {"structured_output": done(status="blocked", blocked_reason="Bash が許可されない。"), "permission_denials": denial, "files": {"a.txt": "A\n"}},
+        ]
+        code = self.run_loop()
+        self.assertEqual(code, 2, self.output)
+        self.assertIn("仕組みの失敗", self.output)
+        self.assertIn("権限で拒否された操作があり", self.output)
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+        self.assertEqual(self.issue(1)["comments"], [])
+        self.assertEqual(len(self.claude_calls()), 1)  # 次のタスクへ進まない
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertFalse(os.path.exists(os.path.join(self.worktree, "a.txt")))
+
+    def test_blocked_with_issue_and_denial_waits_for_decision(self) -> None:
+        self.task(1, body="## 概要\n\nx\n\n- 前提: なし\n")
+        self.add_issue(50, ["AI起票", "未判断", "仕様"])
+        denial = [{"tool_name": "Bash", "tool_input": {"command": "git branch --show-current"}}]
+        self.script["implement"] = [
+            {"structured_output": done(status="blocked", blocked_reason="決まっていない。", blocking_issues=[50]), "permission_denials": denial},
+        ]
+        self.script["triage_default"] = {"result": "仕分けた"}
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual(self.issue(1)["body"], "## 概要\n\nx\n\n- 前提: #50\n")
+        self.assertNotIn("行き詰まり", self.issue(1)["labels"])
+
     def test_no_ci_checks_means_no_merge(self) -> None:
         self.task(1)
         self.task(2)

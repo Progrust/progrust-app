@@ -22,6 +22,7 @@ allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue comment
 
 - 始める前に、`documents/conventions/issues.md` を全部読む。特に「未判断の Issue の仕分け」（「対応すると決めた Issue」を含む）「保留の Issue」「対応しない Issue を閉じるとき」に従う。
 - このスキルと運用ルールが食い違うときは、運用ルールに従い、食い違いを報告で伝える。
+- Bash では、1 回に 1 つのコマンドを実行する。`;`・`&&`・`|`・`for` でつながず、`cd` もしない（作業ディレクトリは、はじめからリポジトリのルートである）。ループでは、許可されたコマンドの形に合わない Bash は、確認なしに拒否される。拒否されたら、1 つずつのコマンドに分けて実行し直す。
 
 ## 進め方
 
@@ -42,7 +43,7 @@ git status --short
 
 処理を始める前に、対象の Issue を全部調べる。
 
-- `gh issue view （番号） --comments` で、本文とコメントを読む。
+- `gh issue view （番号）` で本文を、`gh issue view （番号） --comments` でコメントを読む。`--comments` を付けると、本文は出ず、コメントだけが出る（コメントが無ければ、何も出ない）。
 - 「場所」にあるファイルの、いまの内容を読む。「確認したコミット」より後に直っていないか、問題の前提が無くなっていないかを確かめる。
 - 関連する ADR を探して読む（`documents/conventions/links.md`「仕様に関係する ADR の探し方」）。
 - 同じファイルや同じ原因の Issue は、まとめて考える。

@@ -216,6 +216,7 @@
 * [ADR 0163](0163-loop-merges-pull-requests-by-itself.md) - 実装のループが、機械のチェック・レビュー・CI を通ったタスクの pull request を、ユーザーの承認を待たずに自分で squash マージし、ユーザーは後から pull request を見て、取り消したいものを取り消す
 * [ADR 0164](0164-loop-triages-issues-between-tasks.md) - 実装のループが、ユーザーがループを始めたことを仕分けの依頼として、タスクの切れ目に `AI起票` の Issue を仕分け、直すと決めたものを `実装タスク` を付けてループのタスクとして直し、`実装タスク` の付いた Issue をスキル `triage-issues` の対象から外す
 * [ADR 0165](0165-implementation-plan-excludes-content.md) - 実装計画と実装のループの対象を、アプリ本体・開発用ツール・CI とし、教材（レッスン・動画・音声）を作ることは対象にしない
+* [ADR 0183](0183-stop-loop-when-blocked-by-permission-denials.md) - 実装のループで、実装する側が判断を求める Issue を挙げずに進められないと答え、その会話で権限に拒否された操作があったときは、タスクを行き詰まりにせず、仕組みの失敗としてラベルを付けずに止める
 
 # 置き換え済み・廃止
 

@@ -852,6 +852,13 @@ class Loop:
             session = data.get("session_id") or session
             result = data["structured_output"]
             if result["status"] == "blocked":
+                if data.get("permission_denials") and not result.get("blocking_issues"):
+                    # 権限で拒否されて進められないのは、タスクではなく仕組みの問題なので、行き詰まりにしない
+                    reason = one_line(result.get("blocked_reason") or "")[:300]
+                    raise InfraError(
+                        f"claude（task{task.number}-implement{step}）が、権限で拒否された操作があり、進められないと答えました。"
+                        f"許可の一覧（{SETTINGS_IMPLEMENT}）か、スキルのコマンドを見直してください。{reason}"
+                    )
                 return self.handle_blocked(task, branch, result, history)
             fixed = merge_unique(fixed, result.get("fixed_problems") or [])
             human = merge_unique(human, result.get("human_checks") or [])
