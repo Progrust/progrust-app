@@ -1,4 +1,4 @@
-# push と pull request のたびに、コミット前の確認とデザインシステムの検査を実行する
+# push と pull request のたびに、コミット前の確認、教材チェックツール、デザインシステムの検査を実行する
 # （documents/spec/non-functional/testing.md「CI」）。
 # 実行環境は ubuntu-latest で、対応環境（作者の Mac）ではない。本番ビルドは作らない。
 name: CI
@@ -72,5 +72,9 @@ jobs:
 
       # cargo のコマンドは、package.json のスクリプトが --locked で実行する。
       - run: npm run check
+
+      # 教材チェックツール（documents/spec/content-guidelines/check-tool.md）。エラーがあると失敗する。
+      # 描画の検査に要る、画面なしの Chrome は、ツールが用意する。
+      - run: npm run content:check
 
       - run: python3 tools/design-system.py check

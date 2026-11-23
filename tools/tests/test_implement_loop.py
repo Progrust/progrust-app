@@ -666,6 +666,59 @@ class FlowTest(LoopTestCase):
         self.assertIsNone(self.main_file("FAIL_DOCS"))
         self.assertEqual(self.main_file("a.txt"), "A\n")
 
+    def write_npm_fake(self, scripts: Dict[str, str]) -> str:
+        """package.json と、引数を記録し、FAIL_CONTENT があると content:check で失敗する偽の npm を置く。"""
+        with open(os.path.join(self.repo, "package.json"), "w", encoding="utf-8") as handle:
+            json.dump({"name": "x", "scripts": scripts}, handle)
+        self.sh(["git", "add", "-A"])
+        self.sh(["git", "commit", "--quiet", "-m", "package.json"])
+        self.sh(["git", "push", "--quiet", "origin", "main"])
+        log = os.path.join(self.bin, "npm-calls.txt")
+        path = os.path.join(self.bin, "npm")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(
+                "#!/bin/sh\n"
+                f'echo "$*" >> "{log}"\n'
+                'if [ "$2" = "content:check" ] && [ -e FAIL_CONTENT ]; then\n'
+                '  echo "content/x/lesson.json: エラー: FAIL_CONTENT がある"\n'
+                "  exit 1\n"
+                "fi\n"
+            )
+        os.chmod(path, os.stat(path).st_mode | stat.S_IXUSR)
+        return log
+
+    def test_content_check_runs_and_failure_is_fixed(self) -> None:
+        log = self.write_npm_fake({"check": "x", "content:check": "x"})
+        self.task(1)
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A\n", "FAIL_CONTENT": "x\n"}},
+            {"structured_output": done(), "delete": ["FAIL_CONTENT"]},
+        ]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        with open(log, encoding="utf-8") as handle:
+            calls = handle.read().splitlines()
+        self.assertEqual(calls, ["run check", "run content:check"] * 2)
+        implement = self.claude_calls("implement")
+        self.assertEqual(len(implement), 2)
+        self.assertIn("機械のチェックの失敗: 教材チェックツール", implement[1]["prompt"])
+        self.assertIn("`npm run content:check` が終了コード 1 で終わった", implement[1]["prompt"])
+        self.assertIn("FAIL_CONTENT がある", implement[1]["prompt"])
+        self.assertEqual(len(self.claude_calls("review")), 1)  # チェックが落ちた回はレビューしない
+        self.assertEqual(self.main_file("a.txt"), "A\n")
+
+    def test_content_check_skipped_without_script(self) -> None:
+        log = self.write_npm_fake({"check": "x"})
+        self.task(1)
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "A\n", "FAIL_CONTENT": "x\n"}}]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        with open(log, encoding="utf-8") as handle:
+            self.assertEqual(handle.read().splitlines(), ["run check"])
+        self.assertEqual(len(self.claude_calls("implement")), 1)
+
     def test_stuck_after_escalation_and_continue(self) -> None:
         self.task(1)
         self.task(2)

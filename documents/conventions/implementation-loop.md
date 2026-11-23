@@ -68,7 +68,8 @@ python3 tools/implement-loop.py
   - `python3 tools/check-documents.py`（[ドキュメントの検査](checks.md)）
   - `python3 tools/design-system.py check`（[デザインシステムのファイルと変更の手順](../spec/screens/design-system-files.md)「検査」、[画面デザインのファイルと変更の手順](../spec/screens/ui-design-files.md)「検査」）
   - `npm run check`（[開発環境と依存の版](../spec/architecture/development-environment.md)「開発で使うコマンド」）。`package.json` があるときに実行する
-- チェックを足すとき（教材チェックツールなど）は、この一覧と、スクリプトの先頭の一覧を、同じ変更で直す。
+  - `npm run content:check`（[教材チェックツール](../spec/content-guidelines/check-tool.md)）。`package.json` の `scripts` に `content:check` があるときに実行する
+- チェックを足すときは、この一覧と、スクリプトの先頭の一覧を、同じ変更で直す。
 
 ## 権限
 

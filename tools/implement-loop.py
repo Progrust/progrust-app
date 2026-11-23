@@ -113,11 +113,18 @@ PROTECTED_PATHS = (
     "tools/tests/test_implement_loop.py",
 )
 
-# 機械のチェック（requires のファイルがあるときだけ実行する）
+# 機械のチェック（requires のファイルがあるときだけ実行する。requires_script があるときは、
+# package.json の scripts にそのスクリプトがあるときだけ実行する）
 CHECKS: Tuple[Dict[str, Any], ...] = (
     {"name": "documents の検査", "argv": ["python3", "tools/check-documents.py"], "requires": "tools/check-documents.py"},
     {"name": "デザインシステムの検査", "argv": ["python3", "tools/design-system.py", "check"], "requires": "tools/design-system.py"},
     {"name": "npm run check", "argv": ["npm", "run", "check"], "requires": "package.json"},
+    {
+        "name": "教材チェックツール",
+        "argv": ["npm", "run", "content:check"],
+        "requires": "package.json",
+        "requires_script": "content:check",
+    },
 )
 
 # 時間切れ（秒）
@@ -744,18 +751,33 @@ class Loop:
         if failure:
             raise InfraError(f"保護するパスの変更を戻すコミットに失敗しました:\n{failure}")
 
+    def check_applies(self, check: Dict[str, Any]) -> bool:
+        """機械のチェックを、いまの作業ツリーで実行するかどうか。"""
+        path = os.path.join(self.worktree, check["requires"])
+        if not os.path.exists(path):
+            return False
+        script = check.get("requires_script")
+        if script is None:
+            return True
+        try:
+            with open(path, encoding="utf-8") as handle:
+                scripts = json.load(handle).get("scripts") or {}
+        except (OSError, ValueError, AttributeError):
+            return False
+        return isinstance(scripts, dict) and script in scripts
+
     def run_checks(self, task: Task, step: int) -> List[str]:
         findings = []
         failure = self.ensure_node_modules()
         if failure:
             return [f"## 機械のチェックの失敗: npm ci\n\n```\n{failure}\n```"]
         for check in CHECKS:
-            if not os.path.exists(os.path.join(self.worktree, check["requires"])):
+            if not self.check_applies(check):
                 continue
             self.say(f"機械のチェック: {check['name']}")
             result = self.run(check["argv"], self.worktree, CHECK_TIMEOUT)
             output = result.stdout + result.stderr
-            self.save(f"task{task.number}-check{step}-{check['argv'][-1].replace('/', '_')}.txt", output)
+            self.save(f"task{task.number}-check{step}-{check['argv'][-1].replace('/', '_').replace(':', '_')}.txt", output)
             if result.returncode != 0:
                 findings.append(
                     f"## 機械のチェックの失敗: {check['name']}\n\n"
@@ -1298,7 +1320,10 @@ class Loop:
             )
             print("  実装: " + " ".join(shlex.quote(a) for a in argv))
             for check in CHECKS:
-                print("  機械のチェック: " + " ".join(check["argv"]) + f"（`{check['requires']}` があるとき）")
+                condition = f"`{check['requires']}` があるとき"
+                if "requires_script" in check:
+                    condition = f"`{check['requires']}` の scripts に `{check['requires_script']}` があるとき"
+                print("  機械のチェック: " + " ".join(check["argv"]) + f"（{condition}）")
             argv = self.claude_argv(
                 PROMPT_REVIEW.format(number=task.number), str(models["review"]),
                 f"{settings_dir}/{os.path.basename(SETTINGS_REVIEW)}", {"…": "レビューの結果の形"}, None,
