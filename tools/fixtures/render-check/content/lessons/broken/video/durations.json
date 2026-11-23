@@ -1,0 +1,52 @@
+{
+  "t1": {
+    "seconds": 1.0,
+    "say": "ぶん",
+    "voice": {
+      "narrator": "N",
+      "speed": 100,
+      "pause": 0.2,
+      "emotion": {}
+    }
+  },
+  "u1": {
+    "seconds": 1.0,
+    "say": "ぶん",
+    "voice": {
+      "narrator": "N",
+      "speed": 100,
+      "pause": 0.2,
+      "emotion": {}
+    }
+  },
+  "o1": {
+    "seconds": 1.0,
+    "say": "ぶん",
+    "voice": {
+      "narrator": "N",
+      "speed": 100,
+      "pause": 0.2,
+      "emotion": {}
+    }
+  },
+  "s1": {
+    "seconds": 1.0,
+    "say": "ぶん",
+    "voice": {
+      "narrator": "N",
+      "speed": 100,
+      "pause": 0.2,
+      "emotion": {}
+    }
+  },
+  "i1": {
+    "seconds": 1.0,
+    "say": "ぶん",
+    "voice": {
+      "narrator": "N",
+      "speed": 100,
+      "pause": 0.2,
+      "emotion": {}
+    }
+  }
+}

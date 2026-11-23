@@ -13,6 +13,13 @@ export const CodeBlocksContext = createContext<readonly CodeBlockData[] | null>(
   null,
 );
 
+// 表示している LessonTitle の数を知らせる先。LessonTitle は、表示を始めたときに 1、やめたときに −1 を渡す。
+// 値は、教材チェックツールの描画（検査「表紙」。tools/content-check/render-entry.tsx）だけが入れる。
+// アプリでは null のままで、LessonTitle は何も知らせない。
+export const LessonTitleCountContext = createContext<
+  ((delta: 1 | -1) => void) | null
+>(null);
+
 // 合図の関数 at・endOf を返す。シーンの部品の中で呼ぶ。
 export function useCues(): Cues {
   const cues = useContext(CuesContext);

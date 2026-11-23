@@ -18,8 +18,8 @@ description: "`tools/` の教材チェックツールで検証するチェック
 | 台本 | `script.json` が [動画の台本（script.json）](../content-format/video/script-json.md) の形式に合っている（ID の重複がないこと、文の並び、`say` が 140 字以下であることを含む）。`code_blocks` が [動画でのコードの表示](../content-format/video/code-display.md) の行番号と Diff の決まりに合っている。`index.tsx` のシーンが台本の `scenes` と一致する |
 | 音声 | すべての文に音声ファイルがあり、`durations.json` の `say`・`voice` が、台本の `say`・`content/voice.json` と同じである。台本にない文の音声ファイルと記録がない |
 | lint | 動画のコードが [動画のコードの禁止事項](../content-format/video/prohibited-code.md) に違反していない |
-| 描画 | すべてのシーンをエラーなく描画できる。シーンごとに、最初のフレーム、各文の開始位置のフレーム、最後のフレームを描画する。台本にない文やほかのシーンの文を指す合図（[動画のタイムラインと合図](../content-format/video/timeline-and-cues.md)）と、制約に違反する `CodeBlock` の指定（[動画でのコードの表示](../content-format/video/code-display.md)）は、ここでエラーになる。見つかるのは、描画したフレームで実行された処理のエラーだけである。CI では、毎回すべてのレッスンを描画する |
-| 表紙 | 最初のシーンが `LessonTitle` を 1 つ表示する（[動画のシーンの書き方](../content-format/video/scenes.md)） |
+| 描画 | すべてのシーンをエラーなく描画できる。シーンごとに、最初のフレーム、各文の開始位置のフレーム、最後のフレームを描画する。台本にない文やほかのシーンの文を指す合図（[動画のタイムラインと合図](../content-format/video/timeline-and-cues.md)）と、制約に違反する `CodeBlock` の指定（[動画でのコードの表示](../content-format/video/code-display.md)）は、ここでエラーになる。描画時の例外と、ブラウザの console に出たエラーを、エラーにする（console の警告はエラーにしない）。見つかるのは、描画したフレームで実行された処理のエラーだけである。CI では、毎回すべてのレッスンを描画する |
+| 表紙 | 最初のシーンが `LessonTitle` を 1 つ表示する（[動画のシーンの書き方](../content-format/video/scenes.md)）。最初のシーンの、「描画」で描画したフレームごとに、表示している `LessonTitle` を数える。どのフレームでも表示していないときと、2 つ以上表示しているフレームがあるときに、エラーになる |
 | 問題文・解説 | [演習のファイル形式](../content-format/exercise.md)「問題文（problem.md）」・[演習のファイル形式](../content-format/exercise.md)「解説（explanation.md）」 の必須見出しがある |
 | 模範解答 | 模範解答が判定ですべてのテストケースに通る（[コード実行・判定](../exercise-runner/index.md) の判定処理を使う） |
 | 初期コード | 初期コードが判定で正解にならない |

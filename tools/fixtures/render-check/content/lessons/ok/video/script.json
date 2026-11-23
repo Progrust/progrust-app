@@ -1,0 +1,18 @@
+{
+  "code_blocks": [
+    {
+      "id": "main",
+      "language": "rust",
+      "code": "fn main() {\n    let s = String::from(\"hi\");\n    println!(\"{s}\");\n}"
+    }
+  ],
+  "scenes": [
+    { "id": "title", "name": "表紙" },
+    { "id": "code", "name": "コード" }
+  ],
+  "sentences": [
+    { "id": "t1", "scene": "title", "text": "表紙", "say": "ひょうし" },
+    { "id": "c1", "scene": "code", "text": "コード", "say": "こーど" },
+    { "id": "c2", "scene": "code", "text": "変数", "say": "へんすう" }
+  ]
+}

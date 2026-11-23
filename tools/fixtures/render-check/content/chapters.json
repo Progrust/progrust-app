@@ -1,0 +1,8 @@
+[
+  {
+    "id": "ch01",
+    "title": "描画のテスト",
+    "description": "教材チェックツールの描画のテスト（tools/content-check/render.test.ts）",
+    "lessons": ["ok", "broken", "no-title", "two-titles", "prepared"]
+  }
+]
