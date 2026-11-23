@@ -7,6 +7,7 @@ use std::fs;
 use std::path::Path;
 
 use common::{LOCAL_URL, app, invoke};
+use progrust_lib::attempts::{BuildOutput, SessionKind, SubmitRecord, SubmitStatus};
 use progrust_lib::content::ContentDir;
 use progrust_lib::storage::AppDataDir;
 use serde_json::{Value, json};
@@ -836,4 +837,393 @@ fn draft_commands_for_a_missing_lesson_return_not_found() {
         );
     }
     assert!(!data.path().join("drafts").exists());
+}
+
+// ---- 正解と試行セッションの終了、前回の正解コード（spec/lesson-flow/completion.md、drafts.md）----
+
+fn end_session(window: &WebviewWindow<MockRuntime>, lesson_id: &str) -> Result<Value, Value> {
+    invoke(
+        window,
+        LOCAL_URL,
+        "end_session",
+        json!({ "lesson_id": lesson_id }),
+    )
+}
+
+fn get_passed_code(window: &WebviewWindow<MockRuntime>, lesson_id: &str) -> Result<Value, Value> {
+    invoke(
+        window,
+        LOCAL_URL,
+        "get_passed_code",
+        json!({ "lesson_id": lesson_id }),
+    )
+}
+
+fn one_file(content: &str) -> std::collections::BTreeMap<String, String> {
+    std::collections::BTreeMap::from([("src/main.rs".to_string(), content.to_string())])
+}
+
+/// 提出の判定が終わったときに提出のコマンドがすることを、部品で行う: `submit` イベントを追記し、正解なら正解を記録する。
+/// 追記したセッションの ID と、正解のときは更新した後の進捗を返す。
+fn submit(data: &Path, lesson_id: &str, code: &str, at: &str, passed: bool) -> (String, Value) {
+    let dir = AppDataDir::new(data);
+    let session_id = dir
+        .append_submit(
+            lesson_id,
+            SessionKind::Lesson,
+            SubmitRecord {
+                at: at.into(),
+                files: one_file(code),
+                status: if passed {
+                    SubmitStatus::Passed
+                } else {
+                    SubmitStatus::Wrong
+                },
+                error_codes: Vec::new(),
+                passed: if passed { 3 } else { 1 },
+                total: 3,
+                failed_cases: Vec::new(),
+                build: BuildOutput::default(),
+                program_stderr: String::new(),
+            },
+        )
+        .unwrap();
+    if !passed {
+        return (session_id, Value::Null);
+    }
+    let progress = dir
+        .record_pass(lesson_id, &session_id, at)
+        .unwrap()
+        .expect("追記した試行ログがある");
+    (session_id, serde_json::to_value(progress).unwrap())
+}
+
+/// 正解したが終わっていないセッション（`passed_at` があり `ended_at` が無い）の試行ログを書く。
+fn write_passed_attempt(data: &Path, session_id: &str, lesson_id: &str, code: &str) {
+    write(
+        data,
+        &format!("attempts/{session_id}.json"),
+        &json!({
+            "schema_version": 1,
+            "session_id": session_id,
+            "lesson_id": lesson_id,
+            "kind": "lesson",
+            "difficulty": null,
+            "started_at": "2026-10-30T09:00:00+09:00",
+            "passed_at": "2026-10-30T09:20:00+09:00",
+            "ended_at": null,
+            "events": [{
+                "type": "submit", "at": "2026-10-30T09:20:00+09:00",
+                "files": { "src/main.rs": code },
+                "result": { "status": "passed", "error_codes": [], "passed": 3, "total": 3,
+                            "failed_cases": [], "stderr": "" },
+            }],
+        })
+        .to_string(),
+    );
+}
+
+#[test]
+fn after_passing_and_ending_the_session_the_lesson_starts_from_the_starter_code() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    let opened = open_lesson(&window, "e").unwrap();
+    let first_session = opened["session_id"].as_str().unwrap().to_string();
+
+    const WRONG: &str = "fn main() { /* 途中 */ }\n";
+    const RIGHT: &str = "fn main() { println!(\"正解\"); }\n";
+    save_draft(&window, "e", json!({ "src/main.rs": WRONG })).unwrap();
+    submit(data.path(), "e", WRONG, "2026-10-31T13:10:00+09:00", false);
+    save_draft(&window, "e", json!({ "src/main.rs": RIGHT })).unwrap();
+    let (session_id, progress) = submit(data.path(), "e", RIGHT, "2026-10-31T13:25:00+09:00", true);
+    assert_eq!(session_id, first_session);
+
+    // 正解を記録すると、試行ログに `passed_at` が入り、レッスンが完了になる。
+    let attempt = saved_attempt(data.path(), &session_id);
+    assert_eq!(attempt["passed_at"], "2026-10-31T13:25:00+09:00");
+    assert_eq!(attempt["ended_at"], Value::Null);
+    assert_eq!(progress["status"], "completed");
+    assert_eq!(progress["first_completed_at"], "2026-10-31T13:25:00+09:00");
+    assert_eq!(progress["last_completed_at"], "2026-10-31T13:25:00+09:00");
+    assert_eq!(progress["completion_count"], 1);
+    assert_eq!(progress["last_passed_session_id"], json!(session_id));
+    assert_eq!(saved_progress(data.path())["lessons"]["e"], progress);
+    // 終えるまでは、下書きは残っている。
+    assert!(draft_path(data.path(), "e").exists());
+
+    assert_eq!(end_session(&window, "e").unwrap(), Value::Null);
+    let attempt = saved_attempt(data.path(), &session_id);
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(attempt["ended_at"].as_str().unwrap()).is_ok(),
+        "{attempt}"
+    );
+    assert_eq!(attempt["passed_at"], "2026-10-31T13:25:00+09:00");
+    assert!(!draft_path(data.path(), "e").exists());
+
+    // 開き直すと、新しいセッションで、下書きは無い（初期コードから始まる）。
+    let reopened = open_lesson(&window, "e").unwrap();
+    assert_ne!(reopened["session_id"], json!(session_id));
+    assert_eq!(reopened["draft"], Value::Null);
+    assert_eq!(reopened["progress"]["status"], "completed");
+
+    // 「前回の正解コードを見る」では、正解したときのコードが返る。
+    assert_eq!(
+        get_passed_code(&window, "e").unwrap(),
+        json!({
+            "session_id": session_id,
+            "submitted_at": "2026-10-31T13:25:00+09:00",
+            "files": { "src/main.rs": RIGHT },
+        })
+    );
+
+    // もう一度呼んでも、終えたセッションは変わらない。
+    let ended = saved_attempt(data.path(), &session_id);
+    assert_eq!(end_session(&window, "e").unwrap(), Value::Null);
+    assert_eq!(saved_attempt(data.path(), &session_id), ended);
+}
+
+#[test]
+fn end_session_does_nothing_for_a_session_without_passed_at() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    let session_id = open_lesson(&window, "e").unwrap()["session_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    save_draft(&window, "e", json!({ "src/main.rs": "// 途中" })).unwrap();
+    submit(
+        data.path(),
+        "e",
+        "// 途中",
+        "2026-10-31T13:10:00+09:00",
+        false,
+    );
+    let attempt_path = data
+        .path()
+        .join("attempts")
+        .join(format!("{session_id}.json"));
+    let attempt_before = fs::read(&attempt_path).unwrap();
+    let draft_before = fs::read(draft_path(data.path(), "e")).unwrap();
+    let progress_before = fs::read(data.path().join("progress.json")).unwrap();
+
+    assert_eq!(end_session(&window, "e").unwrap(), Value::Null);
+    assert_eq!(fs::read(&attempt_path).unwrap(), attempt_before);
+    assert_eq!(
+        fs::read(draft_path(data.path(), "e")).unwrap(),
+        draft_before
+    );
+    assert_eq!(
+        fs::read(data.path().join("progress.json")).unwrap(),
+        progress_before
+    );
+    // 次に開くと、同じセッションを続ける。
+    assert_eq!(open_lesson(&window, "e").unwrap()["session_id"], session_id);
+
+    // セッションが無いレッスン（動画のみのレッスン）でも、何もしない。
+    assert_eq!(end_session(&window, "v").unwrap(), Value::Null);
+    assert_eq!(attempt_names(data.path()), [format!("{session_id}.json")]);
+}
+
+#[test]
+fn restarting_the_app_ends_a_passed_session_that_was_not_ended() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    // 正解した後に、end_session を呼ばずにアプリが止まった。
+    write_passed_attempt(data.path(), "20261030T090000_e", "e", "fn main() {}\n");
+    save_draft_file(data.path(), "e");
+    // 正解していない、ほかのレッスンのセッションと下書き。
+    write_attempt(data.path(), "20261030T100000_v", "v", Value::Null);
+    save_draft_file(data.path(), "v");
+    let unpassed_before = fs::read(data.path().join("attempts/20261030T100000_v.json")).unwrap();
+
+    // アプリの起動のときにすること。
+    let ended = AppDataDir::new(data.path()).end_all_passed_sessions();
+    assert!(ended.errors.is_empty(), "{:?}", ended.errors);
+    assert_eq!(ended.ended, ["20261030T090000_e"]);
+
+    let attempt = saved_attempt(data.path(), "20261030T090000_e");
+    assert!(
+        chrono::DateTime::parse_from_rfc3339(attempt["ended_at"].as_str().unwrap()).is_ok(),
+        "{attempt}"
+    );
+    assert_eq!(attempt["passed_at"], "2026-10-30T09:20:00+09:00");
+    assert!(!draft_path(data.path(), "e").exists());
+    // 正解していないセッションと、その下書きは、そのまま残る。
+    assert_eq!(
+        fs::read(data.path().join("attempts/20261030T100000_v.json")).unwrap(),
+        unpassed_before
+    );
+    assert!(draft_path(data.path(), "v").exists());
+
+    // 次に開くと、新しいセッションが始まり、初期コードから始まる。
+    let (_app, window) = app_with(content.path(), data.path());
+    let reopened = open_lesson(&window, "e").unwrap();
+    assert_ne!(reopened["session_id"], "20261030T090000_e");
+    assert_eq!(reopened["draft"], Value::Null);
+
+    // もう一度起動しても、終えたセッションは変わらない。
+    let again = AppDataDir::new(data.path()).end_all_passed_sessions();
+    assert!(again.ended.is_empty() && again.errors.is_empty());
+    assert_eq!(saved_attempt(data.path(), "20261030T090000_e"), attempt);
+}
+
+fn save_draft_file(data: &Path, lesson_id: &str) {
+    write(
+        data,
+        &format!("drafts/{lesson_id}.json"),
+        &json!({
+            "schema_version": 1,
+            "lesson_id": lesson_id,
+            "updated_at": "2026-10-30T09:10:00+09:00",
+            "files": { "src/main.rs": "// 下書き" },
+        })
+        .to_string(),
+    );
+}
+
+#[test]
+fn passing_a_completed_lesson_again_counts_up_and_keeps_first_completed_at() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    open_lesson(&window, "e").unwrap();
+    let (first, done) = submit(
+        data.path(),
+        "e",
+        "// 1 回目",
+        "2026-10-31T13:25:00+09:00",
+        true,
+    );
+    end_session(&window, "e").unwrap();
+
+    // やり直す（新しいセッション）。途中でやめても、完了のまま。
+    let redo = open_lesson(&window, "e").unwrap();
+    assert_ne!(redo["session_id"], json!(first));
+    assert_eq!(redo["progress"]["status"], "completed");
+    assert_eq!(redo["progress"]["completion_count"], 1);
+
+    let (second, again) = submit(
+        data.path(),
+        "e",
+        "// 2 回目",
+        "2026-11-01T09:30:00+09:00",
+        true,
+    );
+    assert_ne!(second, first);
+    assert_eq!(again["status"], "completed");
+    assert_eq!(again["completion_count"], 2);
+    assert_eq!(again["first_completed_at"], done["first_completed_at"]);
+    assert_eq!(again["last_completed_at"], "2026-11-01T09:30:00+09:00");
+    assert_eq!(again["last_passed_session_id"], json!(second));
+    end_session(&window, "e").unwrap();
+
+    // 前回の正解コードは、最後に正解したセッションのもの。
+    let passed = get_passed_code(&window, "e").unwrap();
+    assert_eq!(passed["session_id"], json!(second));
+    assert_eq!(passed["files"], json!({ "src/main.rs": "// 2 回目" }));
+}
+
+#[test]
+fn passing_twice_in_one_session_keeps_the_first_passed_at_and_code() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    open_lesson(&window, "e").unwrap();
+    let (session_id, _) = submit(
+        data.path(),
+        "e",
+        "// 最初",
+        "2026-10-31T13:25:00+09:00",
+        true,
+    );
+    // 解説表示の状態では再び提出できないので、ふつうは起きない。起きたときも、正解した回数として数える。
+    let (same, progress) = submit(data.path(), "e", "// 後", "2026-10-31T13:28:00+09:00", true);
+    assert_eq!(same, session_id);
+    assert_eq!(progress["completion_count"], 2);
+    assert_eq!(progress["first_completed_at"], "2026-10-31T13:25:00+09:00");
+    assert_eq!(progress["last_completed_at"], "2026-10-31T13:28:00+09:00");
+    assert_eq!(progress["last_passed_session_id"], json!(session_id));
+    assert_eq!(
+        saved_attempt(data.path(), &session_id)["passed_at"],
+        "2026-10-31T13:25:00+09:00"
+    );
+    let passed = get_passed_code(&window, "e").unwrap();
+    assert_eq!(passed["submitted_at"], "2026-10-31T13:25:00+09:00");
+    assert_eq!(passed["files"], json!({ "src/main.rs": "// 最初" }));
+}
+
+#[test]
+fn recording_a_pass_without_the_attempt_log_writes_nothing() {
+    let data = tempfile::tempdir().unwrap();
+    let dir = AppDataDir::new(data.path());
+    assert_eq!(
+        dir.record_pass("e", "20261031T130000_e", "2026-10-31T13:25:00+09:00")
+            .unwrap(),
+        None
+    );
+    assert!(!data.path().join("progress.json").exists());
+    assert!(!data.path().join("attempts").exists());
+}
+
+#[test]
+fn get_passed_code_without_a_passed_submit_is_not_found() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+
+    // 進捗が無い。
+    assert_eq!(
+        get_passed_code(&window, "e").unwrap_err()["code"],
+        "not_found"
+    );
+    // 開いただけで、正解していない（`last_passed_session_id` が null）。
+    open_lesson(&window, "e").unwrap();
+    assert_eq!(
+        get_passed_code(&window, "e").unwrap_err()["code"],
+        "not_found"
+    );
+
+    let mut progress = saved_progress(data.path());
+    let mut entry = progress["lessons"]["e"].clone();
+    entry["status"] = json!("completed");
+    entry["last_passed_session_id"] = json!("20261030T090000_e");
+    progress["lessons"]["e"] = entry;
+    write(data.path(), "progress.json", &progress.to_string());
+    // `last_passed_session_id` の試行ログが無い。
+    assert_eq!(
+        get_passed_code(&window, "e").unwrap_err()["code"],
+        "not_found"
+    );
+    // 試行ログに、正解した `submit` イベントが無い。
+    write_attempt(
+        data.path(),
+        "20261030T090000_e",
+        "e",
+        json!("2026-10-30T09:30:00+09:00"),
+    );
+    assert_eq!(
+        get_passed_code(&window, "e").unwrap_err()["code"],
+        "not_found"
+    );
+}
+
+#[test]
+fn completion_commands_for_a_missing_lesson_return_not_found() {
+    let content = make_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    for lesson_id in ["none", "gen-20261031T130000", "../e"] {
+        assert_eq!(
+            end_session(&window, lesson_id).unwrap_err()["code"],
+            "not_found",
+            "{lesson_id}"
+        );
+        assert_eq!(
+            get_passed_code(&window, lesson_id).unwrap_err()["code"],
+            "not_found",
+            "{lesson_id}"
+        );
+    }
 }

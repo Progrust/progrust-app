@@ -114,6 +114,20 @@ impl Progress {
         entry
     }
 
+    /// 提出で正解した。レッスンを完了にし、`last_completed_at` を `at`、`last_passed_session_id` を `session_id` にして、
+    /// `completion_count` を 1 増やす。`first_completed_at` は、まだ無いときだけ `at` にする（やり直しでは変えない）。
+    pub fn record_pass(&mut self, lesson_id: &str, session_id: &str, at: &str) -> &LessonProgress {
+        let entry = self.entry_or_new(lesson_id, at);
+        entry.status = LessonStatus::Completed;
+        if entry.first_completed_at.is_none() {
+            entry.first_completed_at = Some(at.to_string());
+        }
+        entry.last_completed_at = Some(at.to_string());
+        entry.completion_count += 1;
+        entry.last_passed_session_id = Some(session_id.to_string());
+        entry
+    }
+
     fn entry_or_new(&mut self, lesson_id: &str, now: &str) -> &mut LessonProgress {
         self.lessons
             .entry(lesson_id.to_string())
@@ -450,6 +464,43 @@ mod tests {
         assert!(entry.video_watched);
         assert_eq!(entry.status, InProgress);
         assert_eq!(entry.completion_count, 0);
+    }
+
+    #[test]
+    fn passing_completes_the_lesson() {
+        let mut progress = Progress::default();
+        progress.open_lesson("a", T1);
+        let entry = progress.record_pass("a", "20261031T130000_a", T1).clone();
+        assert_eq!(
+            entry,
+            LessonProgress {
+                status: Completed,
+                first_completed_at: Some(T1.into()),
+                last_completed_at: Some(T1.into()),
+                completion_count: 1,
+                last_opened_at: T1.into(),
+                last_sentence_id: None,
+                video_watched: false,
+                last_passed_session_id: Some("20261031T130000_a".into()),
+            }
+        );
+    }
+
+    #[test]
+    fn passing_a_completed_lesson_again_counts_up_and_keeps_the_first_completion() {
+        let mut progress = Progress::default();
+        progress.open_lesson("a", T1);
+        progress.record_pass("a", "20261031T130000_a", T1);
+        progress.open_lesson("a", T2);
+        let entry = progress.record_pass("a", "20261101T090000_a", T2);
+        assert_eq!(entry.status, Completed);
+        assert_eq!(entry.completion_count, 2);
+        assert_eq!(entry.first_completed_at.as_deref(), Some(T1));
+        assert_eq!(entry.last_completed_at.as_deref(), Some(T2));
+        assert_eq!(
+            entry.last_passed_session_id.as_deref(),
+            Some("20261101T090000_a")
+        );
     }
 
     #[test]

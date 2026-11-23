@@ -8,6 +8,7 @@ use tauri::State;
 
 use super::error::{CommandError, ErrorCode};
 use crate::attempts::SessionKind;
+use crate::completion::PassedCode;
 use crate::content::{ContentDir, has_exercise};
 use crate::drafts::Draft;
 use crate::progress::{LessonProgress, ProgressSummary, now_string};
@@ -67,6 +68,39 @@ pub fn open_lesson(
         generated: None,
         draft,
     })
+}
+
+/// 画面の操作（「レッスン一覧へ」「次のレッスンへ」、解説表示中の演習画面から別の画面へ移った）で、試行セッションを終える。
+/// そのレッスンの未完了のセッションが正解済みのときだけ、下書きを消し、`ended_at` を書く。それ以外のときは何もしない。
+#[tauri::command(rename_all = "snake_case")]
+pub fn end_session(
+    data_dir: State<'_, AppDataDir>,
+    content: State<'_, ContentDir>,
+    lesson_id: String,
+) -> Result<(), CommandError> {
+    content.lesson_kind(&lesson_id)?;
+    // 仕様では、ここで、そのレッスンの動いている実行・テスト実行を止め、`stopped` の `run` イベントを追記し終えてから
+    // 終える（spec/architecture/commands/progress.md「end_session」）。実行の状態はまだ無いので、止める処理は無い。
+    data_dir.end_passed_session(&lesson_id)?;
+    Ok(())
+}
+
+/// 前回の正解コード（`last_passed_session_id` の試行ログの、正解した `submit` イベントの日時とファイル）を返す。
+/// `last_passed_session_id` が無いときと、その試行ログ（正解した `submit` イベント）が無いときは `not_found`。
+#[tauri::command(rename_all = "snake_case")]
+pub fn get_passed_code(
+    data_dir: State<'_, AppDataDir>,
+    content: State<'_, ContentDir>,
+    lesson_id: String,
+) -> Result<PassedCode, CommandError> {
+    content.lesson_kind(&lesson_id)?;
+    data_dir
+        .passed_code(&lesson_id)?
+        .ok_or_else(|| CommandError {
+            code: ErrorCode::NotFound,
+            message: "前回の正解コードが見つかりません。".into(),
+            detail: Some(format!("レッスン {lesson_id} の正解した提出の記録が無い")),
+        })
 }
 
 /// 演習の無いレッスン（動画のみのレッスン）の下書きを扱おうとしたときのエラー。

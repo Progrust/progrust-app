@@ -6,7 +6,8 @@
 //! - 試行ログの「読んで、変えて、書く」は [`SESSION_LOCK`] で 1 つずつ行う。
 //! - セッションの開始・継続は [`AppDataDir::start_or_continue_session`]、イベントの追記は
 //!   [`AppDataDir::append_run`]・[`AppDataDir::append_submit`]、正解と終了は [`AppDataDir::mark_session_passed`]・
-//!   [`AppDataDir::end_attempt_session`]、未完了のセッションは [`AppDataDir::unfinished_session`]・
+//!   [`AppDataDir::end_attempt_session`]・[`AppDataDir::end_passed_session_of_lesson`]・
+//!   [`AppDataDir::end_passed_session_by_id`]、未完了のセッションは [`AppDataDir::unfinished_session`]・
 //!   [`AppDataDir::unfinished_sessions`] で扱う。
 
 pub mod output;
@@ -69,6 +70,17 @@ pub struct AttemptLog {
     pub passed_at: Option<String>,
     pub ended_at: Option<String>,
     pub events: Vec<Event>,
+}
+
+impl AttemptLog {
+    /// 正解した `submit` イベント。同じセッションで 2 回以上正解したときは、`passed_at` と同じく最初のもの。
+    /// 無いときは `None`。
+    pub fn passed_submit(&self) -> Option<&SubmitEvent> {
+        self.events.iter().find_map(|event| match event {
+            Event::Submit(submit) if submit.result.status == SubmitStatus::Passed => Some(submit),
+            _ => None,
+        })
+    }
 }
 
 /// 試行ログのイベント。
@@ -381,6 +393,53 @@ impl AppDataDir {
                 log.ended_at = Some(at.to_string());
             }
         })
+    }
+
+    /// レッスン `lesson_id` の未完了のセッション（複数あるときは、最後に始めたもの）が正解済み（`passed_at` がある）なら、
+    /// `before_end` を呼んでから `ended_at` を `at` にし、終えたセッションを返す。正解していないときと、
+    /// 未完了のセッションが無いときは、何もせずに `None` を返す。`before_end` が失敗したときは、`ended_at` を書かない。
+    pub fn end_passed_session_of_lesson(
+        &self,
+        lesson_id: &str,
+        at: &str,
+        before_end: impl FnOnce(&AttemptLog) -> Result<(), StorageError>,
+    ) -> Result<Option<AttemptLog>, StorageError> {
+        let _guard = lock_sessions();
+        let Some(log) = self.find_unfinished_session(lesson_id)? else {
+            return Ok(None);
+        };
+        self.end_if_passed(log, at, before_end)
+    }
+
+    /// セッション `session_id` が正解済みで、まだ終わっていなければ、`before_end` を呼んでから `ended_at` を `at` にし、
+    /// 終えたセッションを返す。それ以外のときと、試行ログが無いときは、何もせずに `None` を返す。
+    pub fn end_passed_session_by_id(
+        &self,
+        session_id: &str,
+        at: &str,
+        before_end: impl FnOnce(&AttemptLog) -> Result<(), StorageError>,
+    ) -> Result<Option<AttemptLog>, StorageError> {
+        let _guard = lock_sessions();
+        let Some(log) = self.read_attempt_log(session_id)? else {
+            return Ok(None);
+        };
+        self.end_if_passed(log, at, before_end)
+    }
+
+    /// 呼ぶ側が [`SESSION_LOCK`] を持っていること。
+    fn end_if_passed(
+        &self,
+        mut log: AttemptLog,
+        at: &str,
+        before_end: impl FnOnce(&AttemptLog) -> Result<(), StorageError>,
+    ) -> Result<Option<AttemptLog>, StorageError> {
+        if log.passed_at.is_none() || log.ended_at.is_some() {
+            return Ok(None);
+        }
+        before_end(&log)?;
+        log.ended_at = Some(at.to_string());
+        self.write_json(attempt_file(&log.session_id), &log)?;
+        Ok(Some(log))
     }
 
     fn append_event(

@@ -74,6 +74,28 @@ export function resetDraft(lessonId: string): Promise<Draft> {
   return invoke<Draft>("reset_draft", { lesson_id: lessonId });
 }
 
+// 画面の操作（「レッスン一覧へ」「次のレッスンへ」、解説表示中の演習画面から別の画面へ移った）で、試行セッションを終える。
+// 正解済みのセッションだけを終え（下書きを消す）、それ以外のときは何もしない。画面を離れるときの下書きの保存は、
+// 終えた後に下書きを作り直さないように、この呼び出しより先に済ませる。
+export function endSession(lessonId: string): Promise<null> {
+  return invoke<null>("end_session", { lesson_id: lessonId });
+}
+
+// get_passed_code の戻り値。前回の正解コード。
+export type PassedCode = {
+  // 最後に正解した試行セッションの ID（last_passed_session_id）。
+  session_id: string;
+  // 正解した提出の日時（RFC 3339）。
+  submitted_at: string;
+  // 正解した提出のファイル。
+  files: DraftFiles;
+};
+
+// 「前回の正解コードを見る」で、前回の正解コードを受け取る。正解したことが無いときは not_found で拒否される。
+export function getPassedCode(lessonId: string): Promise<PassedCode> {
+  return invoke<PassedCode>("get_passed_code", { lesson_id: lessonId });
+}
+
 // 進捗と推奨レッスンを、バックエンドから受け取る。
 export function getProgress(): Promise<ProgressSummary> {
   return invoke<ProgressSummary>("get_progress");

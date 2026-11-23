@@ -1,5 +1,6 @@
 pub mod attempts;
 pub mod commands;
+pub mod completion;
 pub mod content;
 pub mod dashboard;
 pub mod drafts;
@@ -9,7 +10,7 @@ pub mod runner;
 pub mod settings;
 pub mod storage;
 
-use tauri::{Builder, Context, Manager, Runtime};
+use tauri::{AppHandle, Builder, Context, Manager, Runtime};
 
 use content::ContentDir;
 use environment::CargoSearch;
@@ -23,6 +24,8 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         commands::content::get_lesson,
         commands::environment::get_environment_status,
         commands::learning_record::get_dashboard,
+        commands::progress::end_session,
+        commands::progress::get_passed_code,
         commands::progress::get_progress,
         commands::progress::open_lesson,
         commands::progress::reset_draft,
@@ -47,6 +50,9 @@ pub fn run() {
             let data_dir = AppDataDir::from_app(app.handle())?;
             // 設定の `tool_paths.cargo`。設定を読めないときは、設定のパスを使わずに探す。
             let configured_cargo = environment::configured_cargo(&data_dir);
+            // 正解した後に終わっていないセッション（前回、異常終了したときのもの）を終える。画面がレッスンを開く前に
+            // 終えるように、ここで待って行う。終えられなくても、起動は止めない。
+            report_session_errors("起動時", data_dir.end_all_passed_sessions());
             app.manage(data_dir);
             // 教材のディレクトリは、アプリでは `resource_dir()` の下の `content/` にする。同じく、テストでは差し替える。
             app.manage(ContentDir::from_app(app.handle())?);
@@ -56,8 +62,27 @@ pub fn run() {
             environment::start_detection(app.handle(), CargoSearch::from_process(configured_cargo));
             Ok(())
         })
-        .run(app_context())
-        .expect("error while running tauri application");
+        .build(app_context())
+        .expect("error while running tauri application")
+        .run(|app, event| {
+            if let tauri::RunEvent::Exit = event {
+                end_sessions_on_exit(app);
+            }
+        });
+}
+
+/// アプリを終了するときに、正解済みで終わっていないセッションを終える。
+fn end_sessions_on_exit<R: Runtime>(app: &AppHandle<R>) {
+    if let Some(data_dir) = app.try_state::<AppDataDir>() {
+        report_session_errors("終了時", data_dir.end_all_passed_sessions());
+    }
+}
+
+/// セッションを終えられなかったことを、標準エラー出力に書く。
+fn report_session_errors(when: &str, ended: completion::EndedSessions) {
+    for error in ended.errors {
+        eprintln!("{when}に試行セッションを終えられなかった: {error}");
+    }
 }
 
 #[cfg(test)]
