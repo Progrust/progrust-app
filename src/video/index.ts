@@ -2,6 +2,8 @@
 // レッスンの動画のコードは、ここから import する。
 export { Camera, cameraAt, NO_ZOOM } from "./Camera";
 export type { CameraProps, CameraView } from "./Camera";
+export { CodeBlock } from "./CodeBlock";
+export type { CodeBlockProps } from "./CodeBlock";
 export { useCodeBlocks, useCues, useLesson } from "./hooks";
 export type { CodeBlockData } from "./hooks";
 export type { LessonInfo } from "./lesson";
