@@ -94,5 +94,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 | `npm run format` | 整形（上の表の整形のすべて）。`npm run format:check` は、整形が済んでいるかを確かめるだけで、ファイルを変えない |
 | `npm test` | 自動テスト（Vitest と `cargo test`。[テストの方針](../non-functional/testing.md)） |
 | `npm run check` | コミット前の確認。`npm run lint`、`npm run format:check`、`npm test` を順に実行する |
+| `npm run content:check` | 教材チェックツール（[教材チェックツール](../content-guidelines/check-tool.md)）。`content/` のすべての教材を検査する |
+| `npm run content:voice` | 音声を作るツール（[動画の音声](../content-format/video/voice.md)）。作者の環境の VOICEPEAK と ffmpeg を使う |
 
 - Tauri が開発時の起動と本番ビルドの前に実行するフロントエンドだけのコマンド（`beforeDevCommand`・`beforeBuildCommand`）は、`npm run dev:web`（Vite の開発サーバー）と `npm run build:web`（Vite のビルド）にする。

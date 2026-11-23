@@ -6,8 +6,6 @@
 - 動画の枠の外（下）に置く。動画の中には置かない（動画の中に字幕の帯を置くと、文字と図が小さくなるため）。
 - 文字は 15px・太さ 500・行間 1.7・`ink`、中央揃え。2 行になるときは、行の長さを揃え（`text-wrap: balance`）、文節の切れ目で折り返す（`word-break: auto-phrase`。対応していない WebView では文字の単位で折り返す）。面と枠は付けず、`bg` の上にそのまま書く。
 - 高さは 2 行ぶんを確保する。文が 1 行でも 2 行でも、高さは変わらない。1 文の目安は 60 字（仕様の `content-guidelines/video.md`）で、3 行以上になる文では下に伸びる。
-- 表示しないときの場所の扱いは未決（仕様の `screens/open-questions.md`）。見本に両方を示している。
-  - 詰める: `.pg-captions` を置かない。操作（VideoControls）は動画の台紙のすぐ下に寄る。
-  - 空けておく: 中身のない `.pg-captions` を置き、`aria-hidden="true"` を付ける。操作の位置は、字幕を表示しているときと変わらない。
-- どちらの場合も、字幕の切り替えで動画の大きさは変わらない（仕様の `screens/video-screen.md`）。
+- 表示しないときも、場所を空けておく（仕様の `screens/video-screen.md`）。中身のない `.pg-captions` を置き、`aria-hidden="true"` を付ける。操作（VideoControls）の位置は、字幕を表示しているときと変わらない。
+- 字幕の切り替えで、動画の大きさは変わらない（仕様の `screens/video-screen.md`）。
 - 切り替えは VideoControls の「字幕」と、設定画面の「字幕」（Switch）で行う。

@@ -32,10 +32,12 @@ description: "`progress.json` の形式と各フィールドの意味、動画�
 | `video_watched` | 動画を最後まで再生したことがあるか。「演習へ」の表示と、動画のみのレッスンの完了に使う（[レッスンの流れ](flow.md)） |
 | `last_passed_session_id` | 最後に正解した試行セッションの ID。正解コードの参照に使う |
 
-- 動画画面を開いたとき、`last_sentence_id` の文の頭で一時停止した状態で表示する。`last_sentence_id` が `null` のときと、その ID の文が台本（[動画の台本（script.json）](../content-format/video/script-json.md)）にないときは、動画の先頭から表示する。
+- どのフィールドも省かずに書く。まだ値が決まっていないフィールド（完了していないレッスンの `first_completed_at`・`last_completed_at`・`last_passed_session_id`）は `null` にする。完了していないレッスンの `completion_count` は `0` にする。
+
+- 動画画面を開いたとき、`last_sentence_id` の文の頭で一時停止した状態で表示する。`last_sentence_id` が `null` のときと、その ID の文が台本（[動画の台本（script.json）](../content-format/video/script-json.md)）にないときと、その ID の文が台本の最後の文のときは、動画の先頭で一時停止した状態で表示する。
 - `last_sentence_id` と `video_watched` は、`save_video_position` で保存する。保存するのは、再生中の文が変わったとき・一時停止したとき・最後まで再生したとき・動画画面を離れるときとする。
 - レッスン検索のモーダル（[レッスン検索](../screens/lesson-search.md)）での再生は、`last_sentence_id` と `video_watched` に記録しない。
 - 章末復習レッスンでは、`last_sentence_id` は `null`、`video_watched` は `false` のままとする。
-- 動画のみのレッスンでは、`video_watched` を初めて `true` にしたときに、`status` を `completed` にし、`first_completed_at`・`last_completed_at`・`completion_count` を記録する。その後に再生し直しても、これらは変えない。`last_passed_session_id` は持たない。
+- 動画のみのレッスンでは、`video_watched` を初めて `true` にしたときに、`status` を `completed` にし、`first_completed_at`・`last_completed_at`・`completion_count` を記録する。その後に再生し直しても、これらは変えない。`last_passed_session_id` は `null` のままとする。
 - 生成問題の進捗は `progress.json` ではなく、生成問題のメタデータに記録する（[生成問題の保存](../exercise-generation/storage.md)）。
 - 完了済みのレッスンをやり直して途中でやめても、`status` は `completed` のままとする。

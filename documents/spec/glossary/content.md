@@ -32,6 +32,8 @@ description: "章、レッスン、動画、台本、演習、要素、判定方
 | 主要素 | primary elements | そのレッスン・演習の学習対象の要素 |
 | 副要素 | secondary elements | 学習対象ではないが演習に登場する既習の要素 |
 | 学習順 | learning order | 全レッスンを章・レッスンの順に一列に並べた順序（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)） |
+| 章の番号 | chapter number | `chapters.json` での章の位置（1 から）。画面と動画に出す章の番号で、章カラーもこれで決まる（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)「章とレッスンの番号」） |
+| レッスンの番号 | lesson number | 「{章の番号}-{章の中での位置}」の形の番号（例: `4-4`）。画面と動画に出す（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)「章とレッスンの番号」） |
 | 導入レッスン | introducing lesson | 学習順で最初にその要素を主要素とするレッスン（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)） |
 | 既習の要素 | learned elements | 導入レッスンが、あるレッスンより学習順で前にある要素（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)） |
 | 問題文 | problem | 演習の課題を説明する文章 |

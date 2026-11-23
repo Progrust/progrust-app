@@ -20,7 +20,7 @@
 # 教材データ形式
 
 * [ADR 0006](0006-element-ids-are-permanent.md) - 要素 ID を全データで共通にし、公開後は変更・削除しない
-* [ADR 0007](0007-derive-introduced-lesson.md) - 要素の導入レッスンを、要素マスタに持たせず学習順から求める
+* [ADR 0007](0007-derive-introduced-lesson.md) - 要素の導入レッスンを、要素マスタに持たせず学習順から求める（ADR 0180 で導入レッスンを求める元を章とレッスンの一覧の「主要素」に変えた）
 * [ADR 0008](0008-judge-mode-per-lesson.md) - 演習の判定方式を、標準出力の比較と隠しテストからレッスンごとに選ぶ
 * [ADR 0048](0048-slide-colors-follow-chapter-color.md) - スライドの主役・補助の色を、開いている章の章カラーに合わせる（ADR 0076 で動画に引き継いだ）
 * [ADR 0049](0049-slide-accent-light-chapter-color.md) - スライドの補助の色を、同じ章カラーの淡い段にする（ADR 0076 で動画に引き継いだ）
@@ -47,6 +47,10 @@
 * [ADR 0127](0127-encode-narration-with-ffmpeg-aac-and-measure-with-ffprobe.md) - 文の音声を ffmpeg に組み込みの AAC エンコーダーで .m4a に変換し、durations.json の seconds と cue-reference.json の長さを ffprobe の format の duration で測る
 * [ADR 0145](0145-show-unprepared-lessons-as-in-preparation.md) - `chapters.json` には全レッスンを載せたまま、レッスンのディレクトリがまだ無いレッスンを準備中のレッスンとし、レッスン一覧に「準備中」と出して開けないようにする
 * [ADR 0158](0158-chapter-review-has-two-to-five-primary-elements.md) - 章末復習レッスンの主要素を、その章のレッスンの主要素から選ぶ 2〜5 件とし、ほかのレッスンは 1〜2 件のままにする
+* [ADR 0174](0174-number-chapters-and-lessons-by-position.md) - 画面と動画に出す章とレッスンの番号を `chapters.json` の並び順から決め、章カラーも章の番号で決める
+* [ADR 0176](0176-pass-theme-and-chapter-to-video-by-ancestor-attributes.md) - 再生するときのテーマと章カラーを、動画を描く要素の祖先の `data-theme`・`data-chapter` と CSS 変数の継承で動画に渡し、`useLesson()` の材料になる章とレッスン定義は Player の `inputProps` で渡す
+* [ADR 0178](0178-do-not-use-player-built-in-controls.md) - Remotion の Player の組み込みの操作（操作の表示、Space キー、クリック、ダブルクリックでの全画面）を使わず、末尾で先頭に戻さず繰り返さない設定にして、再生の操作をすべてアプリの部品で行う
+* [ADR 0180](0180-derive-introducing-lesson-from-curriculum-list.md) - 要素の導入レッスンを、各レッスンの `lesson.json` ではなく、章とレッスンの一覧の「主要素」から求め、準備中のレッスンが導入する要素も決まるようにする
 
 # カリキュラム
 
@@ -98,8 +102,10 @@
 
 * [ADR 0018](0018-no-lesson-order-lock.md) - レッスンの受講順を制限せず、推奨レッスンを示す（ADR 0145 で準備中のレッスンを開けないことにした）
 * [ADR 0019](0019-autosave-drafts.md) - 編集中のコードを自動保存し、正解した後は初期コードから始める
-* [ADR 0071](0071-save-playback-position-by-sentence.md) - 動画の再生位置を文の単位で保存し、開き直したら続きから見られるようにする
+* [ADR 0071](0071-save-playback-position-by-sentence.md) - 動画の再生位置を文の単位で保存し、開き直したら続きから見られるようにする（ADR 0169 で最後の文まで再生したあとに開き直したときの表示位置を変えた）
 * [ADR 0119](0119-video-only-lessons-for-background-knowledge.md) - 周辺知識だけを扱うレッスンを演習のない動画のみのレッスンにし、動画を最後まで再生したら完了とする（ADR 0143 で、動画画面に「レッスン一覧へ」を表示しないことにした）
+* [ADR 0169](0169-show-video-from-start-after-watching-to-end.md) - 動画を最後の文まで再生したあとに開き直したときは、最後の文の頭ではなく、動画の先頭から表示する
+* [ADR 0170](0170-write-undecided-progress-fields-as-null.md) - `progress.json` で、完了していないレッスンの完了のときに決まるフィールドを、省かずに `null`（`completion_count` は 0）で書く
 
 # Claude Code 連携
 
@@ -165,6 +171,12 @@
 * [ADR 0153](0153-load-design-system-css-directly-from-repository.md) - アプリは、リポジトリの `design-system/` にあるデザインシステムの CSS とアイコンを、写しを作らずに直接読み込み、書体を外部から読み込む `@import` の行はビルドのときに取り除き、`design-system/` を lint と整形の対象から外す
 * [ADR 0154](0154-check-spec-references-in-design-systems.md) - デザインシステムの検査で、README などからインラインコードのパスで書いた仕様とデザインシステムの文書への参照が、実在する文書と小見出しを指すことを確かめる
 * [ADR 0155](0155-check-video-design-system-copied-tokens.md) - デザインシステムの検査で、「Progrust Video」の `video-` で始まらないトークンと書体の族が、「Progrust」と同じ名前・同じ値であることを確かめる
+* [ADR 0171](0171-keep-caption-space-when-captions-are-hidden.md) - 字幕を表示しないときも、動画の下に字幕の場所を空けておき、字幕を切り替えてもプレーヤーの操作の位置を変えない
+* [ADR 0172](0172-dim-rows-of-lessons-in-preparation.md) - レッスン一覧で、準備中のレッスンの行の番号と文字を淡い色にして「準備中」の印を付け、選んでもマウスを乗せても反応させない
+* [ADR 0173](0173-show-video-loading-and-retry-inside-the-frame.md) - 動画を読み込んでいる間は動画の枠の中に回る印を出し、読み込みに失敗したら枠の中に失敗の文と「もう一度読み込む」ボタンを出す
+* [ADR 0175](0175-strip-font-import-with-vite-plugin.md) - デザインシステムの `bundle.css` の、書体を外部から読み込む `@import` の行を、Vite のプラグインで取り除いて読み込み、教材チェックツールの描画でも同じように取り除く
+* [ADR 0177](0177-load-both-design-systems-and-write-app-css-with-classes.md) - 「Progrust」と「Progrust Video」の CSS をどちらもアプリ全体に読み込み、アプリの画面の CSS は動画の枠の中の要素に当たらないように書き、デザインシステムの土台の規則はそのまま両方に効かせる
+* [ADR 0179](0179-define-initial-settings-values.md) - `settings.json` が無いときの初期値を定め、テーマは「システムに合わせる」、エディタの文字サイズは 14px、動画は音量 1.0・ミュートなし・1 倍・字幕なしにする
 
 # 非機能要件
 

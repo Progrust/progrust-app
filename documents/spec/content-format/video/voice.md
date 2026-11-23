@@ -69,7 +69,7 @@ description: "VOICEPEAK で作る音声ファイルの形式と置き場所、�
 
 **音声を作るツール**
 
-`tools/` に置く。作者の環境の VOICEPEAK と ffmpeg（ffprobe を含む）を使う。
+`tools/` に置く。作者の環境の VOICEPEAK と ffmpeg（ffprobe を含む）を使う。実行するコマンドは `npm run content:voice`（[開発環境と依存の版](../../architecture/development-environment.md)「開発で使うコマンド」）とする。
 
 - 台本の文を 1 文ずつ順に VOICEPEAK に渡して、音声を作る。VOICEPEAK を同時に 2 つ以上動かさない。
 - `durations.json` の `say`・`voice` が台本の `say`・`voice.json` と同じで、音声ファイルがある文は、作り直さない。すべての文を作り直す指定もできる。
