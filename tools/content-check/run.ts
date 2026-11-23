@@ -1,9 +1,16 @@
 // 教材チェックツールの本体。検査の項目は checks に足していく。
 import { curriculumCheck } from "./curriculum.ts";
+import { definitionCheck } from "./definition.ts";
 import { elementsCheck } from "./elements.ts";
+import { structureCheck } from "./structure.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
 
-export const checks: Check[] = [curriculumCheck, elementsCheck];
+export const checks: Check[] = [
+  curriculumCheck,
+  structureCheck,
+  definitionCheck,
+  elementsCheck,
+];
 
 export function runChecks(
   options: CheckOptions,
