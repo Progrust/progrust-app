@@ -11,6 +11,21 @@ beforeEach(() => {
     if (command === "get_progress") {
       return { lessons: {}, recommended_lesson_id: null };
     }
+    if (command === "get_dashboard") {
+      return {
+        next_lesson: null,
+        lesson_counts: { completed: 0, total: 0 },
+        chapters: [],
+        analysis: {
+          state: "none",
+          weak_elements: [],
+          review_due_elements: [],
+          regressed_elements: [],
+          last_4_weeks: [],
+          summary_md: null,
+        },
+      };
+    }
     return undefined;
   });
 });
@@ -25,7 +40,7 @@ function menu() {
   return within(screen.getByRole("navigation", { name: "メインメニュー" }));
 }
 
-it("ヘッダーにロゴとメインメニューを表示し、最初はホームを選ぶ", () => {
+it("ヘッダーにロゴとメインメニューを表示し、最初はホームを選ぶ", async () => {
   render(<App />);
   const header = screen.getByRole("banner");
   expect(within(header).getByText("Progrust")).toBeInTheDocument();
@@ -38,8 +53,8 @@ it("ヘッダーにロゴとメインメニューを表示し、最初はホー�
     "aria-current",
     "page",
   );
-  expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
-    "トップページ",
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+    "すべてのレッスンを完了しました",
   );
 });
 
@@ -49,7 +64,7 @@ it("メニューで各画面に移り、選んでいる項目だけに aria-curr
     ["レッスン", "レッスン"],
     ["問題生成", "生成問題一覧"],
     ["設定", "設定画面"],
-    ["ホーム", "トップページ"],
+    ["ホーム", "すべてのレッスンを完了しました"],
   ] as const;
   for (const [label, title] of cases) {
     fireEvent.click(menu().getByRole("link", { name: label }));
