@@ -1,7 +1,14 @@
-//! アプリ同梱の許可クレートの定義（`{app_resources}/runner/`。spec/exercise-runner/crates-and-workspace.md）。
+//! コード実行・判定（spec/exercise-runner/）。
 //!
-//! ディレクトリは [`RunnerDir::new`] に渡す。アプリでは [`RunnerDir::from_app`] で
-//! Tauri の `resource_dir()` の下の `runner/` にし、テストでは一時ディレクトリを渡す。
+//! - アプリ同梱の許可クレートの定義（`{app_resources}/runner/`。spec/exercise-runner/crates-and-workspace.md）は
+//!   [`RunnerDir`]。ディレクトリは [`RunnerDir::new`] に渡す。アプリでは [`RunnerDir::from_app`] で
+//!   Tauri の `resource_dir()` の下の `runner/` にし、テストでは一時ディレクトリを渡す。
+//! - エディタから受け取るファイルパスの検証は [`file_path`]、作業領域のパスは [`workspace`]、
+//!   実行・提出の `project/` の組み立てとビルドの条件は [`project`]。
+
+pub mod file_path;
+pub mod project;
+pub mod workspace;
 
 use std::path::{Path, PathBuf};
 
