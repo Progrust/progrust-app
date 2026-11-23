@@ -1,0 +1,4 @@
+{
+  "scenes": [{ "id": "title", "name": "SCRIPT-MARKER-beta" }],
+  "sentences": [{ "id": "t1", "scene": "title", "text": "表紙", "say": "ひょうし" }]
+}
