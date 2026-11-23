@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "試行ログ（attempts/*.json）"
-description: "試行ログ `attempts/*.json` の試行セッションの開始・継続・終了の条件と、`chat`・`run`・`submit` イベントを含む JSON のスキーマを定める。"
+description: "試行ログ `attempts/*.json` の試行セッションの開始・継続・終了の条件と、`schema_version`・`chat`・`run`・`submit` イベントを含む JSON のスキーマ、`run` の `exit_code` の意味、読み込めない試行ログの扱いを定める。"
 ---
 
 演習中の行動をアプリが記録する生データ。学習記録の入力となる。
@@ -24,6 +24,7 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
 
 ```json
 {
+  "schema_version": 1,
   "session_id": "20261031T130200_ch04-04",
   "lesson_id": "ch04-04",
   "kind": "lesson",
@@ -37,7 +38,7 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
     { "type": "run", "at": "...", "mode": "main",
       "files": { "src/main.rs": "..." },
       "result": { "status": "compile_error", "error_codes": ["E0382"],
-                  "stdout": "", "stderr": "...", "exit_code": 1, "stdin": "" } },
+                  "stdout": "", "stderr": "...", "exit_code": null, "stdin": "" } },
     { "type": "submit", "at": "...",
       "files": { "src/main.rs": "..." },
       "result": { "status": "wrong", "error_codes": [], "passed": 3, "total": 5,
@@ -48,6 +49,7 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
 
 | フィールド | 説明 |
 |---|---|
+| `schema_version` | 試行ログの形式の版。いまは `1`（[データの互換性](../non-functional/data-compatibility.md)） |
 | `session_id` | `{開始日時 YYYYMMDDTHHMMSS}_{lesson_id}` |
 | `lesson_id` | レッスン ID。生成問題は `gen-{生成問題ID}` |
 | `kind` | `lesson` / `chapter_review` / `generated` |
@@ -65,6 +67,12 @@ description: "試行ログ `attempts/*.json` の試行セッションの開始�
 
 `result.status`: `run` は `success` / `compile_error` / `runtime_error` / `timeout` / `stopped`、`submit` は `compile_error` / `wrong` / `passed`（意味は [コードの実行（run）](../exercise-runner/run.md)「結果の状態」・[コードの提出（submit）](../exercise-runner/submit.md)「判定結果」）
 
+- `run` の `result.exit_code` は、`run_finished` の `run.exit_code`（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」）と同じ値にする。学習者のプログラム（テスト実行では `cargo test`）の終了コードで、プログラムを起動していないとき（`compile_error` と、ビルド中に止めた `stopped`）と、シグナルで終わったとき（停止・時間切れ・出力量の上限で止めたときを含む）は `null` にする。
 - スナップショットはファイル全体を保存する。
 - `error_codes` の抽出方法と、`stdout` / `stderr` の保存の上限は [実行・提出の試行ログへの記録](../exercise-runner/attempt-log.md) に従う。
 - 結果の状態が `crates_unavailable` の実行・提出は、学習者のコードを実行・判定していないので、記録しない（[実行・提出の試行ログへの記録](../exercise-runner/attempt-log.md)）。
+
+## 読み込めない試行ログ
+
+- 読み込めない場合（[データの保存場所](../architecture/data-locations.md)「書き込みの規則」と同じ条件）は、`.broken-{日時}` を付けて退避し、その試行ログは無いものとして扱う。試行ログは消さない決まりなので、作り直さない。
+- 未完了のセッションを探すときに読み込めない試行ログがあっても、エラーにしない。そのレッスンに未完了のセッションが無ければ、新しいセッションを始める。

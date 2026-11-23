@@ -50,11 +50,13 @@ description: "実行のコマンド `run_code`（`mode` で実行とテスト実
 
 ## stop_run
 
-停止ボタンで、実行・テスト実行を止める（[コードの実行（run）](../../exercise-runner/run.md)「停止」）。
+停止ボタンで、実行・テスト実行を止める（[コードの実行（run）](../../exercise-runner/run.md)「停止」）。実行・テスト実行・提出の途中で演習画面を離れるときにも呼ぶ（[コードの提出（submit）](../../exercise-runner/submit.md)「途中で止めた提出」）。
 
-- 引数: `request_id`（`string`）。`run_code` で渡した ID。
-- 戻り値: `null`。止めた結果は `run_finished`（`stopped`）で知らせる。
-- 動いていない実行の ID（既に終わったもの、無いもの）を渡したときは、何もせずに `null` を返す。
+- 引数: `request_id`（`string`）。`run_code` か `submit_code` で渡した ID。
+- 戻り値: `null`。止めた結果は `run_finished` で知らせる。実行・テスト実行では `run.status` が `stopped`、提出では `submit.status` が `stopped` になる。
+- 動いていない実行・提出の ID（既に終わったもの、無いもの）を渡したときは、何もせずに `null` を返す。
+- 提出には停止ボタンが無い（[コードの提出（submit）](../../exercise-runner/submit.md)）。提出の ID を渡すのは、演習画面を離れるときだけである。
+- アプリを終了したときは、バックエンドが自分で止める（[コードの実行（run）](../../exercise-runner/run.md)「停止」）。
 
 ## submit_code
 

@@ -1,16 +1,28 @@
 ---
 type: Specification
 title: "コードの提出（submit）"
-description: "`stdout` 方式と `test` 方式それぞれの判定手順、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）の扱いを定める。"
+description: "提出を学習者が途中で止められないこと、`stdout` 方式と `test` 方式それぞれの判定手順とテストケースの結果の決め方（`stdout` 方式で出力が一致しても終了コード 0 以外なら `runtime_error`、`test` 方式で隠しテストの入ったテスト実行ファイルの選び方）、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）と途中で止めた提出（`stopped`）の扱いを定める。"
 ---
 
 提出中はコンソールにビルドの出力（[コードの実行（run）](run.md)「ビルドの出力の表示」）と判定の進み具合だけを表示し、プログラムの出力は表示しない。
+
+- 提出は、学習者が途中で止められない。提出中は「停止」ボタンを無効にする。
+- 提出の途中で演習画面を離れたときと、アプリを終了したときは、提出を止める（下の「途中で止めた提出」）。
 
 ## stdout 方式
 
 1. [コードの実行（run）](run.md)「手順」 と同じ方法でビルドする。失敗したら `compile_error` で終了する。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、`crates_unavailable` で終了する。
 2. テストケースごとに実行ファイルを起動し、`stdin` を書き込んで標準入力を閉じ、標準出力を受け取る。
-3. 正規化した標準出力を `expected_stdout` と比較する。
+3. 次のとおりテストケースの結果を決める。上の行から順に当てはめる。
+
+   | 結果 | 条件 |
+   |---|---|
+   | `timeout` | 1 テストケースの実行時間の制限（[実行・判定の制限値](limits.md)）で止めた |
+   | `fail` | 標準出力が 1 テストケースの出力量の上限（[実行・判定の制限値](limits.md)）を超えた（出力過多） |
+   | `runtime_error` | 終了コードが 0 以外で終わった、またはシグナルで終わった（panic を含む）。標準出力が期待値と一致していても `runtime_error` にする |
+   | `pass` | 終了コード 0 で終わり、正規化した標準出力が、正規化した `expected_stdout` と一致した |
+   | `fail` | 終了コード 0 で終わり、正規化した標準出力が、正規化した `expected_stdout` と一致しない |
+
 4. 1 件失敗しても残りのテストケースはすべて実行する。
 
 **正規化**: 改行コード（CRLF → LF）をそろえ、各行の末尾の空白と、末尾の空行を取り除く。期待値にも同じ正規化をかける。
@@ -27,7 +39,7 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
    ```
 
 3. `cargo test --offline --quiet --no-run --message-format=json-diagnostic-rendered-ansi` でビルドする。失敗したら `compile_error` で終了する。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、`crates_unavailable` で終了する。隠しテストの側でエラーが出た場合は、「問題文で指定された関数名・型・シグネチャを確認してください」と併せて表示する。
-4. テスト実行ファイルを引数 `--list progrust_judge::` で起動し、出力の `{名前}: test` の行から隠しテストの名前を得る（学習者自身が書いたテストは判定に含めない）。名前の `progrust_judge::` より後の部分を、テストケースの関数名とする。
+4. 隠しテストの入ったテスト実行ファイルを、3 のビルドの出力から決める。cargo の標準出力の JSON のうち、`reason` が `compiler-artifact` で、`profile.test` が `true` で、`target.src_path` が `judge.target` のファイル（`project/` の中の絶対パス）であるものの `executable` とする。`src/main.rs` と `src/lib.rs` の両方がある演習や、`tests/` に統合テストがある演習でも、ほかのテスト実行ファイルは使わない。見つからないときは、アプリの側の失敗（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」の `run_finished` の `error`）として終える。そのテスト実行ファイルを引数 `--list progrust_judge::` で起動し、出力の `{名前}: test` の行から隠しテストの名前を得る（学習者自身が書いたテストは判定に含めない）。名前の `progrust_judge::` より後の部分を、テストケースの関数名とする。
 5. 得た名前ごとに、テスト実行ファイルを引数 `--exact {名前} --test-threads=1` で別々のプロセスとして起動する。同時に起動するのは CPU の論理コア数までとする。`--nocapture` は付けない。
 6. プロセスごとに、次のとおりテストケースの結果を決める。結果の行は、行末が ` ... ok` または ` ... FAILED` で、その直前に `test {名前}` がある行とする（行頭に学習者の出力が付いていてもよい）。
 
@@ -63,7 +75,7 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
 
 | 項目 | 内容 |
 |---|---|
-| `status` | `passed`（全テストケース通過）/ `wrong`（1 件以上失敗）/ `compile_error` / `crates_unavailable`（判定をしていない。下の「判定をしなかった提出」） |
+| `status` | `passed`（全テストケース通過）/ `wrong`（1 件以上失敗）/ `compile_error` / `crates_unavailable`（判定をしていない。下の「判定をしなかった提出」）/ `stopped`（途中で止めた。下の「途中で止めた提出」） |
 | `passed` / `total` | 通過したテストケース数 / 全テストケース数 |
 | `cases[]` | テストケースごとの `name`（表示名）・`status`（`pass` / `fail` / `timeout` / `runtime_error`）・`detail` |
 
@@ -82,3 +94,10 @@ description: "`stdout` 方式と `test` 方式それぞれの判定手順、`tes
 - `passed` と `total` は 0、`cases[]` は空にする。
 - 提出として数えない。試行ログに `submit` イベントを追記しない（[実行・提出の試行ログへの記録](attempt-log.md)）。
 - 画面での扱いは [演習画面](../screens/exercise-screen.md)「判定結果」に従う。
+
+## 途中で止めた提出
+
+提出の途中で演習画面を離れたとき（[演習画面](../screens/exercise-screen.md)）と、アプリを終了したときは、ビルドかテストケースの実行のプロセスグループ全体に SIGKILL を送って止める（止め方は [コードの実行（run）](run.md)「停止」と同じ）。
+
+- `status` を `stopped` とし、`passed` と `total` は 0、`cases[]` は空にする。まだ送っていない出力は捨てる。
+- 提出として数えない。試行ログに `submit` イベントを追記しない（[実行・提出の試行ログへの記録](attempt-log.md)）。正解になる前に止めたので、レッスンを完了にしない。

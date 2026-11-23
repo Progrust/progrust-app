@@ -58,3 +58,4 @@ description: "学習者データ（`{app_data_dir}`）とアプリ同梱デー�
   - ファイルの読み込みそのものに失敗した場合（権限が無いなど）は、退避せず、失敗として扱う（コマンドのエラーは `io_error`。[コマンドとイベントの共通の決まり](commands/conventions.md)「エラー」）。
   - ファイルが無い場合は、初期状態として扱う。退避も通知もせず、ファイルは次に書き込むときに作る。
   - `{日時}` は、退避したときの現地時刻の `YYYYMMDDTHHMMSS` である（例: `progress.json.broken-20261123T142500`）。同じ名前のファイルが既にある場合は、後ろに `-2`、`-3`…を付けて、既にあるファイルを上書きしない。
+- 下書き（`drafts/*.json`）と試行ログ（`attempts/*.json`）も `schema_version` を持つ。読み込めない場合（上と同じ条件）は、同じく `.broken-{日時}` を付けて退避する。ただし、作り直さずに、そのファイルが無いものとして扱う（[演習コードの下書き](../lesson-flow/drafts.md)、[試行ログ（attempts/*.json）](../learning-record-and-analysis/attempt-log.md)「読み込めない試行ログ」）。

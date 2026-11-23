@@ -20,6 +20,7 @@
 * [ADR 0187](0187-stage-bundled-content-in-build-script.md) - 同梱する教材を、ビルドスクリプトがリポジトリの content/ から選んで src-tauri/gen/bundled/content/ に写し、Tauri の bundle.resources はそのディレクトリだけを {app_resources}/content/ に入れる
 * [ADR 0199](0199-put-react-in-one-prebundled-chunk-for-dev.md) - 開発時の起動で Vite が前もってまとめる依存（optimizeDeps）の分け方を指定し、react・react-dom・scheduler を 1 つの塊に入れる
 * [ADR 0200](0200-type-check-lesson-video-code-in-lint.md) - TypeScript の型検査（`npm run lint` の `tsc --noEmit -p tsconfig.json`）の対象に、教材の動画のコード（`content/lessons/*/video/` の `.ts`・`.tsx`）を加える
+* [ADR 0207](0207-schema-version-for-drafts-and-attempt-logs.md) - 下書き（`drafts/*.json`）と試行ログ（`attempts/*.json`）に `schema_version`（いまは 1）を持たせ、読み込めないときは `.broken-{日時}` を付けて退避し、作り直さずに無いものとして扱う
 
 # 教材データ形式
 
@@ -81,6 +82,7 @@
 * [ADR 0156](0156-define-all-elements-before-lessons-one-per-lesson.md) - 要素マスタの要素をレッスンを作る前にすべて決め、1 レッスン 1 要素を基本にして 145 件を定め、要素 ID の分類を Rust の機能のまとまりで付ける
 * [ADR 0191](0191-count-lesson-title-on-rendered-frames.md) - 教材チェックツールの検査「表紙」で、最初のシーンの描画したフレームごとに、表示している `LessonTitle` を、`LessonTitle` 自身が知らせる数で数え、どのフレームでも表示していないときと、2 つ以上表示しているフレームがあるときをエラーにする
 * [ADR 0192](0192-report-browser-console-errors-in-render-check.md) - 教材チェックツールの描画のチェックで、描画時の例外に加えて、ブラウザの console に出たエラーもエラーにし、console の警告はエラーにしない
+* [ADR 0208](0208-content-check-runs-judge-via-backend-cli.md) - 教材チェックツールの「模範解答」「初期コード」の判定を、バックエンドのクレートに置いた判定だけを行うコマンドラインのプログラム（`src-tauri/src/bin/`）を `cargo run` で起動して行い、作業領域を `src-tauri/target/` の下の専用のディレクトリにする
 
 # コード実行・判定
 
@@ -107,6 +109,10 @@
 * [ADR 0137](0137-find-e0786-in-compiler-diagnostics.md) - 初回準備のやり直しの判定で、ビルド済みの依存の破損（E0786）を、cargo 自身の標準エラー出力ではなく、コンパイラの診断から探す
 * [ADR 0138](0138-keep-cargo-stderr-in-attempt-log.md) - 試行ログの `stderr` に、ビルドの cargo 自身の標準エラー出力を、コンパイラの診断とプログラムの標準エラー出力の間に入れて保存する
 * [ADR 0139](0139-send-build-output-after-build-ends.md) - ビルドの出力を、ビルド中には送らず、ビルドが終わって結果が決まってから送る
+* [ADR 0201](0201-no-stop-button-for-submit.md) - 提出は学習者が途中で止められないままにし、提出中は「停止」ボタンを無効にする
+* [ADR 0202](0202-stop-run-and-submit-when-leaving-exercise.md) - 実行・テスト実行・提出の途中で演習画面を離れたときとアプリを終了したときは止め、画面を離れて止めた実行は `stopped` として記録し、止めた提出（`stopped`）とアプリの終了で止めたものは記録しない
+* [ADR 0203](0203-stdout-case-fails-on-nonzero-exit.md) - `stdout` 方式の判定で、標準出力が期待値と一致しても、終了コード 0 以外かシグナルで終わったテストケースは `runtime_error`（不正解）にし、テストケースの結果を決める順を定める
+* [ADR 0205](0205-pick-hidden-test-executable-from-build-json.md) - `test` 方式で隠しテストを入れたテスト実行ファイルを、ビルドの JSON の出力のうち、`judge.target` のファイルを根に持つテスト用の成果物から決める
 
 # レッスン進行・進捗管理
 
@@ -145,6 +151,7 @@
 * [ADR 0074](0074-do-not-log-video-viewing.md) - 動画の視聴を試行ログに記録しない
 * [ADR 0108](0108-analysis-outputs-only-ai-fields.md) - 分析セッションの AI にはアプリ管理のフィールドを出力させず、AI 管理のフィールドと本文だけを出力させて、アプリが分析ファイルを組み立てる
 * [ADR 0110](0110-record-session-log-diff-base-and-new-pattern-labels.md) - 試行ログの差分の基準を圧縮で残したイベントのうち直前のものとし、新しい種類の躓きの pattern ラベルが呼び出しごとに揺れることは許す
+* [ADR 0206](0206-attempt-log-exit-code-same-as-run-finished.md) - 試行ログの `run` の `exit_code` を、`run_finished` の `run.exit_code` と同じ値（学習者のプログラム、テスト実行では `cargo test` の終了コード。起動していないときとシグナルで終わったときは `null`）にする
 
 # 演習問題生成
 
@@ -190,6 +197,7 @@
 * [ADR 0182](0182-app-icon-p-in-chapter-colors-on-white.md) - アプリのアイコンを、白い地に第1〜4章の章カラーで塗り分けた「P」を置いた絵にし、元の絵を `src-tauri/app-icon.svg` に置いて、アプリに入れるファイルを Tauri CLI で作る
 * [ADR 0196](0196-stop-display-artifacts-for-design-files.md) - デザインシステムと画面デザインの表示用のアーティファクトをやめてリポジトリのファイルだけを正とし、アーティファクトへ送る手順と道具とページのためだけの索引の項目を消し、見る仕組みは作らず、実装前の画面は引き続き画面デザインのファイルに従う
 * [ADR 0197](0197-remove-font-import-from-design-system-css.md) - デザインシステムの `bundle.css` から書体を外部から読み込む `@import` の行を消し、ビルドと教材チェックツールの描画で取り除く仕組みをやめ、デザインシステムの CSS が外部から読み込まないことを検査で確かめる
+* [ADR 0204](0204-exercise-back-link-goes-to-list.md) - 演習画面の左上のリンクを、レッスンの演習では「レッスン一覧」、生成問題の演習では「生成問題一覧」にし、それぞれの一覧に移る
 
 # 非機能要件
 
