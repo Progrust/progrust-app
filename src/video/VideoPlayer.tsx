@@ -183,6 +183,8 @@ function LoadingLayer() {
         size={18}
         strokeWidth={2.2}
       />
+      {/* 処理中は、回る印に文字を添える（design-system/progrust/README.md「状態」）。 */}
+      <span className="video-player-loading">動画を読み込んでいます</span>
     </div>
   );
 }

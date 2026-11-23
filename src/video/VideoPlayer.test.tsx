@@ -442,6 +442,8 @@ describe("読み込み中と、読み込みに失敗したとき", () => {
     });
     expect(frameElement(container)).toContainElement(status);
     expect(status.querySelector(".pg-spin")).not.toBeNull();
+    // 回る印に、見える文字を添える。
+    expect(status).toHaveTextContent("動画を読み込んでいます");
     expect(screen.getByRole("button", { name: "再生" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "5 秒戻る" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "5 秒進む" })).toBeDisabled();
