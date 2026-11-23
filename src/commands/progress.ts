@@ -23,12 +23,25 @@ export type ProgressSummary = {
   recommended_lesson_id: string | null;
 };
 
-// open_lesson の戻り値。試行セッション・生成問題・下書きは、M2 以降で入る（いまは null）。
+// エディタ上の全ファイル。キーは cargo パッケージのルートからの相対パス（例: "src/main.rs"）。
+export type DraftFiles = { [path: string]: string };
+
+// 演習コードの下書き（documents/spec/lesson-flow/drafts.md）。
+export type Draft = {
+  schema_version: number;
+  lesson_id: string;
+  // 保存した日時（RFC 3339）。バックエンドが付ける。
+  updated_at: string;
+  files: DraftFiles;
+};
+
+// open_lesson の戻り値。試行セッション・生成問題は、まだ入らない（いまは null）。
 export type OpenedLesson = {
   session_id: string | null;
   progress: LessonProgress | null;
   generated: unknown | null;
-  draft: unknown | null;
+  // 下書き。無いときと、演習の無いレッスンでは null。
+  draft: Draft | null;
 };
 
 // レッスンを開いたことを記録し、更新した後の進捗を受け取る。
@@ -47,6 +60,17 @@ export function saveVideoPosition(
     last_sentence_id: lastSentenceId,
     video_watched: videoWatched,
   });
+}
+
+// エディタ上の全ファイルを下書きに保存する。ファイルパスが src/ か tests/ の下の .rs でないときは、
+// invalid_argument で拒否される。
+export function saveDraft(lessonId: string, files: DraftFiles): Promise<null> {
+  return invoke<null>("save_draft", { lesson_id: lessonId, files });
+}
+
+// 下書きを教材の初期コードで上書きし、上書きした後の下書きを受け取る。
+export function resetDraft(lessonId: string): Promise<Draft> {
+  return invoke<Draft>("reset_draft", { lesson_id: lessonId });
 }
 
 // 進捗と推奨レッスンを、バックエンドから受け取る。

@@ -1,6 +1,7 @@
 pub mod commands;
 pub mod content;
 pub mod dashboard;
+pub mod drafts;
 pub mod environment;
 pub mod progress;
 pub mod runner;
@@ -23,6 +24,8 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         commands::learning_record::get_dashboard,
         commands::progress::get_progress,
         commands::progress::open_lesson,
+        commands::progress::reset_draft,
+        commands::progress::save_draft,
         commands::progress::save_video_position,
         commands::settings::get_app_version,
         commands::settings::get_settings,

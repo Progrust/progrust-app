@@ -4,6 +4,7 @@
 //! Tauri の `resource_dir()` の下の `content/` にし、テストでは一時ディレクトリに作った教材を渡す。
 //! 教材の内容の検査は、教材チェックツールが行う。ここでは、読めないファイルを失敗として返すだけにする。
 
+use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
 use std::io;
@@ -69,7 +70,7 @@ pub struct Exercise {
     pub problem_md: String,
     pub explanation_md: String,
     /// 初期コード。キーは cargo パッケージのルートからの相対パス（`/` 区切り）。
-    pub starter_files: std::collections::BTreeMap<String, String>,
+    pub starter_files: BTreeMap<String, String>,
 }
 
 /// 教材を読めなかった理由。コマンドでは `CommandError` に変えて返す（`?` で変わる）。
@@ -191,6 +192,22 @@ impl ContentDir {
             .to_string())
     }
 
+    /// 演習の初期コード（`exercise/starter/` の全ファイル）を読む。キーは cargo パッケージのルートからの相対パス
+    /// （`/` 区切り）。演習の無いレッスン（動画のみのレッスン）では `None`。
+    /// レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn starter_files(
+        &self,
+        lesson_id: &str,
+    ) -> Result<Option<BTreeMap<String, String>>, ContentError> {
+        if !has_exercise(&self.lesson_kind(lesson_id)?) {
+            return Ok(None);
+        }
+        let starter = self.lesson_dir(lesson_id).join("exercise").join("starter");
+        let mut files = BTreeMap::new();
+        collect_files(&starter, &starter, &mut files)?;
+        Ok(Some(files))
+    }
+
     /// レッスンの定義・台本・音声のディレクトリ・演習の内容を読む。
     /// 準備中のレッスン、`chapters.json` に無いレッスン、生成問題（`gen-` で始まる ID）は `LessonNotFound` にする。
     pub fn get_lesson(&self, lesson_id: &str) -> Result<LessonDetail, ContentError> {
@@ -210,7 +227,7 @@ impl ContentDir {
         let kind = lesson.get("kind").and_then(Value::as_str).unwrap_or("");
 
         let has_video = kind != "chapter_review";
-        let has_exercise = kind != "video_only";
+        let has_exercise = has_exercise(kind);
 
         let script = if has_video {
             Some(read_json(&dir.join("video").join("script.json"))?)
@@ -285,6 +302,11 @@ impl ContentDir {
     }
 }
 
+/// `kind`（`lesson.json` の `kind`）のレッスンに演習があるかどうか。演習が無いのは、動画のみのレッスンだけ。
+pub fn has_exercise(kind: &str) -> bool {
+    kind != "video_only"
+}
+
 fn read_text(path: &Path) -> Result<String, ContentError> {
     fs::read_to_string(path).map_err(|source| ContentError::Io {
         path: path.to_path_buf(),
@@ -301,7 +323,7 @@ fn read_json(path: &Path) -> Result<Value, ContentError> {
 
 /// 演習のディレクトリから、問題文・解説・初期コードだけを読む。
 fn read_exercise(dir: &Path) -> Result<Exercise, ContentError> {
-    let mut starter_files = std::collections::BTreeMap::new();
+    let mut starter_files = BTreeMap::new();
     let starter = dir.join("starter");
     collect_files(&starter, &starter, &mut starter_files)?;
     Ok(Exercise {
@@ -315,7 +337,7 @@ fn read_exercise(dir: &Path) -> Result<Exercise, ContentError> {
 fn collect_files(
     base: &Path,
     dir: &Path,
-    files: &mut std::collections::BTreeMap<String, String>,
+    files: &mut BTreeMap<String, String>,
 ) -> Result<(), ContentError> {
     let entries = fs::read_dir(dir).map_err(|source| ContentError::Io {
         path: dir.to_path_buf(),

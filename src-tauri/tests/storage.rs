@@ -322,6 +322,21 @@ fn read_failures_are_io_errors_and_nothing_is_backed_up() {
     assert_eq!(file_names(temp.path()), ["progress.json"]);
 }
 
+/// 下書き・試行ログの読み込みでも、読み込みそのものの失敗は `io_error` にし、退避しない。
+#[test]
+fn read_failures_of_optional_files_are_io_errors_and_nothing_is_backed_up() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = AppDataDir::new(temp.path());
+    fs::create_dir_all(temp.path().join("drafts/a.json")).unwrap();
+
+    let error = dir
+        .read_optional_versioned_json::<Progress>("drafts/a.json", 1)
+        .unwrap_err();
+    assert!(matches!(error, StorageError::Io { .. }), "{error:?}");
+    assert_eq!(CommandError::from(error).code, ErrorCode::IoError);
+    assert_eq!(file_names(&temp.path().join("drafts")), ["a.json"]);
+}
+
 // ---- 学習者データのディレクトリ ----
 
 /// アプリでは、Tauri の `app_data_dir()`（アプリの識別子の名前のディレクトリ）を使う。

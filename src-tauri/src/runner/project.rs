@@ -62,10 +62,7 @@ impl From<InvalidFilePath> for AssemblyError {
 impl From<AssemblyError> for CommandError {
     fn from(error: AssemblyError) -> Self {
         let (code, message) = match &error {
-            AssemblyError::InvalidPath(_) => (
-                ErrorCode::InvalidArgument,
-                "使えないファイル名があります。src/ か tests/ の下の .rs ファイルにしてください。",
-            ),
+            AssemblyError::InvalidPath(invalid) => return invalid.clone().into(),
             AssemblyError::Io { .. } => (
                 ErrorCode::IoError,
                 "実行するプロジェクトのファイルを書き込めませんでした。",

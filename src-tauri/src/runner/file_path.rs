@@ -4,6 +4,8 @@
 
 use std::fmt;
 
+use crate::commands::error::{CommandError, ErrorCode};
+
 /// 受け付けるパスの、最初の要素。
 const ROOTS: [&str; 2] = ["src", "tests"];
 /// 受け付けるファイルの拡張子。
@@ -29,6 +31,18 @@ impl fmt::Display for InvalidFilePath {
 }
 
 impl std::error::Error for InvalidFilePath {}
+
+impl From<InvalidFilePath> for CommandError {
+    fn from(error: InvalidFilePath) -> Self {
+        CommandError {
+            code: ErrorCode::InvalidArgument,
+            message:
+                "使えないファイル名があります。src/ か tests/ の下の .rs ファイルにしてください。"
+                    .into(),
+            detail: Some(error.to_string()),
+        }
+    }
+}
 
 /// エディタから受け取ったファイルパス（cargo パッケージのルートからの、`/` 区切りの相対パス）を確かめる。
 ///

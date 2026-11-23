@@ -4,6 +4,8 @@
 //! - 同じファイルへの読み書きは、[`AppDataDir`] ごとのファイル単位のロックで直列化する。
 //! - `schema_version` を持つ JSON は [`AppDataDir::read_versioned_json`] で読む。読み込めないときは
 //!   `.broken-{日時}` を付けて退避し、初期状態で作り直す（[`versioned`]）。
+//! - 下書き・試行ログのように、無い状態が初期状態であるファイルは [`AppDataDir::read_optional_versioned_json`]
+//!   で読む。読み込めないときは退避し、作り直さずに、無いものとして扱う。
 
 mod error;
 mod versioned;
