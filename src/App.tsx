@@ -7,6 +7,7 @@ import { LessonsScreen } from "./lessons/LessonsScreen";
 import { NavigationContext } from "./router";
 import type { Route } from "./router";
 import { SettingsScreen } from "./settings/SettingsScreen";
+import { VideoScreen } from "./video/VideoScreen";
 
 // 画面全体がスクロールしない画面。ほかの画面は、縦に長いページとしてスクロールする。
 function isFixedHeight(route: Route): boolean {
@@ -38,7 +39,8 @@ function Screen({ route }: { route: Route }) {
     case "lessons":
       return <LessonsScreen />;
     case "video":
-      return <Placeholder title="動画画面" detail={route.lessonId} />;
+      // レッスンが変わったら（「次のレッスンへ」）、状態を作り直す。
+      return <VideoScreen key={route.lessonId} lessonId={route.lessonId} />;
     case "exercise":
       return <Placeholder title="演習画面" detail={route.lessonId} preparing />;
     case "generated":
