@@ -1,6 +1,23 @@
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it } from "vitest";
 import { App } from "./App";
+
+beforeEach(() => {
+  mockIPC((command) => {
+    if (command === "list_chapters") {
+      return { chapters: [] };
+    }
+    if (command === "get_progress") {
+      return { lessons: {}, recommended_lesson_id: null };
+    }
+    return undefined;
+  });
+});
+
+afterEach(() => {
+  clearMocks();
+});
 
 const MENU_LABELS = ["ホーム", "レッスン", "問題生成", "設定"];
 
@@ -26,17 +43,19 @@ it("ヘッダーにロゴとメインメニューを表示し、最初はホー�
   );
 });
 
-it("メニューで各画面に移り、選んでいる項目だけに aria-current を付ける", () => {
+it("メニューで各画面に移り、選んでいる項目だけに aria-current を付ける", async () => {
   render(<App />);
   const cases = [
-    ["レッスン", "レッスン一覧"],
+    ["レッスン", "レッスン"],
     ["問題生成", "生成問題一覧"],
     ["設定", "設定画面"],
     ["ホーム", "トップページ"],
   ] as const;
   for (const [label, title] of cases) {
     fireEvent.click(menu().getByRole("link", { name: label }));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(title);
+    expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+      title,
+    );
     // ヘッダーは、どの画面でも表示される。
     expect(screen.getByRole("banner")).toBeInTheDocument();
     const current = menu()

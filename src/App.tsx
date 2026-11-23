@@ -2,6 +2,7 @@ import { Hourglass } from "lucide-react";
 import { useMemo, useState } from "react";
 import "./App.css";
 import { AppHeader } from "./AppHeader";
+import { LessonsScreen } from "./lessons/LessonsScreen";
 import { NavigationContext } from "./router";
 import type { Route } from "./router";
 
@@ -33,7 +34,7 @@ function Screen({ route }: { route: Route }) {
     case "home":
       return <Placeholder title="トップページ" />;
     case "lessons":
-      return <Placeholder title="レッスン一覧" />;
+      return <LessonsScreen />;
     case "video":
       return <Placeholder title="動画画面" detail={route.lessonId} />;
     case "exercise":
