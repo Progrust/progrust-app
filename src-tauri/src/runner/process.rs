@@ -6,6 +6,8 @@
 //!   止める操作は [`ProcessHandle`] で行い、終わり方は [`RunningProcess::wait`] で受け取る。
 //! - 判定のように、標準入力に決まった文字列を書いて閉じ、出力を集めるだけのときは [`collect_output`] を使う。
 //! - 止めるときは、プロセスグループ全体に SIGKILL を送る。自分で別のプロセスグループやセッションに移った子は止めない。
+//!   止める操作と制限時間で止めたときは、まだ渡していない出力を捨てる。ビルドでは、制限時間で止めたときも、
+//!   受け取った出力を渡す（[`TimeoutOutput`]）。
 //! - 起動したプロセスが終わったら、同じプロセスグループに残ったプロセスを止め、その後に届く出力を
 //!   [`GRACE_AFTER_EXIT`] だけ待って終える。パイプの終わり（EOF）は待たない。
 //! - 出力量の上限は、実行では標準出力と標準エラー出力の合計で、stdout 方式の判定では標準出力だけで数える
@@ -97,6 +99,17 @@ pub struct ProcessSpec {
     pub envs: Vec<(OsString, OsString)>,
     pub stdin: StdinMode,
     pub limits: Limits,
+    /// 制限時間で止めたときに、まだ渡していない出力をどうするか。
+    pub on_timeout: TimeoutOutput,
+}
+
+/// 制限時間で止めたときに、まだ渡していない出力をどうするか。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TimeoutOutput {
+    /// 捨てる（実行。run.md「停止」）。
+    Discard,
+    /// 止めるまでに受け取った出力を、すべて渡してから終える（ビルド。run.md「ビルドの出力の表示」）。
+    Deliver,
 }
 
 impl ProcessSpec {
@@ -113,6 +126,7 @@ impl ProcessSpec {
             envs: Vec::new(),
             stdin: StdinMode::Closed,
             limits,
+            on_timeout: TimeoutOutput::Discard,
         }
     }
 }
@@ -208,6 +222,7 @@ where
     let pgid = libc::pid_t::try_from(child.id()).map_err(io::Error::other)?;
     let group = Arc::new(Group {
         pgid,
+        on_timeout: spec.on_timeout,
         state: Mutex::new(GroupState::default()),
     });
     let (events, receiver) = mpsc::sync_channel(CHANNEL_CAPACITY);
@@ -329,14 +344,20 @@ impl StopReason {
     }
 
     /// まだ渡していない出力を捨てるか（run.md「停止」）。出力量の上限では、上限までの出力を渡す（limits.md）。
-    fn discards_output(self) -> bool {
-        matches!(self, Self::User | Self::Timeout)
+    /// 制限時間では、`on_timeout` に従う。
+    fn discards_output(self, on_timeout: TimeoutOutput) -> bool {
+        match self {
+            Self::User => true,
+            Self::Timeout => on_timeout == TimeoutOutput::Discard,
+            Self::OutputLimit => false,
+        }
     }
 }
 
 /// 起動したプロセスのプロセスグループ。
 struct Group {
     pgid: libc::pid_t,
+    on_timeout: TimeoutOutput,
     state: Mutex<GroupState>,
 }
 
@@ -375,7 +396,8 @@ impl Group {
 
     /// まだ渡していない出力を捨てるか。
     fn discards_output(&self) -> bool {
-        self.stop_reason().is_some_and(StopReason::discards_output)
+        self.stop_reason()
+            .is_some_and(|reason| reason.discards_output(self.on_timeout))
     }
 
     /// 起動したプロセスが終わった後に、同じプロセスグループに残ったプロセスを止めてから、刈り取る。

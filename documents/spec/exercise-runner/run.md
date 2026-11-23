@@ -8,7 +8,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 
 1. `cargo build --offline --quiet --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
 2. ビルドに失敗したら、ビルドの出力（「ビルドの出力の表示」）を表示して終了する（`compile_error`）。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、ビルドの出力を表示せずに終了する（`crates_unavailable`）。
-3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。
+3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。起動する実行ファイルは、1 のビルドの標準出力の JSON のうち、`reason` が `compiler-artifact` で、`profile.test` が `false` で、`target.kind` に `bin` があり、`target.src_path` が `project/src/main.rs` であるものの `executable` とする。`src/bin/` に置いたファイルの実行ファイルは起動しない。見つからないときは、アプリの側の失敗（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」の `run_finished` の `error`）として終える。
 4. 標準出力・標準エラー出力を、「出力の送り方」のとおり `run_output` イベントで送る。
 5. 学習者のプログラム（3 で起動したプロセス）が終了したら、同じプロセスグループに残ったプロセスを止める（「停止」）。その後に届く出力は最大 300ms だけ待って受け取り、実行を終える。パイプの終わり（EOF）は待たない。
 6. `run_finished` イベントで結果を送り、試行ログに `run` イベントを追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。`crates_unavailable` のときは、`run_finished` イベントは送るが、試行ログには追記しない。
