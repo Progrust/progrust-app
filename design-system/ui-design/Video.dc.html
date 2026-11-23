@@ -190,7 +190,7 @@
   </div>
 </div>
 </x-dc>
-<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"kind":{"editor":"enum","options":["lesson","video_only"],"default":"lesson"},"playback":{"editor":"enum","options":["playing","ended"],"default":"playing"},"watched":{"editor":"boolean","default":false},"captions":{"editor":"boolean","default":false},"captionsOffSpace":{"editor":"enum","options":["reserve","collapse"],"default":"reserve"},"chat":{"editor":"enum","options":["open","closed"],"default":"open"},"chatState":{"editor":"enum","options":["answering","error","unavailable"],"default":"answering"},"$preview":{"width":1280,"height":800}}'>
+<script type="text/x-dc" data-dc-script data-props='{"theme":{"editor":"enum","options":["light","dark"],"default":"light"},"kind":{"editor":"enum","options":["lesson","video_only"],"default":"lesson"},"playback":{"editor":"enum","options":["playing","ended"],"default":"playing"},"watched":{"editor":"boolean","default":false},"captions":{"editor":"boolean","default":false},"chat":{"editor":"enum","options":["open","closed"],"default":"open"},"chatState":{"editor":"enum","options":["answering","error","unavailable"],"default":"answering"},"$preview":{"width":1280,"height":800}}'>
 class Component extends DCLogic {
   renderVals() {
     // playback: playing = 0:42 を再生中、ended = 最後まで再生して末尾で止まった状態
@@ -203,8 +203,6 @@ class Component extends DCLogic {
     // 「演習へ」を出す。動画のみのレッスンでは、代わりに「次のレッスンへ」を出す
     const watched = ended || !!this.props.watched;
     const captions = !!this.props.captions;
-    // captionsOffSpace: 字幕を表示しないときの字幕の場所（未決。仕様の screens/open-questions.md）。reserve = 空けておく、collapse = 詰める
-    const reserve = (this.props.captionsOffSpace ?? 'reserve') === 'reserve';
     const chatOpen = (this.props.chat ?? 'open') === 'open';
     const cs = this.props.chatState ?? 'answering';
     return {
@@ -217,7 +215,7 @@ class Component extends DCLogic {
       seekNow: ended ? 104 : 42, seekText: ended ? '1 分 44 秒' : '0 分 42 秒',
       seekStyle: ended ? '--pg-slider-value:1' : '--pg-slider-value:0.404',
       timeNow: ended ? '1:44' : '0:42',
-      captionsOn: captions, captionsBlank: !captions && reserve,
+      captionsOn: captions, captionsBlank: !captions,
       captionsPressed: captions ? 'true' : 'false',
       chatOpen, chatClosed: !chatOpen,
       isAnswering: cs === 'answering', isError: cs === 'error', isUnavailable: cs === 'unavailable'
