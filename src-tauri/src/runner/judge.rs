@@ -16,7 +16,8 @@ use std::{ffi::OsString, io, path::PathBuf, time::Duration};
 use serde::{Deserialize, Serialize};
 
 use super::process::{
-    self, CollectedOutput, Limits, OutputLimit, ProcessSpec, StdinMode, Termination, TimeoutOutput,
+    CollectedOutput, Limits, OutputLimit, ProcessSpec, StdinMode, Stopper, Termination,
+    TimeoutOutput,
 };
 
 /// 1 テストケースの実行時間の制限（spec/exercise-runner/limits.md）。
@@ -106,7 +107,7 @@ pub enum CaseDetail {
         expected: String,
         actual: String,
     },
-    /// `timeout`・`runtime_error` の標準エラー出力の先頭（[`process::STDERR_HEAD_BYTES`] まで）。文字列にする。
+    /// `timeout`・`runtime_error` の標準エラー出力の先頭（[`super::process::STDERR_HEAD_BYTES`] まで）。文字列にする。
     Stderr(String),
     /// `test` 方式の `fail` の panic メッセージ（`assert_eq!` の左辺・右辺を含む）。文字列にする
     /// （[`super::judge_test`]）。
@@ -185,16 +186,21 @@ pub struct JudgeProgress {
 }
 
 /// `spec` のテストケースを順に実行して判定する。テストケースが 1 件終わるたびに `on_progress` を呼ぶ。
+/// `stop` で止めたときは、残りのテストケースを実行せずに、途中で止めた判定結果（[`JudgeResult::stopped`]）を返す。
 ///
 /// 実行ファイルを起動できなかったときなど、アプリの側の失敗は `Err` で返し、残りのテストケースは実行しない。
-pub fn judge_stdout<F>(spec: &StdoutJudgeSpec, mut on_progress: F) -> io::Result<JudgeResult>
+pub fn judge_stdout<F>(
+    spec: &StdoutJudgeSpec,
+    stop: &Stopper,
+    mut on_progress: F,
+) -> io::Result<JudgeResult>
 where
     F: FnMut(JudgeProgress),
 {
     let total = spec.cases.len();
     let mut results = Vec::with_capacity(total);
     for case in &spec.cases {
-        let collected = process::collect_output(case_process(spec, case))?;
+        let collected = stop.collect_output(case_process(spec, case))?;
         let Some(result) = case_result(case, &collected) else {
             return Ok(JudgeResult::stopped());
         };

@@ -122,6 +122,8 @@
 * [ADR 0217](0217-no-hidden-tests-is-app-failure.md) - `test` 方式で、隠しテストの名前を得る起動（`--list`）が失敗したときと、隠しテストが 1 件も得られなかったときは、判定せずにアプリの側の失敗として終える
 * [ADR 0218](0218-read-should-panic-test-results.md) - `test` 方式で、名前の後に ` - should panic` などのテストの種類の表示が付いた行も結果の行とし、`#[should_panic]` のテストの失敗では、libtest の説明を `fail` の `detail` に入れる
 * [ADR 0219](0219-learner-tests-fail-on-any-failed-line.md) - `test` 方式の学習者のテストの判定で、` ... FAILED` の行が 1 つでもあれば cargo の終了コードが 0 でも `pass` にせず、cargo を `CARGO_TERM_COLOR=never` を付けて起動する
+* [ADR 0220](0220-compile-error-submit-has-no-cases.md) - `compile_error` の提出の判定結果は、`passed` と `total` を 0、`cases[]` を空にする
+* [ADR 0221](0221-submit-stderr-from-failed-case-details.md) - 試行ログの `submit` イベントの `stderr` に入れるプログラムの標準エラー出力を、`timeout`・`runtime_error` のテストケースの `detail` を `cases[]` の順に連結したものにする
 
 # レッスン進行・進捗管理
 

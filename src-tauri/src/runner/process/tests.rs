@@ -618,6 +618,55 @@ fn a_program_that_cannot_be_started_is_an_error() {
     assert!(spawn(spec, |_| {}).is_err());
 }
 
+// ---- まとめて止める操作 ----
+
+#[test]
+fn a_stopper_stops_all_running_processes_and_starts_no_more() {
+    let dir = tempfile::tempdir().unwrap();
+    let stopper = Stopper::new();
+    let started = Instant::now();
+    let workers: Vec<_> = (0..2)
+        .map(|_| {
+            let stopper = stopper.clone();
+            let spec = sh("sleep 30", dir.path());
+            std::thread::spawn(move || stopper.collect_output(spec).unwrap())
+        })
+        .collect();
+    // 2 つとも起動して登録されるまで待つ。
+    let deadline = Instant::now() + WAIT;
+    while lock(&stopper.state).running.len() < 2 {
+        assert!(Instant::now() < deadline, "プロセスが登録されない");
+        std::thread::sleep(Duration::from_millis(10));
+    }
+
+    stopper.stop();
+    for worker in workers {
+        assert_eq!(worker.join().unwrap().termination, Termination::Stopped);
+    }
+    assert!(started.elapsed() < WAIT);
+    assert!(stopper.is_stopped());
+    assert!(lock(&stopper.state).running.is_empty());
+
+    // 止めた後は、起動しない。
+    let marker = dir.path().join("started");
+    let collected = stopper
+        .collect_output(sh(&format!("touch '{}'", marker.display()), dir.path()))
+        .unwrap();
+    assert_eq!(collected.termination, Termination::Stopped);
+    assert!(!marker.exists());
+}
+
+#[test]
+fn processes_that_finished_are_no_longer_registered() {
+    let dir = tempfile::tempdir().unwrap();
+    let stopper = Stopper::new();
+    let collected = stopper.collect_output(sh("echo done", dir.path())).unwrap();
+    assert_eq!(collected.termination, Termination::Exited(0));
+    assert_eq!(collected.stdout, "done\n");
+    assert!(lock(&stopper.state).running.is_empty());
+    assert!(!stopper.is_stopped());
+}
+
 // ---- UTF-8 ----
 
 #[test]

@@ -5,7 +5,8 @@
 //! - [`execute`] は、`run_code` が受け付けた後に、別のスレッドで呼ぶ。`project/` を組み立て、ビルドし、
 //!   学習者のプログラム（テスト実行では `cargo test`）を動かし、試行ログに `run` イベントを追記してから、
 //!   要求を外して `run_finished` を送る。
-//! - イベントの送り先は [`RunEvents`] で受け取る。アプリでは Tauri の `emit` で送り、テストでは差し替えられる。
+//! - イベントの送り先と試行ログ・進捗の書き込み先は [`RunEvents`] で受け取る。アプリでは Tauri の `emit` で送り、
+//!   学習者データのディレクトリに書く。提出のタスク（[`super::submit`]）も、同じものを使う。
 //! - アプリの終了で止めたときは、試行ログに追記せず、`run_finished` も送らない。
 
 use std::collections::BTreeMap;
@@ -25,8 +26,9 @@ use super::process::{
 };
 use super::project::{assemble_project, build_env};
 use super::runs::{ActiveRun, RunLimits, Runs, StdinState};
+use super::submit::{SubmitJudgement, SubmitProgress};
 use super::workspace::WorkspaceDir;
-use crate::attempts::{BuildOutput, RunMode, RunRecord, RunStatus, SessionKind};
+use crate::attempts::{BuildOutput, RunMode, RunRecord, RunStatus, SessionKind, SubmitRecord};
 use crate::commands::error::{CommandError, ErrorCode};
 use crate::progress::{LessonProgress, now_string};
 #[cfg(doc)]
@@ -89,15 +91,18 @@ pub struct RunFinished {
     /// アプリの側の失敗で、結果の状態を決められずに終わったときのエラー。
     pub error: Option<CommandError>,
     pub run: Option<RunResultSummary>,
-    /// 提出の判定結果。提出は別のタスクで作るので、実行ではいつも `None`。
-    pub submit: Option<serde_json::Value>,
+    /// 提出の判定結果。実行と、`error` があるときは `None`。
+    pub submit: Option<SubmitJudgement>,
+    /// 提出で正解してレッスンを完了にしたときの、更新した後の進捗。ほかは `None`。
     pub progress: Option<LessonProgress>,
 }
 
-/// イベントの送り先と、試行ログの書き込み先。
+/// イベントの送り先と、試行ログ・進捗の書き込み先。
 pub trait RunEvents: Send + Sync + 'static {
     /// `run_output` を送る。
     fn output(&self, output: RunOutput);
+    /// `submit_progress` を送る。
+    fn submit_progress(&self, progress: SubmitProgress);
     /// `run_finished` を送る。
     fn finished(&self, finished: RunFinished);
     /// 試行ログに `run` イベントを追記する（[`AppDataDir::append_run`]）。
@@ -107,6 +112,21 @@ pub trait RunEvents: Send + Sync + 'static {
         kind: SessionKind,
         record: RunRecord,
     ) -> Result<(), StorageError>;
+    /// 試行ログに `submit` イベントを追記し、追記したセッションの ID を返す（[`AppDataDir::append_submit`]）。
+    fn append_submit(
+        &self,
+        lesson_id: &str,
+        kind: SessionKind,
+        record: SubmitRecord,
+    ) -> Result<String, StorageError>;
+    /// 提出で正解したときに、セッションの `passed_at` を書き、レッスンを完了にして、更新した後の進捗を返す
+    /// （[`AppDataDir::record_pass`]）。
+    fn record_pass(
+        &self,
+        lesson_id: &str,
+        session_id: &str,
+        at: &str,
+    ) -> Result<Option<LessonProgress>, StorageError>;
 }
 
 /// 実行時間の制限で止めたときの知らせ。
@@ -401,9 +421,15 @@ fn process_limits(limits: &RunLimits) -> Limits {
     }
 }
 
-/// ビルドの出力を、受け取った順に 1 つの `run_output` で送る。コンパイラの診断と cargo 自身の標準エラー出力は
-/// `stderr`、タイムアウトの旨は `system` にする。
+/// ビルドの出力を、受け取った順に 1 つの `run_output` で送る。
 fn send_build_output(job: &RunJob, events: &Arc<dyn RunEvents>, built: &BuildOutcome) {
+    send(job, events, build_output_chunks(built));
+}
+
+/// ビルドの出力を、受け取った順に `run_output` の断片にする。コンパイラの診断と cargo 自身の標準エラー出力は
+/// `stderr`、アプリの知らせ（タイムアウトの旨、隠しテストの側でエラーが出たときの案内）は `system` にする。
+/// 同じ種類の断片が続く分は 1 つにまとめる。
+pub(super) fn build_output_chunks(built: &BuildOutcome) -> Vec<RunOutputChunk> {
     let mut chunks: Vec<RunOutputChunk> = Vec::new();
     for piece in &built.output {
         let stream = match piece.kind {
@@ -418,16 +444,21 @@ fn send_build_output(job: &RunJob, events: &Arc<dyn RunEvents>, built: &BuildOut
             }),
         }
     }
-    send(job, events, chunks);
+    chunks
 }
 
 /// 断片があれば、`run_output` で送る。
 fn send(job: &RunJob, events: &Arc<dyn RunEvents>, chunks: Vec<RunOutputChunk>) {
+    send_output(events.as_ref(), job.active.request_id(), chunks);
+}
+
+/// 断片があれば、要求 `request_id` の `run_output` で送る。
+pub(super) fn send_output(events: &dyn RunEvents, request_id: &str, chunks: Vec<RunOutputChunk>) {
     if chunks.is_empty() {
         return;
     }
     events.output(RunOutput {
-        request_id: job.active.request_id().to_string(),
+        request_id: request_id.to_string(),
         chunks,
     });
 }
@@ -443,7 +474,7 @@ fn program_chunk(chunk: OutputChunk) -> RunOutputChunk {
 }
 
 /// アプリの側の失敗（`run_finished` の `error`）。
-fn app_failure(message: &str, error: std::io::Error) -> CommandError {
+pub(super) fn app_failure(message: &str, error: std::io::Error) -> CommandError {
     CommandError {
         code: ErrorCode::Internal,
         message: message.into(),

@@ -399,7 +399,7 @@ fn every_case_is_judged_with_the_spec_limits_and_progress_is_reported_per_case()
 
     let mut progress = Vec::new();
     let started = Instant::now();
-    let result = judge_stdout(&spec, |step| progress.push(step)).unwrap();
+    let result = judge_stdout(&spec, &Stopper::new(), |step| progress.push(step)).unwrap();
     let elapsed = started.elapsed();
 
     assert_eq!(
@@ -467,7 +467,7 @@ fn a_correct_program_passes_every_case() {
         case("負の数", "sum\n-1 -2\n", "-3\n"),
         case("行末の空白", "trailing\n", "6"),
     ]);
-    let result = judge_stdout(&spec, |_| {}).unwrap();
+    let result = judge_stdout(&spec, &Stopper::new(), |_| {}).unwrap();
     assert_eq!(result.status, JudgeStatus::Passed);
     assert_eq!((result.passed, result.total), (3, 3));
     assert!(result.cases.iter().all(|case| case.detail.is_none()));
@@ -484,6 +484,6 @@ fn a_missing_executable_is_an_error() {
         limits: CaseLimits::default(),
     };
     let mut progress = Vec::new();
-    assert!(judge_stdout(&spec, |step| progress.push(step)).is_err());
+    assert!(judge_stdout(&spec, &Stopper::new(), |step| progress.push(step)).is_err());
     assert!(progress.is_empty());
 }

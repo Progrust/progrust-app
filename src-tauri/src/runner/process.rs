@@ -5,6 +5,7 @@
 //! - [`spawn`] で起動し、出力を [`BATCH_INTERVAL`] ごとにまとめて呼び出し側の関数に渡す。標準入力を書く・閉じる、
 //!   止める操作は [`ProcessHandle`] で行い、終わり方は [`RunningProcess::wait`] で受け取る。
 //! - 判定のように、標準入力に決まった文字列を書いて閉じ、出力を集めるだけのときは [`collect_output`] を使う。
+//!   判定の途中で止める（提出を止める）ときは、[`Stopper`] で起動し、[`Stopper::stop`] でまとめて止める。
 //! - 止めるときは、プロセスグループ全体に SIGKILL を送る。自分で別のプロセスグループやセッションに移った子は止めない。
 //!   止める操作と制限時間で止めたときは、まだ渡していない出力を捨てる。ビルドでは、制限時間で止めたときも、
 //!   受け取った出力を渡す（[`TimeoutOutput`]）。
@@ -307,28 +308,91 @@ pub struct CollectedOutput {
 
 /// `spec` のプロセスを起動し、終わるまでの標準出力と標準エラー出力を集めて返す。
 /// 出力量の上限で止めたときは、上限までの出力だけが入る。[`OutputLimit::Stdout`] のときは、
-/// 標準エラー出力は先頭の [`STDERR_HEAD_BYTES`] までだけが入る。
+/// 標準エラー出力は先頭の [`STDERR_HEAD_BYTES`] までだけが入る。途中で止める操作が要るときは、
+/// [`Stopper::collect_output`] を使う。
 pub fn collect_output(spec: ProcessSpec) -> io::Result<CollectedOutput> {
-    let collected = Arc::new(Mutex::new((String::new(), String::new())));
-    let process = {
-        let collected = Arc::clone(&collected);
-        spawn(spec, move |chunks| {
-            let mut collected = lock(&collected);
-            for chunk in chunks {
-                match chunk.stream {
-                    OutputStream::Stdout => collected.0.push_str(&chunk.text),
-                    OutputStream::Stderr => collected.1.push_str(&chunk.text),
+    Stopper::new().collect_output(spec)
+}
+
+/// 判定のように、いくつものプロセスを続けて、または同時に起動するときに、まとめて止める操作。複製は同じものを指す。
+///
+/// [`Stopper::collect_output`] で起動したプロセスは、動いている間、止める相手として登録する。[`Stopper::stop`] の後は、
+/// 動いているプロセスをすべて止め、新しいプロセスは起動せずに [`Termination::Stopped`] にする。止める操作が、
+/// 起動してから登録するまでの間に来ても、登録したときに止める。
+#[derive(Clone, Default)]
+pub struct Stopper {
+    state: Arc<Mutex<StopperState>>,
+}
+
+#[derive(Default)]
+struct StopperState {
+    stopped: bool,
+    running: Vec<ProcessHandle>,
+}
+
+impl Stopper {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// 動いているプロセスをすべて止め、この後は起動させない。
+    pub fn stop(&self) {
+        let mut state = lock(&self.state);
+        state.stopped = true;
+        for process in state.running.drain(..) {
+            process.stop();
+        }
+    }
+
+    /// [`Stopper::stop`] を呼んだか。
+    pub fn is_stopped(&self) -> bool {
+        lock(&self.state).stopped
+    }
+
+    /// [`collect_output`] と同じ。止めた後は起動せずに、出力が空の [`Termination::Stopped`] を返す。
+    pub fn collect_output(&self, spec: ProcessSpec) -> io::Result<CollectedOutput> {
+        let stopped = || CollectedOutput {
+            termination: Termination::Stopped,
+            stdout: String::new(),
+            stderr: String::new(),
+        };
+        if self.is_stopped() {
+            return Ok(stopped());
+        }
+        let collected = Arc::new(Mutex::new((String::new(), String::new())));
+        let process = {
+            let collected = Arc::clone(&collected);
+            spawn(spec, move |chunks| {
+                let mut collected = lock(&collected);
+                for chunk in chunks {
+                    match chunk.stream {
+                        OutputStream::Stdout => collected.0.push_str(&chunk.text),
+                        OutputStream::Stderr => collected.1.push_str(&chunk.text),
+                    }
                 }
+            })?
+        };
+        let handle = process.handle();
+        {
+            let mut state = lock(&self.state);
+            if state.stopped {
+                handle.stop();
+            } else {
+                state.running.push(handle.clone());
             }
-        })?
-    };
-    let termination = process.wait()?;
-    let (stdout, stderr) = std::mem::take(&mut *lock(&collected));
-    Ok(CollectedOutput {
-        termination,
-        stdout,
-        stderr,
-    })
+        }
+        let termination = process.wait();
+        lock(&self.state)
+            .running
+            .retain(|running| !Arc::ptr_eq(&running.group, &handle.group));
+        let termination = termination?;
+        let (stdout, stderr) = std::mem::take(&mut *lock(&collected));
+        Ok(CollectedOutput {
+            termination,
+            stdout,
+            stderr,
+        })
+    }
 }
 
 // ---- 止める ----

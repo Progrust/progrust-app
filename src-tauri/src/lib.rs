@@ -36,6 +36,7 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         commands::run::run_code,
         commands::run::send_stdin,
         commands::run::stop_run,
+        commands::run::submit_code,
         commands::settings::get_app_version,
         commands::settings::get_settings,
         commands::settings::update_settings,
