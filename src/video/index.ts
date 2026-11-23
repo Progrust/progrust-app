@@ -4,6 +4,7 @@ export { Camera, cameraAt, NO_ZOOM } from "./Camera";
 export type { CameraProps, CameraView } from "./Camera";
 export { CodeBlock } from "./CodeBlock";
 export type { CodeBlockProps } from "./CodeBlock";
+export type { LineMotion, LinesSpec, MarkSpec, ScopeSpec } from "./codeSpec";
 export { useCodeBlocks, useCues, useLesson } from "./hooks";
 export type { CodeBlockData } from "./hooks";
 export type { LessonInfo } from "./lesson";
