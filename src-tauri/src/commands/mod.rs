@@ -4,6 +4,7 @@
 //! どのコマンドにも `#[tauri::command(rename_all = "snake_case")]` を付け、`Result` を返す。
 
 pub mod content;
+pub mod environment;
 pub mod error;
 pub mod learning_record;
 pub mod progress;

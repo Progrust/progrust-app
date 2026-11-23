@@ -14,6 +14,13 @@ description: "cargo と claude の検出方法と必要条件、見つからな�
 | `claude` | 設定で指定したパス → `PATH` → `~/.local/bin` → `~/.claude/local` → npm のグローバルインストール先 | `claude --version` が成功すること |
 
 - `PATH` に見つかった場合も見つからなかった場合も、表の既定のインストール先を探索する（macOS で Finder から起動した場合を含む）。
+- `cargo` / `rustc` は、探索順の場所ごとに、`cargo` と、同じディレクトリの `rustc` を組で調べる。
+  - 設定で指定するパス（[設定画面と settings.json](../screens/settings-screen.md)「settings.json」の `tool_paths.cargo`）は、`cargo` の実行ファイルの絶対パスとする。`rustc` は、そのファイルと同じディレクトリの `rustc` を使う。
+  - `PATH` の場所は、`PATH` の各ディレクトリを順に調べる。相対パスのディレクトリは調べない。
+  - `cargo` と `rustc` がどちらも実行できるファイルで、`rustc --version` が成功してバージョンを取り出せた最初の場所を使う。それ以降の場所は調べない。`rustc` のバージョンが必要条件に満たないときも、その場所を使う（「バージョンが足りない場合」）。
+  - 次の場所は使えないとして飛ばし、次の場所を調べる。設定で指定したパスが無いか、相対パスである。`cargo` か `rustc` が無いか、実行できない。`rustc --version` が失敗するか、10 秒で終わらないか、出力からバージョンを取り出せない。
+  - 使える場所が無いときは、見つからないとする（「見つからない場合」）。
+- `rustc --version` の出力の 1 行目は `rustc 1.100.0 (…)` の形で、2 つ目の語をバージョンとする。必要条件と比べるときは、メジャー・マイナー・パッチの数を数として比べ、`-nightly` などの後ろの部分は比べない。
 - `claude --version` を起動するときに渡す環境変数は、[claude -p の呼び出しの共通ルール](../claude-integration/invocation.md)「環境変数」に従う。
 - 検出結果（パス・バージョン）はメモリに保持し、`get_environment_status` で返す。
 
