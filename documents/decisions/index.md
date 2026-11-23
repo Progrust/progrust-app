@@ -125,6 +125,7 @@
 * [ADR 0119](0119-video-only-lessons-for-background-knowledge.md) - 周辺知識だけを扱うレッスンを演習のない動画のみのレッスンにし、動画を最後まで再生したら完了とする（ADR 0143 で、動画画面に「レッスン一覧へ」を表示しないことにした）
 * [ADR 0169](0169-show-video-from-start-after-watching-to-end.md) - 動画を最後の文まで再生したあとに開き直したときは、最後の文の頭ではなく、動画の先頭から表示する
 * [ADR 0170](0170-write-undecided-progress-fields-as-null.md) - `progress.json` で、完了していないレッスンの完了のときに決まるフィールドを、省かずに `null`（`completion_count` は 0）で書く
+* [ADR 0213](0213-passed-code-is-first-passed-submit.md) - 「前回の正解コードを見る」では、最後に正解した試行セッションの最初に正解した `submit` イベントを返し、正解した `submit` イベントが無い試行ログでは `not_found` にする
 
 # Claude Code 連携
 

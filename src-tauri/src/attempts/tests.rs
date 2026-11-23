@@ -521,3 +521,55 @@ fn session_kinds_follow_the_lesson_kind() {
         Some(SessionKind::ChapterReview)
     );
 }
+
+#[test]
+fn a_passed_session_is_ended_only_after_before_end_succeeds() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = AppDataDir::new(temp.path());
+    let log = dir
+        .start_or_continue_session_at("ch04-04", SessionKind::Lesson, at(13, 2, 0))
+        .unwrap();
+    let id = log.session_id.clone();
+
+    // 正解していないセッションは終えない。`before_end` も呼ばない。
+    let ended = dir
+        .end_passed_session_of_lesson("ch04-04", "2026-10-31T13:30:00+09:00", |_| {
+            panic!("正解していないのに呼んだ")
+        })
+        .unwrap();
+    assert_eq!(ended, None);
+
+    dir.mark_session_passed(&id, "2026-10-31T13:25:00+09:00")
+        .unwrap();
+    // `before_end` が失敗したら、`ended_at` を書かない。
+    let failed = dir.end_passed_session_by_id(&id, "2026-10-31T13:30:00+09:00", |_| {
+        Err(StorageError::InvalidPath { path: "x".into() })
+    });
+    assert!(failed.is_err());
+    assert_eq!(saved_json(&temp, &id)["ended_at"], Value::Null);
+
+    let ended = dir
+        .end_passed_session_of_lesson("ch04-04", "2026-10-31T13:30:00+09:00", |log| {
+            assert_eq!(log.session_id, id);
+            Ok(())
+        })
+        .unwrap()
+        .unwrap();
+    assert_eq!(ended.ended_at.as_deref(), Some("2026-10-31T13:30:00+09:00"));
+    assert_eq!(
+        saved_json(&temp, &id)["ended_at"],
+        "2026-10-31T13:30:00+09:00"
+    );
+
+    // 終えたセッションは、もう一度は終えない。
+    assert_eq!(
+        dir.end_passed_session_by_id(&id, "2026-10-31T13:40:00+09:00", |_| Ok(()))
+            .unwrap(),
+        None
+    );
+    assert_eq!(
+        dir.end_passed_session_of_lesson("ch04-04", "2026-10-31T13:40:00+09:00", |_| Ok(()))
+            .unwrap(),
+        None
+    );
+}

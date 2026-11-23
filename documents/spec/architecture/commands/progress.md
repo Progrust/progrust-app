@@ -79,7 +79,7 @@ description: "進捗のコマンド `get_progress`（進捗と推奨レッスン
 | `submitted_at` | `string` | 正解した `submit` イベントの `at` |
 | `files` | `{ [path: string]: string }` | 正解した `submit` イベントのファイル（[試行ログ（attempts/*.json）](../../learning-record-and-analysis/attempt-log.md)「スキーマ」） |
 
-- エラー: `last_passed_session_id` が無いときと、その試行ログが無いときは `not_found`。
+- エラー: `last_passed_session_id` が無いときと、その試行ログが無いときと、その試行ログに正解した `submit` イベントが無いときは `not_found`。
 
 ## save_video_position
 
