@@ -250,6 +250,10 @@ def main():
     for path in entry.get("delete") or []:
         if os.path.exists(path):
             os.remove(path)
+    if entry.get("commit"):
+        # 禁止をすり抜けて、claude がコミットしたことにする
+        subprocess.run(["git", "add", "-A"], check=True)
+        subprocess.run(["git", "commit", "--quiet", "--allow-empty", "-m", "claude のコミット"], check=True)
     if entry.get("push_main"):
         # ほかの作業で main が進んだことにする
         with tempfile.TemporaryDirectory() as tmp:
@@ -594,7 +598,7 @@ class FlowTest(LoopTestCase):
         self.assertEqual([c["model"] for c in review], ["sonnet", "sonnet"])
         for call in self.claude_calls():
             self.assertEqual(os.path.realpath(call["cwd"]), os.path.realpath(self.worktree))
-            self.assertEqual(call["permission_mode"], "dontAsk")
+            self.assertEqual(call["permission_mode"], "bypassPermissions")
             self.assertEqual(call["output_format"], "json")
             self.assertTrue(call["has_schema"])
             # 権限の設定は、作業ツリーの外に置いた main のコピーを渡す
@@ -861,6 +865,21 @@ class FlowTest(LoopTestCase):
         self.assertEqual(len(self.claude_calls()), 1)  # 次のタスクへ進まない
         self.assertEqual(self.origin_branches(), ["main"])
         self.assertFalse(os.path.exists(os.path.join(self.worktree, "a.txt")))
+
+    def test_commit_by_claude_stops_without_label(self) -> None:
+        self.task(1)
+        self.task(2)
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A\n"}, "commit": True},
+        ]
+        code = self.run_loop()
+        self.assertEqual(code, 2, self.output)
+        self.assertIn("仕組みの失敗", self.output)
+        self.assertIn("HEAD が変わりました", self.output)
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+        self.assertEqual(self.issue(1)["comments"], [])
+        self.assertEqual(len(self.claude_calls()), 1)  # レビューにも次のタスクにも進まない
+        self.assertEqual(self.origin_branches(), ["main"])
 
     def test_blocked_with_issue_and_denial_waits_for_decision(self) -> None:
         self.task(1, body="## 概要\n\nx\n\n- 前提: なし\n")
