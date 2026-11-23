@@ -11,7 +11,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。起動する実行ファイルは、1 のビルドの標準出力の JSON のうち、`reason` が `compiler-artifact` で、`profile.test` が `false` で、`target.kind` に `bin` があり、`target.src_path` が `project/src/main.rs` であるものの `executable` とする。`src/bin/` に置いたファイルの実行ファイルは起動しない。見つからないときは、アプリの側の失敗（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」の `run_finished` の `error`）として終える。
 4. 標準出力・標準エラー出力を、「出力の送り方」のとおり `run_output` イベントで送る。
 5. 学習者のプログラム（3 で起動したプロセス）が終了したら、同じプロセスグループに残ったプロセスを止める（「停止」）。その後に届く出力は最大 300ms だけ待って受け取り、実行を終える。パイプの終わり（EOF）は待たない。
-6. `run_finished` イベントで結果を送り、試行ログに `run` イベントを追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。`crates_unavailable` のときは、`run_finished` イベントは送るが、試行ログには追記しない。
+6. 試行ログに `run` イベントを追記してから（[実行・提出の試行ログへの記録](attempt-log.md)）、`run_finished` イベントで結果を送る（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」）。`crates_unavailable` のときは、`run_finished` イベントは送るが、試行ログには追記しない。
 
 - 演習には必ず `src/main.rs` があるものとする（[演習のファイル形式](../content-format/exercise.md)「ファイル」）。
 - ビルドに成功したときも、ビルドの出力を表示する（コンパイラの警告など）。
@@ -25,7 +25,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 3. 成功したら、`cargo test --offline --no-fail-fast` を、`project/` を作業ディレクトリとし、環境変数 `CARGO_TERM_COLOR=always` を付けて、新しいプロセスグループで起動する。
 4. 3 の cargo の標準出力・標準エラー出力を、そのまま `run_output` イベントで送る。cargo が出す `Running ...`・`Doc-tests ...` などの行と、テストごとの結果の行（`test {名前} ... ok` など）も表示する。
 5. 3 の cargo が終了したら、実行の手順の 5 と同じく、同じプロセスグループに残ったプロセスを止めて実行を終える。
-6. `run_finished` イベントで結果を送り、試行ログに `run` イベント（`mode` は `test`）を追記する（[実行・提出の試行ログへの記録](attempt-log.md)）。`crates_unavailable` のときの扱いは、実行の手順の 6 と同じにする。
+6. 試行ログに `run` イベント（`mode` は `test`）を追記してから（[実行・提出の試行ログへの記録](attempt-log.md)）、`run_finished` イベントで結果を送る。`crates_unavailable` のときの扱いは、実行の手順の 6 と同じにする。
 
 - 出力の送り方と停止は、実行と同じにする（「出力の送り方」「停止」）。制限値も実行と同じにする（[実行・判定の制限値](limits.md)）。
 - 標準入力は、3 で起動した直後に閉じる。入力欄は表示しない。

@@ -15,6 +15,7 @@ use tauri::{AppHandle, Builder, Context, Manager, Runtime};
 use content::ContentDir;
 use environment::CargoSearch;
 use runner::RunnerDir;
+use runner::runs::Runs;
 use storage::AppDataDir;
 
 /// コマンドのハンドラを載せたビルダーを返す。`run` と、モックの実行環境のテストで使う。
@@ -31,6 +32,10 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         commands::progress::reset_draft,
         commands::progress::save_draft,
         commands::progress::save_video_position,
+        commands::run::close_stdin,
+        commands::run::run_code,
+        commands::run::send_stdin,
+        commands::run::stop_run,
         commands::settings::get_app_version,
         commands::settings::get_settings,
         commands::settings::update_settings,
@@ -58,6 +63,8 @@ pub fn run() {
             app.manage(ContentDir::from_app(app.handle())?);
             // 同梱の許可クレートの定義（`runner/`）も、`resource_dir()` の下にある。
             app.manage(RunnerDir::from_app(app.handle())?);
+            // 実行・提出を同時に 1 つだけ行う状態。作業領域は `{app_data_dir}/workspace/`（実行のコマンドが使う）。
+            app.manage(Runs::default());
             // cargo・rustc を、画面の表示を待たせずに別のスレッドで探す。
             environment::start_detection(app.handle(), CargoSearch::from_process(configured_cargo));
             Ok(())
@@ -66,6 +73,8 @@ pub fn run() {
         .expect("error while running tauri application")
         .run(|app, event| {
             if let tauri::RunEvent::Exit = event {
+                // 動いている実行・テスト実行・提出を止める。run_finished を送らず、試行ログに追記しない。
+                commands::run::stop_runs_on_exit(app);
                 end_sessions_on_exit(app);
             }
         });

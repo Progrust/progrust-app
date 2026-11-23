@@ -80,7 +80,7 @@ pub fn end_session(
 ) -> Result<(), CommandError> {
     content.lesson_kind(&lesson_id)?;
     // 仕様では、ここで、そのレッスンの動いている実行・テスト実行を止め、`stopped` の `run` イベントを追記し終えてから
-    // 終える（spec/architecture/commands/progress.md「end_session」）。実行の状態はまだ無いので、止める処理は無い。
+    // 終える（spec/architecture/commands/progress.md「end_session」）。その止める処理は、まだ作っていない。
     data_dir.end_passed_session(&lesson_id)?;
     Ok(())
 }

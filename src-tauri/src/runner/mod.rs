@@ -7,11 +7,15 @@
 //!   実行・提出の `project/` の組み立てとビルドの条件は [`project`]。
 //! - 学習者のプログラムなどを新しいプロセスグループで動かし、出力・標準入力・停止・制限を扱う部品は [`process`]。
 //! - `project/` を cargo でビルドし、ビルドの出力・エラーコード・実行ファイルを得る部品は [`build`]。
+//! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
+//!   イベント `run_output`・`run_finished` の内容は [`run`]。
 
 pub mod build;
 pub mod file_path;
 pub mod process;
 pub mod project;
+pub mod run;
+pub mod runs;
 pub mod workspace;
 
 use std::path::{Path, PathBuf};
