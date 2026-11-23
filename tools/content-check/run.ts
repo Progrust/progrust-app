@@ -1,4 +1,5 @@
 // 教材チェックツールの本体。検査の項目は checks に足していく。
+import { audioCheck } from "./audio.ts";
 import { curriculumCheck } from "./curriculum.ts";
 import { definitionCheck } from "./definition.ts";
 import { elementsCheck } from "./elements.ts";
@@ -7,8 +8,10 @@ import {
   masterElementsUsedCheck,
   reviewPrimaryElementsCheck,
 } from "./elements-in-lessons.ts";
+import { scriptCheck } from "./script.ts";
 import { structureCheck } from "./structure.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
+import { warningsCheck } from "./warnings.ts";
 
 export const checks: Check[] = [
   curriculumCheck,
@@ -18,6 +21,9 @@ export const checks: Check[] = [
   masterElementsUsedCheck,
   elementsCheck,
   reviewPrimaryElementsCheck,
+  scriptCheck,
+  audioCheck,
+  warningsCheck,
 ];
 
 export function runChecks(

@@ -397,6 +397,9 @@ describe("要素マスタと一覧の照合（要素と一覧）", () => {
 
 type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
+// 声の設定（content/voice.json）。
+const VOICE = { narrator: "N", speed: 100, pause: 0.2, emotion: { a: 1 } };
+
 const ALL_LESSONS = chapters.flatMap((c) => c.lessons);
 
 // 構成と定義の検査に通る lesson.json。
@@ -452,8 +455,10 @@ function lessonFiles(lesson: Json): Record<string, string> {
       scenes: [{ id: "s", name: "表紙" }],
       sentences: [{ id: "t1", scene: "s", text: "文", say: "文" }],
     });
-    files["video/index.tsx"] = "";
-    files["video/durations.json"] = "{}";
+    files["video/index.tsx"] = "export default { s: () => null };";
+    files["video/durations.json"] = JSON.stringify({
+      t1: { seconds: 70, say: "文", voice: VOICE },
+    });
     files["video/voice/t1.m4a"] = "";
   }
   if (lesson.kind !== "video_only") {
@@ -485,6 +490,7 @@ function checkFull(options: FullOptions = {}): Finding[] {
     chapters,
     options.masters ?? elements,
   );
+  writeFileSync(join(contentDir, "voice.json"), JSON.stringify(VOICE));
   for (const id of ALL_LESSONS) {
     if (options.prepared?.includes(id)) continue;
     const lesson = options.lessons
@@ -1045,5 +1051,476 @@ describe("npm run content:check のコマンド", () => {
     const result = run([]);
     expect(result.status, result.stdout + result.stderr).toBe(0);
     expect(result.stdout).toContain("エラー 0 件");
+  });
+});
+
+// ch01-01 の動画のファイルを書き換えて検査し、指定した項目の結果だけを返す。
+function checkVideo(
+  check: string,
+  change: (files: Record<string, string | undefined>) => void,
+  options: Omit<FullOptions, "files"> = {},
+): Finding[] {
+  return only(
+    checkFull({
+      ...options,
+      files: (files, id) => {
+        if (id === "ch01-01") change(files);
+      },
+    }),
+    check,
+  );
+}
+
+type Script = {
+  code_blocks?: Record<string, unknown>[];
+  scenes: Record<string, unknown>[];
+  sentences: Record<string, unknown>[];
+};
+
+function withScript(check: string, change: (script: Script) => void) {
+  return checkVideo(check, (files) => {
+    const script = JSON.parse(files["video/script.json"] ?? "{}") as Script;
+    change(script);
+    files["video/script.json"] = JSON.stringify(script);
+    // 音声の記録は、台本に合わせて作り直したものとする。
+    files["video/durations.json"] = JSON.stringify(
+      Object.fromEntries(
+        script.sentences.map((s) => [
+          s.id,
+          { seconds: 70, say: s.say, voice: VOICE },
+        ]),
+      ),
+    );
+  });
+}
+
+describe("台本", () => {
+  it("正しい台本は、エラーにならない", () => {
+    expect(withScript("台本", () => {})).toEqual([]);
+  });
+
+  it("say が 140 字なら通り、141 字ならエラーになる", () => {
+    const say = (n: number) => (script: Script) => {
+      script.sentences[0].say = "あ".repeat(n);
+    };
+    expect(withScript("台本", say(140))).toEqual([]);
+    const findings = withScript("台本", say(141));
+    expect(findings).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        file: "lessons/ch01-01/video/script.json",
+        lesson: "ch01-01",
+        message: expect.stringContaining("141 字"),
+      }),
+    ]);
+  });
+
+  it("say の文字数は、コードポイントで数える", () => {
+    const findings = withScript("台本", (script) => {
+      script.sentences[0].say = "😀".repeat(140);
+    });
+    expect(findings).toEqual([]);
+  });
+
+  it.each([
+    ["文の ID が重複", (s: Script) => s.sentences.push({ ...s.sentences[0] })],
+    ["ID が英小文字で始まらない", (s: Script) => (s.sentences[0].id = "1a")],
+    ["ID に大文字がある", (s: Script) => (s.scenes[0].id = "Title")],
+    ["シーンの ID が重複", (s: Script) => s.scenes.push({ ...s.scenes[0] })],
+    ["シーンに文がない", (s: Script) => s.scenes.push({ id: "b", name: "b" })],
+    ["scenes が空", (s: Script) => (s.scenes = [])],
+    [
+      "文の scene が scenes にない",
+      (s: Script) => (s.sentences[0].scene = "x"),
+    ],
+    ["text が空", (s: Script) => (s.sentences[0].text = " ")],
+    ["say が空", (s: Script) => (s.sentences[0].say = "")],
+    ["pause_after が負", (s: Script) => (s.sentences[0].pause_after = -1)],
+    [
+      "シーンの最後の文に pause_after がある",
+      (s: Script) => (s.sentences[0].pause_after = 0.5),
+    ],
+    ["lead が負", (s: Script) => (s.scenes[0].lead = -1)],
+  ])("%s と、エラーになる", (_, change) => {
+    const findings = withScript("台本", change);
+    expect(findings.length).toBeGreaterThan(0);
+    expect(findings.every((f) => f.severity === "error")).toBe(true);
+  });
+
+  it("シーンの途中の文の pause_after は書ける", () => {
+    const findings = withScript("台本", (s) => {
+      s.sentences.push({ id: "t2", scene: "s", text: "文", say: "文" });
+      s.sentences[0].pause_after = 0.8;
+    });
+    expect(findings).toEqual([]);
+  });
+
+  it("同じシーンの文が続けて並んでいないと、エラーになる", () => {
+    const findings = withScript("台本", (s) => {
+      s.scenes.push({ id: "b", name: "b" });
+      s.sentences.push(
+        { id: "t2", scene: "b", text: "文", say: "文" },
+        { id: "t3", scene: "s", text: "文", say: "文" },
+      );
+    });
+    expect(findings.map((f) => f.message)).toContain(
+      "シーン s の文が続けて並んでいない",
+    );
+  });
+
+  it("シーンが現れる順序が scenes と違うと、エラーになる", () => {
+    const findings = withScript("台本", (s) => {
+      s.scenes.push({ id: "b", name: "b" });
+      s.sentences.unshift({ id: "t0", scene: "b", text: "文", say: "文" });
+    });
+    expect(findings.map((f) => f.message)).toContain(
+      "シーンが現れる順序が、scenes の順序と違う",
+    );
+  });
+
+  it("script.json が JSON でないと、エラーになる", () => {
+    const findings = checkVideo("台本", (files) => {
+      files["video/script.json"] = "{";
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("JSON として読めない");
+  });
+});
+
+describe("台本の code_blocks", () => {
+  const block = (b: Record<string, unknown>) => (s: Script) => {
+    s.code_blocks = [{ id: "main", language: "rust", code: "a\nb", ...b }];
+  };
+
+  it("決まりに合うコードブロックは、エラーにならない", () => {
+    expect(
+      withScript("台本", (s) => {
+        block({ start_line: 10 })(s);
+        s.code_blocks?.push(
+          {
+            id: "d",
+            language: "rust",
+            diff: true,
+            code: " a\n-b\n+c\n\n d",
+            start_line: 5,
+          },
+          { id: "e", language: "text", code: "x\n".repeat(2000) },
+        );
+      }),
+    ).toEqual([]);
+  });
+
+  it.each([0, 1.5, -1, "3"])("start_line が %j だと、エラーになる", (n) => {
+    const findings = withScript("台本", block({ start_line: n }));
+    expect(findings).toEqual([
+      expect.objectContaining({
+        message: expect.stringContaining("start_line"),
+      }),
+    ]);
+  });
+
+  it("Diff の行の先頭が +・-・半角空白でないと、エラーになる", () => {
+    const findings = withScript(
+      "台本",
+      block({ diff: true, code: " a\nb\n+c" }),
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({ message: expect.stringContaining("2 行目") }),
+    ]);
+  });
+
+  it("最後の行番号が 999 なら通り、1000 ならエラーになる", () => {
+    const lines = (n: number) =>
+      Array.from({ length: n }, () => "x").join("\n");
+    expect(
+      withScript("台本", block({ code: lines(10), start_line: 990 })),
+    ).toEqual([]);
+    expect(
+      withScript("台本", block({ code: lines(10), start_line: 991 })),
+    ).toHaveLength(1);
+  });
+
+  it("Diff の削除行は、行番号を数えない", () => {
+    const code = ["-x", "-y", "+z", " w"].join("\n");
+    expect(
+      withScript("台本", block({ diff: true, code, start_line: 998 })),
+    ).toEqual([]);
+    expect(
+      withScript("台本", block({ diff: true, code, start_line: 999 })),
+    ).toHaveLength(1);
+  });
+
+  it("language が text のコードブロックには、行番号の上限がない", () => {
+    expect(
+      withScript("台本", block({ language: "text", code: "x\n".repeat(1500) })),
+    ).toEqual([]);
+  });
+
+  it("code_blocks の ID が重複すると、エラーになる", () => {
+    const findings = withScript("台本", (s) => {
+      block({})(s);
+      s.code_blocks?.push({ id: "main", language: "text", code: "" });
+    });
+    expect(findings).toHaveLength(1);
+  });
+});
+
+describe("台本と index.tsx のキー", () => {
+  const index =
+    (source: string) => (files: Record<string, string | undefined>) => {
+      files["video/index.tsx"] = source;
+    };
+
+  it("キーが scenes と一致すれば、エラーにならない", () => {
+    expect(checkVideo("台本", index('export default { "s": A };'))).toEqual([]);
+    expect(
+      checkVideo("台本", index("const s = A;\nexport default { s };")),
+    ).toEqual([]);
+    expect(
+      checkVideo("台本", index("const m = { s: A };\nexport default m;")),
+    ).toEqual([]);
+  });
+
+  it("台本のシーンがキーに無いと、エラーになる", () => {
+    const findings = checkVideo(
+      "台本",
+      index("export default { x: A, s: B };"),
+    );
+    expect(findings).toEqual([
+      expect.objectContaining({
+        file: "lessons/ch01-01/video/index.tsx",
+        message: "index.tsx のキー x が、台本の scenes にない",
+      }),
+    ]);
+    const missing = checkVideo("台本", index("export default {};"));
+    expect(missing.map((f) => f.message)).toEqual([
+      "台本のシーン s が、index.tsx のキーにない",
+    ]);
+  });
+
+  it("default export が無いか、読めないと、エラーになる", () => {
+    for (const source of [
+      "export const a = 1;",
+      "export default makeScenes();",
+      "export default { ...rest };",
+    ]) {
+      const findings = checkVideo("台本", index(source));
+      expect(findings).toHaveLength(1);
+      expect(findings[0].file).toBe("lessons/ch01-01/video/index.tsx");
+    }
+  });
+});
+
+describe("音声", () => {
+  const durations = (change: (d: Json) => void) =>
+    checkVideo("音声", (files) => {
+      const d = JSON.parse(files["video/durations.json"] ?? "{}");
+      change(d);
+      files["video/durations.json"] = JSON.stringify(d);
+    });
+
+  it("音声が台本と声の設定に合っていれば、エラーにならない", () => {
+    expect(durations(() => {})).toEqual([]);
+  });
+
+  it("say を変えたあと音声を作り直していないと、エラーになる", () => {
+    const findings = checkVideo("音声", (files) => {
+      const script = JSON.parse(files["video/script.json"] ?? "{}");
+      script.sentences[0].say = "変えた";
+      files["video/script.json"] = JSON.stringify(script);
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({
+        severity: "error",
+        file: "lessons/ch01-01/video/durations.json",
+        lesson: "ch01-01",
+        message: expect.stringContaining("say が台本の say と違う"),
+      }),
+    ]);
+  });
+
+  it("声の設定を変えたあと音声を作り直していないと、エラーになる", () => {
+    const findings = durations((d) => (d.t1.voice.speed = 120));
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("voice が voice.json と違う");
+  });
+
+  it("声の設定の項目の順序が違っても、同じとみなす", () => {
+    expect(
+      durations((d) => {
+        d.t1.voice = {
+          emotion: { a: 1 },
+          pause: 0.2,
+          speed: 100,
+          narrator: "N",
+        };
+      }),
+    ).toEqual([]);
+  });
+
+  it("durations.json に文の記録が無いと、エラーになる", () => {
+    const findings = durations((d) => delete d.t1);
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("文 t1 の記録がない");
+  });
+
+  it("台本にない文の音声ファイルと記録があると、エラーになる", () => {
+    const findings = checkVideo("音声", (files) => {
+      files["video/voice/old.m4a"] = "";
+      files["video/cue-reference.json"] = JSON.stringify({ old: 1, t1: 1 });
+      const d = JSON.parse(files["video/durations.json"] ?? "{}");
+      d.old = d.t1;
+      files["video/durations.json"] = JSON.stringify(d);
+    });
+    expect(findings.map((f) => f.file)).toEqual([
+      "lessons/ch01-01/video/voice/old.m4a",
+      "lessons/ch01-01/video/durations.json",
+      "lessons/ch01-01/video/cue-reference.json",
+    ]);
+  });
+
+  it("voice.json が無くても、台本と音声の記録のあるレッスンがなければ、エラーにならない", () => {
+    const { contentDir, curriculumDir } = setup(chapters, elements);
+    expect(runChecks({ contentDir, curriculumDir })).toEqual([]);
+    expect(only(checkFull({ prepared: ALL_LESSONS }), "音声")).toEqual([]);
+  });
+
+  it("voice.json が無いと、音声の記録のあるレッスンがあるときだけ、エラーになる", () => {
+    const { contentDir, curriculumDir } = setup(chapters, elements);
+    const dir = join(contentDir, "lessons", "ch01-01", "video");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "script.json"),
+      JSON.stringify({
+        scenes: [{ id: "s", name: "表紙" }],
+        sentences: [{ id: "t1", scene: "s", text: "文", say: "文" }],
+      }),
+    );
+    writeFileSync(
+      join(dir, "durations.json"),
+      JSON.stringify({ t1: { seconds: 1, say: "文", voice: VOICE } }),
+    );
+    const findings = only(runChecks({ contentDir, curriculumDir }), "音声");
+    expect(findings).toEqual([
+      expect.objectContaining({
+        file: "voice.json",
+        message: "voice.json がない",
+      }),
+    ]);
+  });
+});
+
+describe("警告", () => {
+  const warnings = (
+    name: string,
+    change: (files: Record<string, string | undefined>) => void,
+  ) => checkVideo(name, change);
+
+  const script = (files: Record<string, string | undefined>, s: Script) => {
+    files["video/script.json"] = JSON.stringify(s);
+  };
+  const base: Script = {
+    scenes: [{ id: "s", name: "表紙" }],
+    sentences: [{ id: "t1", scene: "s", text: "文", say: "文" }],
+  };
+
+  // 動画の長さは、音声の長さに lead 0.9 秒と tail 0.7 秒を足した値になる。
+  it.each([
+    [10, true],
+    [58, true],
+    [58.4, false],
+    [250, false],
+    [298.4, false],
+    [299, true],
+  ])("音声が %d 秒の動画は、動画の長さの警告が %s", (seconds, warned) => {
+    const findings = warnings("動画の長さ", (files) => {
+      files["video/durations.json"] = JSON.stringify({
+        t1: { seconds, say: "文", voice: VOICE },
+      });
+    });
+    expect(findings.length).toBe(warned ? 1 : 0);
+  });
+
+  it("動画の長さが範囲の外だと、警告になる（エラーにならない）", () => {
+    const all = checkFull({
+      files: (files, id) => {
+        if (id === "ch01-01") {
+          files["video/durations.json"] = JSON.stringify({
+            t1: { seconds: 5, say: "文", voice: VOICE },
+          });
+        }
+      },
+    });
+    expect(all).toEqual([
+      expect.objectContaining({
+        severity: "warning",
+        check: "動画の長さ",
+        lesson: "ch01-01",
+      }),
+    ]);
+    const { text, exitCode } = report(all);
+    expect(exitCode).toBe(0);
+    expect(text).toContain("警告 [動画の長さ]");
+    expect(text).toContain("エラー 0 件、警告 1 件");
+  });
+
+  it("text が 60 字を超える文は、警告になる", () => {
+    const findings = warnings("文の長さ", (files) => {
+      script(files, {
+        ...base,
+        sentences: [{ ...base.sentences[0], text: "あ".repeat(61) }],
+      });
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].severity).toBe("warning");
+    expect(
+      warnings("文の長さ", (files) => {
+        script(files, {
+          ...base,
+          sentences: [{ ...base.sentences[0], text: "あ".repeat(60) }],
+        });
+      }),
+    ).toEqual([]);
+  });
+
+  it("say に読みの対応表の語が残っていると、警告になる", () => {
+    const { contentDir, curriculumDir } = setup(chapters, elements);
+    writeFileSync(
+      join(contentDir, "readings.json"),
+      JSON.stringify({ Rust: "ラスト" }),
+    );
+    const dir = join(contentDir, "lessons", "ch01-01", "video");
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(
+      join(dir, "script.json"),
+      JSON.stringify({
+        ...base,
+        sentences: [
+          { id: "t1", scene: "s", text: "Rust", say: "Rust を学びます" },
+          { id: "t2", scene: "s", text: "ラスト", say: "ラストを学びます" },
+        ],
+      }),
+    );
+    const findings = only(runChecks({ contentDir, curriculumDir }), "読み");
+    expect(findings).toEqual([
+      expect.objectContaining({
+        severity: "warning",
+        file: "lessons/ch01-01/video/script.json",
+        message: expect.stringContaining("文 t1"),
+      }),
+    ]);
+  });
+});
+
+describe("コマンドの終了コード", () => {
+  it("準備中でないレッスンが無く、voice.json も無い教材で、エラーにならない", () => {
+    const { contentDir, curriculumDir } = setup(chapters, elements);
+    const result = spawnSync(
+      process.execPath,
+      [main, "--content", contentDir, "--curriculum", curriculumDir],
+      { encoding: "utf8" },
+    );
+    expect(result.stdout).toContain("エラー 0 件");
+    expect(result.status).toBe(0);
   });
 });
