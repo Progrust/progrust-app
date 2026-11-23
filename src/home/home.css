@@ -1,0 +1,62 @@
+/* トップページの配置（design-system/ui-design/styles/app.css の配置に合わせる）。 */
+.pgx-home {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-22) var(--space-28);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-18);
+  box-sizing: border-box;
+}
+
+.pgx-home-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--space-18);
+}
+
+.pgx-home-fill {
+  flex: 1;
+  min-height: 0;
+}
+
+.pgx-hero-done {
+  background: var(--panel);
+}
+
+.pgx-chapter-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pgx-chapter-progress-head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.pgx-chapter-progress-head h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.pgx-muted {
+  color: var(--muted);
+}
+
+.pgx-chapter-progress-head span {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.pgx-chapter-progress-head b {
+  font-size: 18px;
+  color: var(--ink);
+}
+
+.pgx-home-note {
+  font-size: 12px;
+}
