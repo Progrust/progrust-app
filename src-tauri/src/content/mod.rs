@@ -192,6 +192,21 @@ impl ContentDir {
             .to_string())
     }
 
+    /// 演習が使う許可クレートの名前（`lesson.json` の `exercise.dependencies`）を読む。書かれていないときは空。
+    /// レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn exercise_dependencies(&self, lesson_id: &str) -> Result<Vec<String>, ContentError> {
+        self.lesson_kind(lesson_id)?;
+        let path = self.lesson_dir(lesson_id).join("lesson.json");
+        let lesson = read_json(&path)?;
+        let Some(dependencies) = lesson.pointer("/exercise/dependencies") else {
+            return Ok(Vec::new());
+        };
+        serde_json::from_value(dependencies.clone()).map_err(|error| ContentError::Invalid {
+            path,
+            reason: format!("exercise.dependencies が文字列の配列でない: {error}"),
+        })
+    }
+
     /// 演習の初期コード（`exercise/starter/` の全ファイル）を読む。キーは cargo パッケージのルートからの相対パス
     /// （`/` 区切り）。演習の無いレッスン（動画のみのレッスン）では `None`。
     /// レッスンが無いときの扱いは `get_lesson` と同じ。

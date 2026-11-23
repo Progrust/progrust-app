@@ -58,7 +58,8 @@ pub struct OutputChunk {
 /// 標準入力の扱い。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StdinMode {
-    /// 実行中に [`ProcessHandle::write_stdin_line`] で 1 行ずつ書き、[`ProcessHandle::close_stdin`] で閉じる。
+    /// 実行中に [`ProcessHandle::write_stdin_line`]・[`ProcessHandle::write_stdin`] で書き、
+    /// [`ProcessHandle::close_stdin`] で閉じる。
     Interactive,
     /// 起動の直後に閉じる（プログラムが読むと、すぐに EOF になる）。
     Closed,
@@ -185,9 +186,15 @@ impl ProcessHandle {
 
     /// 標準入力に、`line` に改行を付けて書く。書き込みは別のスレッドで行うので、プログラムが読まなくても待たない。
     pub fn write_stdin_line(&self, line: &str) -> Result<(), StdinClosed> {
+        self.write_stdin(&format!("{line}\n"))
+    }
+
+    /// 標準入力に、`text` をそのまま書く（改行を付けない）。書き込みは別のスレッドで行うので、プログラムが読まなくても
+    /// 待たない。
+    pub fn write_stdin(&self, text: &str) -> Result<(), StdinClosed> {
         let stdin = lock(&self.stdin);
         let sender = stdin.as_ref().ok_or(StdinClosed)?;
-        sender.send(format!("{line}\n")).map_err(|_| StdinClosed)
+        sender.send(text.to_string()).map_err(|_| StdinClosed)
     }
 
     /// 標準入力を閉じる。それまでに書いた行は、閉じる前にプログラムに渡る。

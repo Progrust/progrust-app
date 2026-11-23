@@ -383,12 +383,32 @@ impl Environment {
                 path: None,
                 version: None,
             },
-            // 初回準備は M3 で作る。それまでは、初回準備を始めていないので `not_started` を返す。
-            crates: CratesStatus {
-                status: CratesState::NotStarted,
-                error: None,
-            },
+            crates: self.crates_status(),
         }
+    }
+
+    /// 初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
+    pub fn crates_status(&self) -> CratesStatus {
+        // 初回準備は M3 で作る。それまでは、初回準備を始めていないので `not_started` を返す。
+        CratesStatus {
+            status: CratesState::NotStarted,
+            error: None,
+        }
+    }
+
+    /// 許可クレートを使う演習を実行・提出できるか。初回準備の状態が `ready` でないときは `crates_not_ready`。
+    pub fn ensure_crates_ready(&self) -> Result<(), CommandError> {
+        let crates = self.crates_status();
+        if crates.status == CratesState::Ready {
+            return Ok(());
+        }
+        Err(CommandError {
+            code: ErrorCode::CratesNotReady,
+            message:
+                "この演習で使うクレートの準備が終わっていません。準備が終わるまで待ってください。"
+                    .into(),
+            detail: crates.error,
+        })
     }
 
     /// 実行・テスト・提出で使う `cargo`・`rustc`。検出が終わるまで待つ。`rustc` のバージョンが
