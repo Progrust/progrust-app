@@ -149,8 +149,11 @@ function lessonJson(id: string, change: Record<string, unknown> = {}) {
   };
 }
 
+// 「カリキュラム」の検査の結果だけを返す（構成・定義は、別の describe で確かめる）。
 function checkLessons(lessons: Record<string, unknown>): Finding[] {
-  return runChecks(setup(chapters, elements, lessons));
+  return runChecks(setup(chapters, elements, lessons)).filter(
+    (f) => f.check === "カリキュラム",
+  );
 }
 
 function checkElements(change: (copy: Element[]) => void): Finding[] {
@@ -389,6 +392,429 @@ describe("要素マスタと一覧の照合（要素と一覧）", () => {
   it("要素 ID の形式が違うと、エラーになる", () => {
     const findings = checkElements((e) => (e[0].id = "Bad-ID"));
     expect(findings.some((f) => f.message.includes("snake_case"))).toBe(true);
+  });
+});
+
+type Json = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+
+const ALL_LESSONS = chapters.flatMap((c) => c.lessons);
+
+// 構成と定義の検査に通る lesson.json。
+function fullLesson(id: string): Json {
+  const chapter = id.slice(0, 4);
+  const base = {
+    id,
+    chapter,
+    title: `タイトル${id}`,
+    summary: "説明",
+    estimated_minutes: 10,
+  };
+  if (id === VIDEO_ONLY) {
+    return {
+      ...base,
+      kind: "video_only",
+      tags: ["動画"],
+      primary_elements: [],
+      secondary_elements: [],
+    };
+  }
+  const exercise = {
+    layout: "single",
+    judge: { mode: "stdout", target: "src/main.rs" },
+    dependencies: [],
+    readonly_files: [],
+    case_labels: {},
+  };
+  if (id.endsWith("-review")) {
+    return {
+      ...base,
+      kind: "chapter_review",
+      primary_elements: ["x.ch01_01", "x.ch02_01"],
+      secondary_elements: [],
+      exercise,
+    };
+  }
+  return {
+    ...base,
+    kind: "lesson",
+    tags: ["タグ"],
+    primary_elements: primaryOf(id),
+    secondary_elements: [],
+    exercise,
+  };
+}
+
+// lesson.json に合わせて必要なファイルを作る。台本の文は t1 の 1 つ。
+function lessonFiles(lesson: Json): Record<string, string> {
+  const files: Record<string, string> = {};
+  if (lesson.kind !== "chapter_review") {
+    files["video/script.json"] = JSON.stringify({
+      scenes: [{ id: "s", name: "表紙" }],
+      sentences: [{ id: "t1", scene: "s", text: "文", say: "文" }],
+    });
+    files["video/index.tsx"] = "";
+    files["video/durations.json"] = "{}";
+    files["video/voice/t1.m4a"] = "";
+  }
+  if (lesson.kind !== "video_only") {
+    files["exercise/problem.md"] = "";
+    files["exercise/explanation.md"] = "";
+    files["exercise/starter/src/main.rs"] = "";
+    files["exercise/solution/src/main.rs"] = "";
+    files[
+      lesson.exercise?.judge?.mode === "test"
+        ? "exercise/judge_tests.rs"
+        : "exercise/cases.json"
+    ] = "";
+  }
+  return files;
+}
+
+interface FullOptions {
+  // レッスンごとの lesson.json を書き換える。
+  lessons?: (lesson: Json, id: string) => Json | undefined;
+  // レッスンごとに、ファイルを足す・消す（消すときは undefined）。
+  files?: (files: Record<string, string | undefined>, id: string) => void;
+  // 準備中にするレッスン（ディレクトリを作らない）。
+  prepared?: string[];
+  masters?: unknown;
+}
+
+function checkFull(options: FullOptions = {}): Finding[] {
+  const { contentDir, curriculumDir } = setup(
+    chapters,
+    options.masters ?? elements,
+  );
+  for (const id of ALL_LESSONS) {
+    if (options.prepared?.includes(id)) continue;
+    const lesson = options.lessons
+      ? options.lessons(fullLesson(id), id)
+      : fullLesson(id);
+    const dir = join(contentDir, "lessons", id);
+    mkdirSync(dir, { recursive: true });
+    if (lesson !== undefined) {
+      writeFileSync(join(dir, "lesson.json"), JSON.stringify(lesson));
+    }
+    const files: Record<string, string | undefined> = lessonFiles(
+      lesson ?? fullLesson(id),
+    );
+    options.files?.(files, id);
+    for (const [path, content] of Object.entries(files)) {
+      if (content === undefined) continue;
+      mkdirSync(join(dir, path, ".."), { recursive: true });
+      writeFileSync(join(dir, path), content);
+    }
+  }
+  return runChecks({ contentDir, curriculumDir });
+}
+
+function only(findings: Finding[], check: string): Finding[] {
+  return findings.filter((f) => f.check === check);
+}
+
+describe("構成", () => {
+  it("必要なファイルが揃っていれば、エラーにならない", () => {
+    expect(checkFull()).toEqual([]);
+  });
+
+  it("準備中のレッスン（ディレクトリが無いレッスン）は、エラーにならない", () => {
+    expect(checkFull({ prepared: ["ch01-01", "ch01-review"] })).toEqual([]);
+  });
+
+  it("ディレクトリがあり lesson.json が無いレッスンは、エラーになる", () => {
+    const findings = checkFull({
+      lessons: (lesson, id) => (id === "ch01-01" ? undefined : lesson),
+    });
+    expect(findings).toEqual([
+      {
+        severity: "error",
+        check: "構成",
+        file: "lessons/ch01-01/lesson.json",
+        lesson: "ch01-01",
+        message: "lesson.json がない",
+      },
+    ]);
+  });
+
+  it.each([
+    "video/script.json",
+    "video/index.tsx",
+    "video/durations.json",
+    "video/voice/t1.m4a",
+  ])("動画のファイル %s が無いと、エラーになる", (path) => {
+    const findings = checkFull({
+      files: (files, id) => {
+        if (id === "ch01-01") files[path] = undefined;
+      },
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({
+        check: "構成",
+        file: `lessons/ch01-01/${path}`,
+        lesson: "ch01-01",
+      }),
+    ]);
+  });
+
+  it("章末復習レッスンは、video/ が無くてもエラーにならない", () => {
+    expect(only(checkFull(), "構成")).toEqual([]);
+  });
+
+  it.each([
+    "exercise/problem.md",
+    "exercise/explanation.md",
+    "exercise/starter/src/main.rs",
+    "exercise/solution/src/main.rs",
+    "exercise/cases.json",
+  ])("演習のファイル %s が無いと、エラーになる", (path) => {
+    const findings = checkFull({
+      files: (files, id) => {
+        if (id === "ch02-01") files[path] = undefined;
+      },
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({
+        check: "構成",
+        file: `lessons/ch02-01/${path}`,
+      }),
+    ]);
+  });
+
+  it("test 方式では、cases.json ではなく judge_tests.rs が必要になる", () => {
+    const testMode = (lesson: Json, id: string) => {
+      if (id === "ch01-01") {
+        lesson.exercise.judge = { mode: "test", target: "src/main.rs" };
+      }
+      return lesson;
+    };
+    expect(checkFull({ lessons: testMode })).toEqual([]);
+    const findings = checkFull({
+      lessons: testMode,
+      files: (files, id) => {
+        if (id === "ch01-01") files["exercise/judge_tests.rs"] = undefined;
+      },
+    });
+    expect(findings).toHaveLength(1);
+    expect(findings[0].file).toBe("lessons/ch01-01/exercise/judge_tests.rs");
+  });
+
+  it("動画のみのレッスンに exercise/ があると、エラーになる", () => {
+    const findings = checkFull({
+      files: (files, id) => {
+        if (id === VIDEO_ONLY) files["exercise/problem.md"] = "";
+      },
+    });
+    expect(findings).toEqual([
+      expect.objectContaining({
+        check: "構成",
+        file: `lessons/${VIDEO_ONLY}/exercise`,
+      }),
+    ]);
+  });
+});
+
+describe("定義", () => {
+  function definition(change: (lesson: Json) => void, id = "ch01-01") {
+    return only(
+      checkFull({
+        lessons: (lesson, lessonId) => {
+          if (lessonId === id) change(lesson);
+          return lesson;
+        },
+        // 演習のファイルは、書き換えた lesson.json に関係なく足りる状態にする。
+        files: (files) => {
+          files["exercise/cases.json"] ??= "";
+          files["exercise/judge_tests.rs"] ??= "";
+        },
+      }),
+      "定義",
+    );
+  }
+
+  it("正しい lesson.json は、エラーにならない", () => {
+    expect(definition(() => {})).toEqual([]);
+  });
+
+  it("準備中のレッスンは、検査しない", () => {
+    expect(only(checkFull({ prepared: ["ch01-01"] }), "定義")).toEqual([]);
+  });
+
+  it("id と chapter が chapters.json と違うと、エラーになる", () => {
+    const findings = definition((l) => {
+      l.id = "ch09-01";
+      l.chapter = "ch02";
+    });
+    expect(findings.map((f) => f.message)).toEqual([
+      expect.stringContaining("id がレッスンの ID と違う"),
+      expect.stringContaining("chapter が chapters.json と違う"),
+    ]);
+    expect(findings[0]).toMatchObject({
+      file: "lessons/ch01-01/lesson.json",
+      lesson: "ch01-01",
+    });
+  });
+
+  it("lesson.json が JSON でないと、エラーになる", () => {
+    const { contentDir, curriculumDir } = setup(chapters, elements, {
+      "ch01-01": "{",
+    });
+    const findings = runChecks({ contentDir, curriculumDir }).filter(
+      (f) => f.check === "定義",
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("lesson.json を読めない");
+  });
+
+  it("kind が決まった値でないと、エラーになる", () => {
+    const findings = definition((l) => (l.kind = "other"));
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("kind が");
+  });
+
+  it.each(["title", "summary"])("%s が空だと、エラーになる", (key) => {
+    const findings = definition((l) => (l[key] = ""));
+    expect(findings.map((f) => f.message)).toEqual([
+      `${key} が空でない文字列でない`,
+    ]);
+  });
+
+  it("estimated_minutes が正の数でないと、エラーになる", () => {
+    expect(definition((l) => (l.estimated_minutes = 0))).toHaveLength(1);
+    expect(definition((l) => (l.estimated_minutes = "10"))).toHaveLength(1);
+  });
+
+  it.each(["lesson", "video_only"])(
+    "kind が %s で tags が無いと、エラーになる",
+    (kind) => {
+      const id = kind === "lesson" ? "ch01-01" : VIDEO_ONLY;
+      const findings = definition((l) => delete l.tags, id);
+      expect(findings.map((f) => f.message)).toEqual([
+        "tags が 1 件以上の文字列の配列でない",
+      ]);
+    },
+  );
+
+  it("tags が空の配列・空の文字列・重複を持つと、エラーになる", () => {
+    expect(definition((l) => (l.tags = []))).toHaveLength(1);
+    expect(definition((l) => (l.tags = ["a", ""]))).toHaveLength(1);
+    expect(definition((l) => (l.tags = ["a", "a"]))).toHaveLength(1);
+  });
+
+  it("章末復習レッスンが tags を持つと、エラーになる", () => {
+    const findings = definition((l) => (l.tags = ["a"]), "ch01-review");
+    expect(findings.map((f) => f.message)).toEqual([
+      "kind が chapter_review の lesson.json は tags を持たない",
+    ]);
+  });
+
+  it("video_only が exercise を持つと、エラーになる", () => {
+    const findings = definition((l) => {
+      l.exercise = fullLesson("ch01-01").exercise;
+    }, VIDEO_ONLY);
+    expect(findings.map((f) => f.message)).toEqual([
+      "video_only の lesson.json は exercise を持たない",
+    ]);
+  });
+
+  it("video_only の primary_elements・secondary_elements が空でないと、エラーになる", () => {
+    const findings = definition((l) => {
+      l.primary_elements = ["x.ch01_01"];
+      l.secondary_elements = ["x.ch01_01"];
+    }, VIDEO_ONLY);
+    expect(findings.map((f) => f.message)).toEqual([
+      expect.stringContaining("primary_elements の件数が video_only の範囲"),
+      "video_only の secondary_elements は空の配列にする",
+    ]);
+  });
+
+  it("lesson で exercise が無いと、エラーになる", () => {
+    const findings = definition((l) => delete l.exercise);
+    expect(findings.map((f) => f.message)).toEqual([
+      "kind が lesson の lesson.json に exercise がない",
+    ]);
+  });
+
+  it.each([
+    ["lesson", "ch01-01", [], false],
+    ["lesson", "ch01-01", ["x.ch01_01"], true],
+    ["lesson", "ch01-01", ["x.ch01_01", "x.ch02_01", "x.ch02_01_b"], false],
+    ["chapter_review", "ch01-review", ["x.ch01_01"], false],
+    [
+      "chapter_review",
+      "ch01-review",
+      ["x.ch01_01", "x.ch02_01", "x.ch02_01_b"],
+      true,
+    ],
+    [
+      "chapter_review",
+      "ch01-review",
+      [
+        "x.ch01_01",
+        "x.ch02_01",
+        "x.ch02_01_b",
+        "x.ch01_01",
+        "x.ch02_01",
+        "x.ch02_01_b",
+      ],
+      false,
+    ],
+  ])(
+    "kind が %s の primary_elements の件数が範囲にあるか（%s、%j）→ %s",
+    (_kind, id, primary, ok) => {
+      const findings = definition((l) => (l.primary_elements = primary), id);
+      const countErrors = findings.filter((f) =>
+        f.message.includes("primary_elements の件数"),
+      );
+      expect(countErrors).toHaveLength(ok ? 0 : 1);
+    },
+  );
+
+  it("要素 ID が要素マスタに無いと、エラーになる", () => {
+    const findings = definition((l) => {
+      l.primary_elements = ["x.ch01_01"];
+      l.secondary_elements = ["x.unknown"];
+    });
+    expect(findings.map((f) => f.message)).toEqual([
+      "secondary_elements の要素 x.unknown が要素マスタにない",
+    ]);
+  });
+
+  it("exercise の値が形式に合わないと、エラーになる", () => {
+    const bad: ((e: Json) => void)[] = [
+      (e) => (e.layout = "other"),
+      (e) => (e.judge = { mode: "other" }),
+      (e) => (e.judge = { mode: "stdout", target: "src/lib.rs" }),
+      (e) => (e.judge = { mode: "stdout", min_learner_tests: 1 }),
+      (e) => (e.judge = { mode: "test" }),
+      (e) => (e.judge = { mode: "test", target: "src/lib.rs" }),
+      (e) =>
+        (e.judge = {
+          mode: "test",
+          target: "src/main.rs",
+          min_learner_tests: 0,
+        }),
+      (e) => (e.dependencies = "serde"),
+      (e) => (e.readonly_files = ["src/lib.rs"]),
+      (e) => (e.case_labels = { a: 1 }),
+      (e) => (e.case_labels = { a: "名前" }),
+    ];
+    for (const change of bad) {
+      expect(definition((l) => change(l.exercise))).toHaveLength(1);
+    }
+  });
+
+  it("test 方式で layout が multi の exercise は、エラーにならない", () => {
+    expect(
+      definition((l) => {
+        l.exercise = {
+          layout: "multi",
+          judge: { mode: "test", target: "src/lib.rs", min_learner_tests: 2 },
+          dependencies: [],
+          readonly_files: ["src/helper.rs"],
+          case_labels: { empty_input: "空の入力" },
+        };
+      }),
+    ).toEqual([]);
   });
 });
 
