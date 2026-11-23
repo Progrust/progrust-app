@@ -155,6 +155,7 @@
 * [ADR 0108](0108-analysis-outputs-only-ai-fields.md) - 分析セッションの AI にはアプリ管理のフィールドを出力させず、AI 管理のフィールドと本文だけを出力させて、アプリが分析ファイルを組み立てる
 * [ADR 0110](0110-record-session-log-diff-base-and-new-pattern-labels.md) - 試行ログの差分の基準を圧縮で残したイベントのうち直前のものとし、新しい種類の躓きの pattern ラベルが呼び出しごとに揺れることは許す
 * [ADR 0206](0206-attempt-log-exit-code-same-as-run-finished.md) - 試行ログの `run` の `exit_code` を、`run_finished` の `run.exit_code` と同じ値（学習者のプログラム、テスト実行では `cargo test` の終了コード。起動していないときとシグナルで終わったときは `null`）にする
+* [ADR 0212](0212-attempt-session-id-collision-and-append-target.md) - 試行セッションの ID が既にある試行ログと重なるときは ID の日時を 1 秒ずつ進め、未完了のセッションが複数あるときは最後に始めたものを続け、実行・提出のイベントはレッスンの未完了のセッションに追記し（無ければ追記しない）、`passed_at` は最初に正解した日時を残す
 
 # 演習問題生成
 

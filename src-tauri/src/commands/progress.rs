@@ -7,6 +7,7 @@ use serde_json::Value;
 use tauri::State;
 
 use super::error::{CommandError, ErrorCode};
+use crate::attempts::SessionKind;
 use crate::content::{ContentDir, has_exercise};
 use crate::drafts::Draft;
 use crate::progress::{LessonProgress, ProgressSummary, now_string};
@@ -24,9 +25,10 @@ pub fn get_progress(
     Ok(ProgressSummary::new(&chapters, progress))
 }
 
-/// `open_lesson` の戻り値。試行セッションは M2 の別のタスク、生成問題は M6 で作るので、いまは `null` を返す。
+/// `open_lesson` の戻り値。生成問題は M6 で作るので、`generated` はいまは `null` を返す。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct OpenedLesson {
+    /// 開始または継続した試行セッションの ID。動画のみのレッスンでは `None`。
     pub session_id: Option<String>,
     pub progress: Option<LessonProgress>,
     pub generated: Option<Value>,
@@ -34,7 +36,8 @@ pub struct OpenedLesson {
     pub draft: Option<Draft>,
 }
 
-/// レッスンを開いたことを進捗に記録し、更新した後の進捗と下書きを返す。
+/// レッスンを開いたことを進捗に記録し、試行セッションを始めるか続けて、更新した後の進捗と、セッションの ID と、
+/// 下書きを返す。動画のみのレッスンでは、試行セッションを作らない。
 #[tauri::command(rename_all = "snake_case")]
 pub fn open_lesson(
     data_dir: State<'_, AppDataDir>,
@@ -45,13 +48,21 @@ pub fn open_lesson(
     let now = now_string();
     let progress =
         data_dir.update_progress(|progress| progress.open_lesson(&lesson_id, &now).clone())?;
+    let session_id = match SessionKind::for_lesson_kind(&kind) {
+        Some(session_kind) => Some(
+            data_dir
+                .start_or_continue_session(&lesson_id, session_kind)?
+                .session_id,
+        ),
+        None => None,
+    };
     let draft = if has_exercise(&kind) {
         data_dir.read_draft(&lesson_id)?
     } else {
         None
     };
     Ok(OpenedLesson {
-        session_id: None,
+        session_id,
         progress: Some(progress),
         generated: None,
         draft,
