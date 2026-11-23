@@ -3,6 +3,7 @@ import { audioCheck } from "./audio.ts";
 import { curriculumCheck } from "./curriculum.ts";
 import { definitionCheck } from "./definition.ts";
 import { elementsCheck } from "./elements.ts";
+import { casesCheck, cratesCheck, textCheck } from "./exercise-files.ts";
 import { checkJudge } from "./judge.ts";
 import {
   learnedElementsCheck,
@@ -27,6 +28,9 @@ export const checks: Check[] = [
   scriptCheck,
   audioCheck,
   lintCheck,
+  textCheck,
+  casesCheck,
+  cratesCheck,
   warningsCheck,
 ];
 
