@@ -32,12 +32,42 @@ fn stderr(text: &str) -> OutputChunk {
 }
 
 fn diagnostic_line(level: &str, code: Option<&str>, rendered: Option<&str>) -> String {
+    diagnostic_line_in(level, code, rendered, &[])
+}
+
+/// `files` を指す（`spans` の `file_name` に持つ）診断の行。
+fn diagnostic_line_in(
+    level: &str,
+    code: Option<&str>,
+    rendered: Option<&str>,
+    files: &[&str],
+) -> String {
+    let spans: Vec<serde_json::Value> = files
+        .iter()
+        .map(|file| {
+            serde_json::json!({
+                "file_name": file,
+                "byte_start": 0,
+                "byte_end": 1,
+                "line_start": 1,
+                "line_end": 1,
+                "column_start": 1,
+                "column_end": 2,
+                "is_primary": true,
+                "text": [],
+                "label": null,
+                "suggested_replacement": null,
+                "suggestion_applicability": null,
+                "expansion": null,
+            })
+        })
+        .collect();
     let message = serde_json::json!({
         "$message_type": "diagnostic",
         "message": "診断",
         "code": code.map(|code| serde_json::json!({ "code": code, "explanation": null })),
         "level": level,
-        "spans": [],
+        "spans": spans,
         "children": [],
         "rendered": rendered,
     });
@@ -173,6 +203,117 @@ fn error_codes_are_from_error_level_only_unique_and_in_order() {
 }
 
 #[test]
+fn files_of_error_diagnostics_are_kept_unique_and_in_order() {
+    let collected = collect(vec![stdout(
+        &[
+            diagnostic_line_in("warning", None, Some("w\n"), &["src/lib.rs"]),
+            diagnostic_line_in(
+                "error",
+                Some("E0425"),
+                Some("a\n"),
+                &["src/../progrust_judge_tests.rs"],
+            ),
+            diagnostic_line_in(
+                "error",
+                Some("E0308"),
+                Some("b\n"),
+                &["src/main.rs", "src/../progrust_judge_tests.rs"],
+            ),
+            diagnostic_line_in("error", None, Some("aborting\n"), &[]),
+        ]
+        .concat(),
+    )]);
+    assert_eq!(
+        collected.error_files,
+        [
+            PathBuf::from("src/../progrust_judge_tests.rs"),
+            PathBuf::from("src/main.rs"),
+        ]
+    );
+}
+
+#[test]
+fn files_where_macros_were_expanded_are_kept_for_errors_inside_macros() {
+    let span = |file: &str, expansion: serde_json::Value| {
+        serde_json::json!({
+            "file_name": file,
+            "byte_start": 0,
+            "byte_end": 1,
+            "line_start": 1,
+            "line_end": 1,
+            "column_start": 1,
+            "column_end": 2,
+            "is_primary": true,
+            "text": [],
+            "label": null,
+            "suggested_replacement": null,
+            "suggestion_applicability": null,
+            "expansion": expansion,
+        })
+    };
+    let expansion = |call_site: serde_json::Value| {
+        serde_json::json!({
+            "span": call_site,
+            "macro_decl_name": "assert_eq!",
+            "def_site_span": span("/rustc/library/core/src/macros/mod.rs", serde_json::Value::Null),
+        })
+    };
+    // 隠しテストの中の自作のマクロの中で呼んだ assert_eq! の中で出たエラー。
+    let nested = span(
+        "/rustc/library/core/src/macros/mod.rs",
+        expansion(span(
+            "src/../progrust_judge_tests.rs",
+            expansion(span("src/main.rs", serde_json::Value::Null)),
+        )),
+    );
+    let line = serde_json::json!({
+        "reason": "compiler-message",
+        "package_id": "path+file:///p#progrust_exercise@0.1.0",
+        "target": { "kind": ["bin"], "name": "progrust_exercise", "src_path": "/p/src/main.rs" },
+        "message": {
+            "$message_type": "diagnostic",
+            "message": "can't compare",
+            "code": { "code": "E0277", "explanation": null },
+            "level": "error",
+            "spans": [nested],
+            "children": [],
+            "rendered": "error[E0277]\n",
+        },
+    });
+    let collected = collect(vec![stdout(&format!("{line}\n"))]);
+    assert_eq!(
+        collected.error_files,
+        [
+            PathBuf::from("/rustc/library/core/src/macros/mod.rs"),
+            PathBuf::from("src/../progrust_judge_tests.rs"),
+            PathBuf::from("src/main.rs"),
+        ]
+    );
+}
+
+#[test]
+fn errors_are_found_by_file_with_parent_segments_resolved() {
+    let temp = tempfile::tempdir().unwrap();
+    let project = temp.path().join("project");
+    std::fs::create_dir_all(project.join("src")).unwrap();
+    std::fs::write(project.join("progrust_judge_tests.rs"), "").unwrap();
+    std::fs::write(project.join("src/main.rs"), "").unwrap();
+    let outcome = BuildOutcome {
+        status: BuildStatus::Failed {
+            exit_code: Some(101),
+        },
+        output: Vec::new(),
+        error_codes: Vec::new(),
+        error_files: vec![PathBuf::from("src/../progrust_judge_tests.rs")],
+        artifacts: Vec::new(),
+        project_dir: project.clone(),
+    };
+    assert!(outcome.has_error_in(Path::new("progrust_judge_tests.rs")));
+    assert!(outcome.has_error_in(&project.join("progrust_judge_tests.rs")));
+    assert!(!outcome.has_error_in(Path::new("src/main.rs")));
+}
+
+#[test]
 fn diagnostics_without_rendered_text_and_non_json_lines_are_skipped() {
     let collected = collect(vec![stdout(
         &[
@@ -233,6 +374,7 @@ fn executables_are_chosen_by_root_file_and_test_profile() {
         status: BuildStatus::Succeeded,
         output: collected.output,
         error_codes: collected.error_codes,
+        error_files: collected.error_files,
         artifacts: collected.artifacts,
         project_dir: "/p".into(),
     };
@@ -264,6 +406,7 @@ fn attempt_output_splits_diagnostics_and_cargo_stderr_without_system_messages() 
             piece(BuildOutputKind::System, &timeout_message(BUILD_TIME_LIMIT)),
         ],
         error_codes: Vec::new(),
+        error_files: Vec::new(),
         artifacts: Vec::new(),
         project_dir: "/p".into(),
     };
@@ -405,6 +548,12 @@ fn compile_errors_fail_with_diagnostics_and_error_codes() {
         }
     );
     assert_eq!(outcome.error_codes, ["E0382"]);
+    // 診断が指すファイルの最初は学習者のファイル。`println!` の展開の中も指すので、そのマクロのファイルも続く。
+    assert_eq!(
+        outcome.error_files.first(),
+        Some(&PathBuf::from("src/main.rs"))
+    );
+    assert!(outcome.has_error_in(Path::new("src/main.rs")));
     let output = outcome.attempt_output();
     assert!(
         output.compiler_messages.contains("E0382"),
@@ -438,6 +587,8 @@ fn warnings_only_build_succeeds_with_warning_diagnostics_and_an_executable() {
 
     assert_eq!(outcome.status, BuildStatus::Succeeded);
     assert!(outcome.error_codes.is_empty());
+    // 警告の診断が指すファイルは残さない。
+    assert!(outcome.error_files.is_empty());
     let output = outcome.attempt_output();
     assert!(
         output.compiler_messages.contains("unused variable"),
