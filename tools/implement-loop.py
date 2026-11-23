@@ -82,7 +82,8 @@ PROMPT_TRIAGE = "/triage-issues --loop {numbers}"
 SETTINGS_IMPLEMENT = ".claude/loop-settings.json"
 SETTINGS_REVIEW = ".claude/loop-review-settings.json"
 SETTINGS_TRIAGE = ".claude/loop-triage-settings.json"
-PERMISSION_MODE = "dontAsk"
+# claude の権限のモード。bypassPermissions では、設定の allow は使われず、deny だけが効く（ADR 0189）
+PERMISSION_MODE = "bypassPermissions"
 
 # 始める前に main に無ければならないファイル
 REQUIRED_FILES = (
@@ -497,6 +498,12 @@ class Loop:
         self.git(["clean", "-fdx", "--quiet", "--", ".claude"])
         self.git(["checkout", "--quiet", "--detach", MAIN_REF])
 
+    def head_state(self) -> str:
+        """作業ツリーの HEAD のコミットと、ブランチの名前（切り離されていれば「detached」）。"""
+        commit = self.git(["rev-parse", "HEAD"]).stdout.strip()
+        branch = self.git(["symbolic-ref", "-q", "--short", "HEAD"], check=False).stdout.strip() or "detached"
+        return f"{branch}@{commit[:12]}"
+
     def discard_if_dirty(self, when: str) -> None:
         status = self.git(["status", "--porcelain"]).stdout.strip()
         if status:
@@ -585,10 +592,19 @@ class Loop:
         settings = self.settings_copy(settings_path)
         argv = self.claude_argv(prompt, model, settings, schema, resume)
         self.say(f"claude を呼ぶ: {name}（{model}{'、会話の続き' if resume else ''}）")
+        head_before = self.head_state()
         result = self.run(argv, self.worktree, timeout)
         self.save(f"{name}.json", result.stdout)
         if result.stderr.strip():
             self.save(f"{name}.stderr.txt", result.stderr)
+        head_after = self.head_state()
+        if head_after != head_before:
+            # コミットとブランチの切り替えはスクリプトだけが行う。deny をすり抜けたときに、ここで気づく
+            raise InfraError(
+                f"claude（{name}）を呼んだ前後で、作業ツリーの HEAD が変わりました（{head_before} → {head_after}）。"
+                f"claude がコミットかブランチの切り替えをしたので、止めます。"
+                f"禁止の一覧（.claude/loop-*.json の deny）か、スキルを見直してください。"
+            )
         data: Any = None
         try:
             data = json.loads(result.stdout)
@@ -622,7 +638,7 @@ class Loop:
             data["structured_output"] = structured
         denials = data.get("permission_denials") or []
         if denials:
-            # 許可の一覧（.claude/loop-*.json）を見直すときの手がかりにする。
+            # 禁止の一覧（.claude/loop-*.json の deny）とスキルを見直すときの手がかりにする。
             self.say(f"  権限で拒否された操作: {len(denials)} 件")
             for denial in denials[:10]:
                 tool_input = denial.get("tool_input") or {}
@@ -857,7 +873,7 @@ class Loop:
                     reason = one_line(result.get("blocked_reason") or "")[:300]
                     raise InfraError(
                         f"claude（task{task.number}-implement{step}）が、権限で拒否された操作があり、進められないと答えました。"
-                        f"許可の一覧（{SETTINGS_IMPLEMENT}）か、スキルのコマンドを見直してください。{reason}"
+                        f"禁止の一覧（{SETTINGS_IMPLEMENT} の deny）か、スキルのコマンドを見直してください。{reason}"
                     )
                 return self.handle_blocked(task, branch, result, history)
             fixed = merge_unique(fixed, result.get("fixed_problems") or [])
