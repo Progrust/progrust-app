@@ -116,6 +116,7 @@
 * [ADR 0202](0202-stop-run-and-submit-when-leaving-exercise.md) - 実行・テスト実行・提出の途中で演習画面を離れたときとアプリを終了したときは止め、画面を離れて止めた実行は `stopped` として記録し、止めた提出（`stopped`）とアプリの終了で止めたものは記録しない
 * [ADR 0203](0203-stdout-case-fails-on-nonzero-exit.md) - `stdout` 方式の判定で、標準出力が期待値と一致しても、終了コード 0 以外かシグナルで終わったテストケースは `runtime_error`（不正解）にし、テストケースの結果を決める順を定める
 * [ADR 0205](0205-pick-hidden-test-executable-from-build-json.md) - `test` 方式で隠しテストを入れたテスト実行ファイルを、ビルドの JSON の出力のうち、`judge.target` のファイルを根に持つテスト用の成果物から決める
+* [ADR 0214](0214-stdout-case-output-limit-ignores-stderr.md) - `stdout` 方式の 1 テストケースの出力量の上限を標準出力だけで数え、標準エラー出力は `detail` に使う先頭だけを受け取って、残りはプログラムを止めずに捨てる
 
 # レッスン進行・進捗管理
 

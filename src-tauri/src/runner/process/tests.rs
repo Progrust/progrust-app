@@ -11,7 +11,7 @@ use super::*;
 /// テストで使う制限値。止まらないプログラムでも、テストが止まらなくならないようにする。
 const LIMITS: Limits = Limits {
     time: Duration::from_secs(20),
-    output_bytes: 1024 * 1024,
+    output: OutputLimit::Total(1024 * 1024),
 };
 /// 状態が変わるのを待つ最長の時間。
 const WAIT: Duration = Duration::from_secs(10);
@@ -100,7 +100,7 @@ fn assert_terminates(pid: libc::pid_t) {
 fn infinite_output_stops_at_the_limit_and_only_the_output_up_to_the_limit_is_delivered() {
     let dir = tempfile::tempdir().unwrap();
     let mut spec = sh("while :; do echo abcdefghi; done", dir.path());
-    spec.limits.output_bytes = 10_000;
+    spec.limits.output = OutputLimit::Total(10_000);
     let collected = collect_output(spec).unwrap();
     assert_eq!(collected.termination, Termination::OutputLimitExceeded);
     assert_eq!(collected.stdout.len(), 10_000);
@@ -115,7 +115,7 @@ fn output_over_the_limit_just_before_exiting_is_returned_as_over_the_limit() {
     std::fs::write(dir.path().join("big"), "abcdefghi\n".repeat(1_100)).unwrap();
     for _ in 0..30 {
         let mut spec = sh("exec cat big", dir.path());
-        spec.limits.output_bytes = 10_000;
+        spec.limits.output = OutputLimit::Total(10_000);
         let collected = collect_output(spec).unwrap();
         assert_eq!(collected.termination, Termination::OutputLimitExceeded);
         assert_eq!(collected.stdout, "abcdefghi\n".repeat(1_000));
@@ -165,7 +165,7 @@ fn output_exactly_at_the_limit_is_not_over_the_limit() {
         "i=0; while [ $i -lt 1000 ]; do echo abcdefghi; i=$((i+1)); done",
         dir.path(),
     );
-    spec.limits.output_bytes = 10_000;
+    spec.limits.output = OutputLimit::Total(10_000);
     let collected = collect_output(spec).unwrap();
     assert_eq!(collected.termination, Termination::Exited(0));
     assert_eq!(collected.stdout.len(), 10_000);
@@ -175,7 +175,7 @@ fn output_exactly_at_the_limit_is_not_over_the_limit() {
 fn the_output_limit_counts_stdout_and_stderr_together() {
     let dir = tempfile::tempdir().unwrap();
     let mut spec = sh("while :; do echo out; echo err >&2; done", dir.path());
-    spec.limits.output_bytes = 5_000;
+    spec.limits.output = OutputLimit::Total(5_000);
     let collected = collect_output(spec).unwrap();
     assert_eq!(collected.termination, Termination::OutputLimitExceeded);
     assert_eq!(collected.stdout.len() + collected.stderr.len(), 5_000);
@@ -190,12 +190,86 @@ fn a_character_cut_at_the_output_limit_is_not_delivered() {
         r"while :; do printf '\343\201\202\343\201\204'; done",
         dir.path(),
     );
-    spec.limits.output_bytes = 10_000;
+    spec.limits.output = OutputLimit::Total(10_000);
     let collected = collect_output(spec).unwrap();
     assert_eq!(collected.termination, Termination::OutputLimitExceeded);
     assert_eq!(collected.stdout.len(), 9_999);
     assert!(!collected.stdout.contains(char::REPLACEMENT_CHARACTER));
     assert_eq!(collected.stdout, "あい".repeat(3_333 / 2) + "あ");
+}
+
+// ---- 出力量の上限（stdout 方式の判定） ----
+
+/// 標準出力だけで数える上限で、`script` を動かす。止まって待ち続けたときに、テストが長くならないようにする。
+fn sh_counting_stdout_only(script: &str, dir: &Path, limit: usize) -> ProcessSpec {
+    let mut spec = sh(script, dir);
+    spec.limits = Limits {
+        time: Duration::from_secs(5),
+        output: OutputLimit::Stdout(limit),
+    };
+    spec
+}
+
+/// 標準エラー出力に 1 MB（パイプに入りきらない量）を書くスクリプト。書ききれなかったら（読む側がパイプを
+/// 閉じたなど）、終了コード 9 で終わる。
+const MUCH_STDERR: &str = "yes e | head -c 1048576 >&2 || exit 9";
+
+/// [`MUCH_STDERR`] のうち、渡される先頭の部分。
+fn head_of_much_stderr() -> String {
+    "e\n".repeat(STDERR_HEAD_BYTES / 2)
+}
+
+#[test]
+fn stderr_is_not_counted_and_only_its_head_is_delivered_without_stopping() {
+    let dir = tempfile::tempdir().unwrap();
+    // 標準出力は上限ちょうどで、標準エラー出力は上限よりずっと多い。
+    let script =
+        format!("{MUCH_STDERR}; i=0; while [ $i -lt 1000 ]; do echo abcdefghi; i=$((i+1)); done");
+    let started = Instant::now();
+    let collected = collect_output(sh_counting_stdout_only(&script, dir.path(), 10_000)).unwrap();
+    assert_eq!(collected.termination, Termination::Exited(0));
+    assert_eq!(collected.stdout, "abcdefghi\n".repeat(1_000));
+    assert_eq!(collected.stderr, head_of_much_stderr());
+    // 先頭より後の標準エラー出力も読んで捨てるので、プログラムは書くのを待たされない。
+    assert!(started.elapsed() < Duration::from_secs(3));
+}
+
+#[test]
+fn stdout_over_the_limit_is_stopped_even_when_stderr_is_not_counted() {
+    let dir = tempfile::tempdir().unwrap();
+    let collected = collect_output(sh_counting_stdout_only(
+        "echo err >&2; while :; do echo abcdefghi; done",
+        dir.path(),
+        10_000,
+    ))
+    .unwrap();
+    assert_eq!(collected.termination, Termination::OutputLimitExceeded);
+    assert_eq!(collected.stdout, "abcdefghi\n".repeat(1_000));
+    assert_eq!(collected.stderr, "err\n");
+}
+
+#[test]
+fn much_stderr_keeps_the_exit_code_and_the_head_of_stderr() {
+    let dir = tempfile::tempdir().unwrap();
+    let script = format!("{MUCH_STDERR}; exit 3");
+    let collected = collect_output(sh_counting_stdout_only(&script, dir.path(), 10_000)).unwrap();
+    assert_eq!(collected.termination, Termination::Exited(3));
+    assert_eq!(collected.stdout, "");
+    assert_eq!(collected.stderr, head_of_much_stderr());
+}
+
+#[test]
+fn a_character_cut_at_the_end_of_the_stderr_head_is_not_delivered() {
+    let dir = tempfile::tempdir().unwrap();
+    // 「あ」（UTF-8 で 3 バイト）を、先頭の量より多く書く。先頭の量は 3 の倍数ではない。
+    assert_ne!(STDERR_HEAD_BYTES % 3, 0);
+    let characters = STDERR_HEAD_BYTES / 3 + 100;
+    let script = format!(
+        r"i=0; while [ $i -lt {characters} ]; do printf '\343\201\202' >&2; i=$((i+1)); done"
+    );
+    let collected = collect_output(sh_counting_stdout_only(&script, dir.path(), 10_000)).unwrap();
+    assert_eq!(collected.termination, Termination::Exited(0));
+    assert_eq!(collected.stderr, "あ".repeat(STDERR_HEAD_BYTES / 3));
 }
 
 // ---- 止める ----
