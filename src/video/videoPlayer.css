@@ -1,0 +1,79 @@
+/* 動画のプレーヤー（VideoPlayer）の配置。部品の見た目は design-system/progrust/components/bundle.css の
+   .pg-video・.pg-video-frame・.pg-captions・.pg-video-controls。
+   動画の枠の中の要素に当たらないよう、要素を指すセレクタは書かない（documents/spec/screens/appearance.md）。 */
+
+/* プレーヤーを置く領域。置かれた場所の残りいっぱいに広がり、その中央にプレーヤーを置く。
+   動画は、下に置くもの（字幕と操作）の高さ（--video-player-below）を引いた残りと、領域の幅に、
+   16:9 で収まる最大の大きさにする（design-system/ui-design/styles/app.css の .pgx-video-area と同じ計算）。
+   --video-player-below = 字幕 2 行ぶん 51 + 操作 72（シークバー 20 + 間 8 + 行 44）+ 間 12 × 2 + 台紙の枠 1 = 148。
+   操作が 2 行になる幅では、さらに 52（間 8 + 行 44）で 200。
+   字幕を表示していないときも、右端の行動がまだ出ていないときも同じ高さを引くので、
+   字幕の切り替えと右端の行動の表示で、動画の大きさは変わらない。 */
+.video-player {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  container: video-player / size;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-player > .pg-video {
+  --video-player-below: 200px;
+
+  width: min(100cqw, calc((100cqh - var(--video-player-below)) * 16 / 9));
+}
+
+/* 「演習へ」まで 1 行に並ぶ幅（VideoControls の README の目安は約 720px）を確保できる広さのときだけ、
+   操作を 1 行として数える。 */
+@container video-player (min-width: 740px) and (min-height: 565px) {
+  .video-player > .pg-video {
+    --video-player-below: 148px;
+  }
+}
+
+/* 動画のみのレッスンでは、右端が「次のレッスンへ」になり、1 行に並ぶのが約 775px からなので、
+   その広さ（795px）を確保できるまでは 2 行として数える。ボタンがまだ出ていないときも同じに数える。 */
+@container video-player not ((min-width: 795px) and (min-height: 596px)) {
+  .video-player > .pg-video[data-lesson-kind="video_only"] {
+    --video-player-below: 200px;
+  }
+}
+
+/* 動画の台紙の中に、Player を台紙いっぱいに置く。 */
+.video-player-stage {
+  position: absolute;
+  inset: 0;
+}
+
+/* 台紙の中に重ねる、読み込み中の印と、読み込みに失敗したときの文とボタン。 */
+.video-player-layer {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  padding: var(--space-16);
+  text-align: center;
+}
+
+.video-player-spinner {
+  color: var(--muted);
+}
+
+.video-player-loading {
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--muted);
+}
+
+.video-player-message {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.75;
+  color: var(--ink);
+}
