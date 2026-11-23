@@ -1,5 +1,6 @@
 pub mod commands;
 pub mod content;
+pub mod dashboard;
 pub mod progress;
 pub mod settings;
 pub mod storage;
@@ -14,6 +15,7 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
     builder.invoke_handler(tauri::generate_handler![
         commands::content::list_chapters,
         commands::content::get_lesson,
+        commands::learning_record::get_dashboard,
         commands::progress::get_progress,
         commands::progress::open_lesson,
         commands::progress::save_video_position,
