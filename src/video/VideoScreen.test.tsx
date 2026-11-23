@@ -287,6 +287,43 @@ describe("右端の行動", () => {
   });
 });
 
+describe("読み込みに失敗したときの右端の行動", () => {
+  it("動画のコードの読み込みに失敗しても、見終わったレッスンでは「演習へ」で進める", async () => {
+    loadLessonVideo.mockRejectedValue(new Error("動画のコードが無い"));
+    const { navigate } = setup("ch04-02", {
+      progress: { video_watched: true },
+    });
+    await screen.findByText("動画を読み込めませんでした");
+    fireEvent.click(screen.getByRole("button", { name: "演習へ" }));
+    expect(navigate).toHaveBeenCalledWith({
+      name: "exercise",
+      lessonId: "ch04-02",
+    });
+  });
+
+  it("動画のみのレッスンでも、失敗したまま「次のレッスンへ」で進める", async () => {
+    loadLessonVideo.mockRejectedValue(new Error("動画のコードが無い"));
+    const { navigate } = setup("ch04-01", {
+      progress: { video_watched: true },
+    });
+    await screen.findByText("動画を読み込めませんでした");
+    fireEvent.click(screen.getByRole("button", { name: "次のレッスンへ" }));
+    expect(navigate).toHaveBeenCalledWith({
+      name: "video",
+      lessonId: "ch04-02",
+    });
+  });
+
+  it("見ていないレッスンでは、失敗しても出さない", async () => {
+    loadLessonVideo.mockRejectedValue(new Error("動画のコードが無い"));
+    setup("ch04-02");
+    await screen.findByText("動画を読み込めませんでした");
+    expect(
+      screen.queryByRole("button", { name: "演習へ" }),
+    ).not.toBeInTheDocument();
+  });
+});
+
 describe("再生位置の保存", () => {
   it("レッスン一覧に戻るとき、いまの位置と、見終わっていないことを保存する", async () => {
     const { calls, navigate, unmount } = setup("ch04-02", {

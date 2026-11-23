@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { findLesson, numberChapters } from "../chapterNumbers";
 import { getLesson, listChapters } from "../commands/content";
-import type { Chapter, LessonDetail } from "../commands/content";
+import type { Chapter, LessonDetail, LessonKind } from "../commands/content";
 import { openLesson, saveVideoPosition } from "../commands/progress";
 import type { LessonProgress } from "../commands/progress";
 import { getSettings, updateSettings } from "../commands/settings";
@@ -48,9 +48,23 @@ type Loaded = {
   initialSentenceId: string | undefined;
 };
 
+// 読み込みの途中や失敗のあとでも、分かっているもの。文脈の行と、右端の行動（「演習へ」など）を、
+// 動画の読み込みの状態によらずに決めるために、動画のコードとは別に持つ。
+type Known = {
+  chapters: Chapter[] | null;
+  progress: LessonProgress | null | undefined;
+  kind: LessonKind | null;
+};
+
+const NOTHING_KNOWN: Known = {
+  chapters: null,
+  progress: undefined,
+  kind: null,
+};
+
 type State =
   | { state: "loading" }
-  | { state: "failed"; chapters: Chapter[] | null }
+  | { state: "failed" }
   | { state: "ready"; loaded: Loaded };
 
 function toVideoSettings(settings: Settings): VideoSettings {
@@ -67,10 +81,10 @@ function toVideoSettings(settings: Settings): VideoSettings {
 async function load(
   lessonId: string,
   opened: { current: Promise<LessonProgress | null> | null },
-  onChapters: (chapters: Chapter[]) => void,
+  onKnown: (patch: Partial<Known>) => void,
 ): Promise<Loaded> {
   const chaptersPromise = listChapters().then(({ chapters }) => {
-    onChapters(chapters);
+    onKnown({ chapters });
     return chapters;
   });
   if (opened.current === null) {
@@ -83,10 +97,18 @@ async function load(
     });
     opened.current = promise;
   }
+  const progressPromise = opened.current.then((progress) => {
+    onKnown({ progress });
+    return progress;
+  });
+  const detailPromise = getLesson(lessonId).then((detail) => {
+    onKnown({ kind: detail.lesson.kind });
+    return detail;
+  });
   const [chapters, detail, progress, settings, code] = await Promise.all([
     chaptersPromise,
-    getLesson(lessonId),
-    opened.current,
+    detailPromise,
+    progressPromise,
     getSettings(),
     loadLessonVideo(lessonId),
   ]);
@@ -131,13 +153,15 @@ async function load(
 export function VideoScreen({ lessonId }: { lessonId: string }) {
   const [attempt, setAttempt] = useState(0);
   const [state, setState] = useState<State>({ state: "loading" });
+  const [known, setKnown] = useState(NOTHING_KNOWN);
   const opened = useRef<Promise<LessonProgress | null> | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    let chapters: Chapter[] | null = null;
-    load(lessonId, opened, (c) => {
-      chapters = c;
+    load(lessonId, opened, (patch) => {
+      if (!cancelled) {
+        setKnown((k) => ({ ...k, ...patch }));
+      }
     }).then(
       (loaded) => {
         if (!cancelled) {
@@ -146,7 +170,7 @@ export function VideoScreen({ lessonId }: { lessonId: string }) {
       },
       () => {
         if (!cancelled) {
-          setState({ state: "failed", chapters });
+          setState({ state: "failed" });
         }
       },
     );
@@ -160,16 +184,25 @@ export function VideoScreen({ lessonId }: { lessonId: string }) {
     setAttempt((n) => n + 1);
   }, []);
 
-  return <VideoScreenBody lessonId={lessonId} state={state} onRetry={retry} />;
+  return (
+    <VideoScreenBody
+      lessonId={lessonId}
+      state={state}
+      known={known}
+      onRetry={retry}
+    />
+  );
 }
 
 function VideoScreenBody({
   lessonId,
   state,
+  known,
   onRetry,
 }: {
   lessonId: string;
   state: State;
+  known: Known;
   onRetry: () => void;
 }) {
   const { navigate } = useNavigation();
@@ -245,20 +278,17 @@ function VideoScreenBody({
     });
   }, []);
 
-  const chapters = chaptersOf(state);
+  const chapters = known.chapters;
   const found = useMemo(
     () =>
       chapters === null ? null : findLesson(numberChapters(chapters), lessonId),
     [chapters, lessonId],
   );
 
-  const nextId =
-    loaded === null ? null : nextLessonId(loaded.chapters, lessonId);
-  const kind = loaded?.detail.lesson.kind ?? "lesson";
-  const action =
-    loaded === null
-      ? null
-      : rightAction(kind, loaded.progress, reachedEnd, nextId !== null);
+  const nextId = chapters === null ? null : nextLessonId(chapters, lessonId);
+  const kind = known.kind ?? found?.lesson.lesson.kind ?? "lesson";
+  // 表示する条件は、動画の読み込みの状態によらない（video-screen.md）。
+  const action = rightAction(kind, known.progress, reachedEnd, nextId !== null);
 
   const back = (event: MouseEvent) => {
     event.preventDefault();
@@ -340,15 +370,4 @@ function VideoScreenBody({
       />
     </main>
   );
-}
-
-function chaptersOf(state: State): Chapter[] | null {
-  switch (state.state) {
-    case "ready":
-      return state.loaded.chapters;
-    case "failed":
-      return state.chapters;
-    case "loading":
-      return null;
-  }
 }
