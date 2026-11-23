@@ -1,0 +1,12 @@
+{
+  "narrator": "Natsuki Karin",
+  "speed": 120,
+  "pause": 0.2,
+  "emotion": {
+    "hightension": 20,
+    "buchigire": 5,
+    "nageki": 0,
+    "sagesumi": 20,
+    "sasayaki": 80
+  }
+}

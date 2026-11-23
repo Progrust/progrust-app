@@ -35,7 +35,6 @@
 * [ADR 0057](0057-scopes-on-code-and-no-code-in-diagrams.md) - 変数が生きている範囲はコードに重ねた枠で示し、図の中にコードを書かない（ADR 0076 で動画に引き継いだ）
 * [ADR 0061](0061-render-videos-with-remotion-player.md) - 動画を、書き出したファイルにせず、アプリの中で Remotion の Player で描画する
 * [ADR 0062](0062-write-video-scenes-in-unrestricted-tsx.md) - 動画のシーンを、制限のない React（TSX）で書く
-* [ADR 0188](0188-write-rust-highlighter-by-hand.md) - 動画のコードの字句の色分けを、ライブラリを使わず、Rust の字句を分ける自作の走査で行う
 * [ADR 0063](0063-generate-narration-with-voicepeak-and-bundle.md) - ナレーションの音声を教材の作者の環境で VOICEPEAK から作り、圧縮してアプリに同梱する
 * [ADR 0064](0064-narrator-natsuki-karin-with-shared-voice-settings.md) - ナレーターを夏色花梨とし、声の設定を 1 か所に持って後から変えられるようにする
 * [ADR 0065](0065-separate-text-and-say-in-script.md) - 台本で、もとの文（text）と読ませる文（say）を分ける
@@ -55,7 +54,9 @@
 * [ADR 0178](0178-do-not-use-player-built-in-controls.md) - Remotion の Player の組み込みの操作（操作の表示、Space キー、クリック、ダブルクリックでの全画面）を使わず、末尾で先頭に戻さず繰り返さない設定にして、再生の操作をすべてアプリの部品で行う
 * [ADR 0180](0180-derive-introducing-lesson-from-curriculum-list.md) - 要素の導入レッスンを、各レッスンの `lesson.json` ではなく、章とレッスンの一覧の「主要素」から求め、準備中のレッスンが導入する要素も決まるようにする
 * [ADR 0186](0186-round-cue-offsets-to-whole-frames.md) - 合図の関数 `at`・`endOf` が返す位置を整数のフレーム数にし、指定した秒をフレーム数に四捨五入してから足す
+* [ADR 0188](0188-write-rust-highlighter-by-hand.md) - 動画のコードの字句の色分けを、ライブラリを使わず、Rust の字句を分ける自作の走査で行う
 * [ADR 0190](0190-ignore-lint-disable-comments-in-video-code.md) - 動画のコードの lint では、コードの中の lint を止めるための指定（eslint-disable・stylelint-disable などのコメント）に従わない
+* [ADR 0198](0198-find-comma-pauses-by-matching-silences-to-punctuation.md) - 「、」にあたる無音を、−50dBFS より小さい音が 0.2 秒以上続く無音と、say の文の途中の句読点を前から順に対応づけて見つけ、数が合わない文はエラーにする
 
 # カリキュラム
 

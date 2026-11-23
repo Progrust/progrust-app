@@ -1,4 +1,4 @@
-// 検査「台本」「音声」と、警告が共通で使う、動画のファイルの読み込み。
+// 検査「台本」「音声」と警告、音声を作るツール（tools/content-voice/）が共通で使う、動画のファイルの読み込み。
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
@@ -25,6 +25,27 @@ export function readJsonFile(path: string): JsonResult {
 
 export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// JSON の値として等しいか（オブジェクトのキーの順序は問わない）。
+export function deepEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) || Array.isArray(b)) {
+    return (
+      Array.isArray(a) &&
+      Array.isArray(b) &&
+      a.length === b.length &&
+      a.every((v, i) => deepEqual(v, b[i]))
+    );
+  }
+  if (isRecord(a) && isRecord(b)) {
+    const keys = Object.keys(a);
+    return (
+      keys.length === Object.keys(b).length &&
+      keys.every((k) => k in b && deepEqual(a[k], b[k]))
+    );
+  }
+  return false;
 }
 
 // 動画のあるレッスン（準備中でなく、章末復習でないレッスン）。

@@ -8,6 +8,7 @@ import { join } from "node:path";
 import type { LessonEntry } from "./lesson-files.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
 import {
+  deepEqual,
   isRecord,
   readJsonFile,
   readSentences,
@@ -17,26 +18,6 @@ import {
 } from "./video-files.ts";
 
 const NAME = "音声";
-
-function deepEqual(a: unknown, b: unknown): boolean {
-  if (a === b) return true;
-  if (Array.isArray(a) || Array.isArray(b)) {
-    return (
-      Array.isArray(a) &&
-      Array.isArray(b) &&
-      a.length === b.length &&
-      a.every((v, i) => deepEqual(v, b[i]))
-    );
-  }
-  if (isRecord(a) && isRecord(b)) {
-    const keys = Object.keys(a);
-    return (
-      keys.length === Object.keys(b).length &&
-      keys.every((k) => k in b && deepEqual(a[k], b[k]))
-    );
-  }
-  return false;
-}
 
 function voiceFileIds(dir: string): string[] {
   try {
