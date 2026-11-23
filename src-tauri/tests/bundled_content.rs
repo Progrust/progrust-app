@@ -171,7 +171,10 @@ fn tauri_conf() -> Value {
 fn bundle_resources_point_to_staging_dir() {
     assert_eq!(
         tauri_conf()["bundle"]["resources"],
-        json!({ (bundled_content::STAGING_DIR): "content/" })
+        json!({
+            (bundled_content::STAGING_DIR): "content/",
+            (bundled_content::RUNNER_STAGING_DIR): "runner/",
+        })
     );
 }
 
@@ -185,4 +188,53 @@ fn staging_dir_matches_repository_content() {
         list_files(&manifest_dir.join(bundled_content::STAGING_DIR)),
         list_files(temp.path())
     );
+}
+
+/// 同梱する `runner/` のファイル。
+const RUNNER: [&str; 2] = ["allowed-crates.toml", "Cargo.lock"];
+
+/// `runner/` からは、`allowed-crates.toml` と `Cargo.lock` だけを写し、ほかのファイルは写さない。
+#[test]
+fn stages_runner_files_only() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = temp.path().join("runner");
+    let dest = temp.path().join("staged");
+    write_files(&source, &RUNNER);
+    write_files(&source, &["memo.md", ".DS_Store"]);
+    write_files(&dest, &["old.txt"]);
+
+    bundled_content::stage_runner(&source, &dest).unwrap();
+
+    assert_eq!(list_files(&dest), strings(&RUNNER));
+    assert_eq!(
+        fs::read_to_string(dest.join("Cargo.lock")).unwrap(),
+        "Cargo.lock の中身"
+    );
+}
+
+/// 写したディレクトリと、開発時の起動で実行ファイルの隣に写されたものに、
+/// リポジトリの `runner/` の 2 つのファイルが入っている。
+#[test]
+fn runner_files_are_staged_and_copied_next_to_executable() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let repository = manifest_dir.join("../runner");
+    // アプリの実行ファイル（`progrust`）の隣が、Tauri のビルドが資料を写す場所になる。
+    let profile_dir = Path::new(env!("CARGO_BIN_EXE_progrust"))
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    for dir in [
+        manifest_dir.join(bundled_content::RUNNER_STAGING_DIR),
+        profile_dir.join("runner"),
+    ] {
+        assert_eq!(list_files(&dir), strings(&RUNNER), "{}", dir.display());
+        for file in RUNNER {
+            assert_eq!(
+                fs::read(dir.join(file)).unwrap(),
+                fs::read(repository.join(file)).unwrap(),
+                "{}",
+                dir.join(file).display()
+            );
+        }
+    }
 }

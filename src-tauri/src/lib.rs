@@ -2,12 +2,14 @@ pub mod commands;
 pub mod content;
 pub mod dashboard;
 pub mod progress;
+pub mod runner;
 pub mod settings;
 pub mod storage;
 
 use tauri::{Builder, Context, Manager, Runtime};
 
 use content::ContentDir;
+use runner::RunnerDir;
 use storage::AppDataDir;
 
 /// コマンドのハンドラを載せたビルダーを返す。`run` と、モックの実行環境のテストで使う。
@@ -39,6 +41,8 @@ pub fn run() {
             app.manage(data_dir);
             // 教材のディレクトリは、アプリでは `resource_dir()` の下の `content/` にする。同じく、テストでは差し替える。
             app.manage(ContentDir::from_app(app.handle())?);
+            // 同梱の許可クレートの定義（`runner/`）も、`resource_dir()` の下にある。
+            app.manage(RunnerDir::from_app(app.handle())?);
             Ok(())
         })
         .run(app_context())

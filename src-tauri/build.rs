@@ -4,13 +4,22 @@ mod bundled_content;
 use std::path::Path;
 
 fn main() {
-    // 同梱する教材を、`tauri.conf.json` の `bundle.resources` が指すディレクトリに写す。
+    // 同梱する教材と許可クレートの定義を、`tauri.conf.json` の `bundle.resources` が指すディレクトリに写す。
     // `tauri_build::build()` が、開発時の起動のために、そのディレクトリを実行ファイルの隣へ写すので、先に行う。
     let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
     let content = manifest_dir.join("../content");
     println!("cargo:rerun-if-changed={}", content.display());
     bundled_content::stage(&content, &manifest_dir.join(bundled_content::STAGING_DIR))
         .expect("同梱する教材を写せない");
+
+    // 許可クレートの定義（`runner/`）も、同じように写す。
+    let runner = manifest_dir.join("../runner");
+    println!("cargo:rerun-if-changed={}", runner.display());
+    bundled_content::stage_runner(
+        &runner,
+        &manifest_dir.join(bundled_content::RUNNER_STAGING_DIR),
+    )
+    .expect("同梱する許可クレートの定義を写せない");
 
     tauri_build::build()
 }

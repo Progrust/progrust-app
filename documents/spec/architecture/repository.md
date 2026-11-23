@@ -14,12 +14,12 @@ progrust-app/
 │   └── ui-design/       # 画面デザイン「Progrust UIデザイン」
 ├── content/             # 教材の原本（動画のコードと音声を含む。形式は spec/content-format/index.md）
 ├── prompts/             # AI への指示文の原本
-├── runner/              # 許可クレートの定義
+├── runner/              # 許可クレートの定義（allowed-crates.toml と Cargo.lock。spec/exercise-runner/crates-and-workspace.md）
 ├── tools/               # 教材チェックツール、音声を作るツール、デザインシステムの検査の道具、実装のループのスクリプトなどの開発用ツール（spec/content-guidelines/check-tool.md、spec/content-format/video/voice.md、spec/screens/design-system-files.md、conventions/implementation-loop.md）
 ├── src/                 # フロントエンド
 │   └── video/           # 動画の共通部品（プレーヤー・タイムライン・教材用の部品。spec/content-format/video/scenes.md）
 ├── src-tauri/           # バックエンド
-│   ├── build.rs         # ビルドスクリプト。同梱する教材を選んで写す（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）
+│   ├── build.rs         # ビルドスクリプト。同梱する教材と許可クレートの定義（`runner/`）を選んで写す（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）
 │   ├── build/           # ビルドスクリプトの部品。テストからも使う
 │   ├── src/bin/         # 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム（spec/content-guidelines/check-tool.md）
 │   ├── app-icon.svg     # アプリのアイコンの元の絵（spec/screens/app-icon.md）

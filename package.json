@@ -22,7 +22,8 @@
     "test": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml --locked",
     "check": "npm run lint && npm run format:check && npm test",
     "content:check": "node tools/content-check/main.ts",
-    "content:voice": "node tools/content-voice/main.ts"
+    "content:voice": "node tools/content-voice/main.ts",
+    "runner:lock": "node tools/runner-lock/main.ts"
   },
   "dependencies": {
     "@remotion/player": "4.0.545",
