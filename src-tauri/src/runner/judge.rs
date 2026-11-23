@@ -111,6 +111,9 @@ pub enum CaseDetail {
     /// `test` 方式の `fail` の panic メッセージ（`assert_eq!` の左辺・右辺を含む）。文字列にする
     /// （[`super::judge_test`]）。
     PanicMessage(String),
+    /// `test` 方式の学習者のテストの判定の `fail` の、通ったテストの件数と必要な件数、失敗したテストの名前。
+    /// 文字列にする（[`super::judge_test`]）。
+    LearnerTests(String),
 }
 
 /// テストケース 1 件の結果。
