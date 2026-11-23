@@ -35,8 +35,9 @@ export type Draft = {
   files: DraftFiles;
 };
 
-// open_lesson の戻り値。試行セッション・生成問題は、まだ入らない（いまは null）。
+// open_lesson の戻り値。生成問題は、まだ入らない（いまは null）。
 export type OpenedLesson = {
+  // 開始または継続した試行セッションの ID。動画のみのレッスンでは null。
   session_id: string | null;
   progress: LessonProgress | null;
   generated: unknown | null;

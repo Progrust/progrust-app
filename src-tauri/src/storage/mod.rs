@@ -67,6 +67,40 @@ impl AppDataDir {
         Ok(self.root.join(relative))
     }
 
+    /// `{app_data_dir}` からの相対パス `relative` のディレクトリにある `.json` のファイルの、拡張子を除いた名前を、
+    /// 名前の順に返す。`.` で始まる名前のファイル（一時ファイルなど）と、退避したファイル（`.json.broken-…`）は含めない。
+    /// ディレクトリが無いときは空を返す（ディレクトリは作らない）。
+    pub fn list_json_stems(&self, relative: impl AsRef<Path>) -> Result<Vec<String>, StorageError> {
+        let dir = self.path(relative)?;
+        let entries = match std::fs::read_dir(&dir) {
+            Ok(entries) => entries,
+            Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+            Err(error) => return Err(StorageError::io(&dir, error)),
+        };
+        let mut stems = Vec::new();
+        for entry in entries {
+            let entry = entry.map_err(|error| StorageError::io(&dir, error))?;
+            let Ok(name) = entry.file_name().into_string() else {
+                continue;
+            };
+            if name.starts_with('.') {
+                continue;
+            }
+            let Some(stem) = name.strip_suffix(".json") else {
+                continue;
+            };
+            let is_file = entry
+                .file_type()
+                .map_err(|error| StorageError::io(entry.path(), error))?
+                .is_file();
+            if is_file && !stem.is_empty() {
+                stems.push(stem.to_string());
+            }
+        }
+        stems.sort();
+        Ok(stems)
+    }
+
     /// `path` のファイルのロックを取る。ロックを持っている間、同じファイルを読み書きするほかのスレッドは待つ。
     fn lock_file(&self, path: &Path) -> FileLock {
         let lock = Arc::clone(
@@ -127,6 +161,30 @@ mod tests {
                 "{relative:?} は受け付けない"
             );
         }
+    }
+
+    #[test]
+    fn list_json_stems_returns_only_json_files_in_name_order() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = AppDataDir::new(temp.path());
+        assert_eq!(
+            dir.list_json_stems("attempts").unwrap(),
+            Vec::<String>::new()
+        );
+        assert!(!temp.path().join("attempts").exists());
+
+        for name in [
+            "b.json",
+            "a.json",
+            ".a.json.123.tmp",
+            ".hidden.json",
+            "c.json.broken-20261123T142500",
+            "notes.md",
+        ] {
+            dir.write_text(format!("attempts/{name}"), "{}").unwrap();
+        }
+        std::fs::create_dir(temp.path().join("attempts/d.json")).unwrap();
+        assert_eq!(dir.list_json_stems("attempts").unwrap(), ["a", "b"]);
     }
 
     #[test]

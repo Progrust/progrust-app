@@ -245,7 +245,10 @@ fn open_lesson_records_the_lesson_as_in_progress_and_returns_it() {
     let data = tempfile::tempdir().unwrap();
     let (_app, window) = app_with(content.path(), data.path());
     let response = open_lesson(&window, "l").unwrap();
-    assert_eq!(response["session_id"], Value::Null);
+    assert!(
+        response["session_id"].as_str().unwrap().ends_with("_l"),
+        "{response}"
+    );
     assert_eq!(response["generated"], Value::Null);
     assert_eq!(response["draft"], Value::Null);
     let progress = &response["progress"];
@@ -367,6 +370,178 @@ fn commands_for_a_missing_lesson_return_not_found() {
         );
     }
     assert!(!data.path().join("progress.json").exists());
+}
+
+// ---- 試行セッション（spec/learning-record-and-analysis/attempt-log.md）----
+
+/// `attempts/` の中のファイルの名前の一覧（並べたもの）。`attempts/` が無いときは空。
+fn attempt_names(data: &Path) -> Vec<String> {
+    let Ok(entries) = fs::read_dir(data.join("attempts")) else {
+        return Vec::new();
+    };
+    let mut names: Vec<_> = entries
+        .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+        .collect();
+    names.sort();
+    names
+}
+
+fn saved_attempt(data: &Path, session_id: &str) -> Value {
+    serde_json::from_str(
+        &fs::read_to_string(data.join("attempts").join(format!("{session_id}.json"))).unwrap(),
+    )
+    .unwrap()
+}
+
+fn write_attempt(data: &Path, session_id: &str, lesson_id: &str, ended_at: Value) {
+    write(
+        data,
+        &format!("attempts/{session_id}.json"),
+        &json!({
+            "schema_version": 1,
+            "session_id": session_id,
+            "lesson_id": lesson_id,
+            "kind": "lesson",
+            "difficulty": null,
+            "started_at": "2026-10-30T09:00:00+09:00",
+            "passed_at": if ended_at.is_null() { Value::Null } else { ended_at.clone() },
+            "ended_at": ended_at,
+            "events": [{
+                "type": "run", "at": "2026-10-30T09:05:00+09:00", "mode": "main",
+                "files": { "src/main.rs": "fn main() {}\n" },
+                "result": { "status": "success", "error_codes": [], "stdout": "", "stderr": "",
+                            "exit_code": 0, "stdin": "" },
+            }],
+        })
+        .to_string(),
+    );
+}
+
+#[test]
+fn opening_a_lesson_starts_an_attempt_session() {
+    let content = make_kinds_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    for (lesson_id, kind) in [("l", "lesson"), ("r", "chapter_review")] {
+        let session_id = open_lesson(&window, lesson_id).unwrap()["session_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        let saved = saved_attempt(data.path(), &session_id);
+        assert_eq!(saved["schema_version"], 1);
+        assert_eq!(saved["session_id"], session_id);
+        assert_eq!(saved["lesson_id"], lesson_id);
+        assert_eq!(saved["kind"], kind);
+        assert_eq!(saved["difficulty"], Value::Null);
+        assert_eq!(saved["passed_at"], Value::Null);
+        assert_eq!(saved["ended_at"], Value::Null);
+        assert_eq!(saved["events"], json!([]));
+        // ID は `{開始日時 YYYYMMDDTHHMMSS}_{lesson_id}`。
+        let started_at =
+            chrono::DateTime::parse_from_rfc3339(saved["started_at"].as_str().unwrap()).unwrap();
+        assert_eq!(
+            session_id,
+            format!("{}_{lesson_id}", started_at.format("%Y%m%dT%H%M%S"))
+        );
+    }
+}
+
+#[test]
+fn a_video_only_lesson_opened_and_completed_leaves_no_attempt_log() {
+    let content = make_kinds_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    assert_eq!(
+        open_lesson(&window, "v").unwrap()["session_id"],
+        Value::Null
+    );
+    let done = save_video_position(&window, "v", "m9", true).unwrap();
+    assert_eq!(done["status"], "completed");
+    assert_eq!(
+        open_lesson(&window, "v").unwrap()["session_id"],
+        Value::Null
+    );
+    assert!(!data.path().join("attempts").exists());
+    assert!(!data.path().join("records").exists());
+}
+
+#[test]
+fn reopening_a_lesson_with_an_unfinished_session_continues_it() {
+    let content = make_kinds_content();
+    let data = tempfile::tempdir().unwrap();
+    // 前に開いて実行した、終わっていないセッション。
+    write_attempt(data.path(), "20261030T090000_l", "l", Value::Null);
+    let before = saved_attempt(data.path(), "20261030T090000_l");
+
+    let (_app, window) = app_with(content.path(), data.path());
+    assert_eq!(
+        open_lesson(&window, "l").unwrap()["session_id"],
+        "20261030T090000_l"
+    );
+    // アプリを起動し直しても続ける。
+    let (_app, window) = app_with(content.path(), data.path());
+    assert_eq!(
+        open_lesson(&window, "l").unwrap()["session_id"],
+        "20261030T090000_l"
+    );
+    assert_eq!(saved_attempt(data.path(), "20261030T090000_l"), before);
+    assert_eq!(attempt_names(data.path()), ["20261030T090000_l.json"]);
+}
+
+#[test]
+fn reopening_a_lesson_whose_sessions_all_ended_starts_a_new_one() {
+    let content = make_kinds_content();
+    let data = tempfile::tempdir().unwrap();
+    write_attempt(
+        data.path(),
+        "20261030T090000_l",
+        "l",
+        json!("2026-10-30T09:30:00+09:00"),
+    );
+    let before = saved_attempt(data.path(), "20261030T090000_l");
+    let (_app, window) = app_with(content.path(), data.path());
+    let session_id = open_lesson(&window, "l").unwrap()["session_id"]
+        .as_str()
+        .unwrap()
+        .to_string();
+    assert_ne!(session_id, "20261030T090000_l");
+    assert_eq!(saved_attempt(data.path(), &session_id)["events"], json!([]));
+    // 終わったセッションの試行ログは、そのまま残す。
+    assert_eq!(saved_attempt(data.path(), "20261030T090000_l"), before);
+    assert_eq!(attempt_names(data.path()).len(), 2);
+    // 次に開いたときは、新しいほうを続ける。
+    assert_eq!(open_lesson(&window, "l").unwrap()["session_id"], session_id);
+}
+
+#[test]
+fn a_broken_attempt_log_does_not_fail_open_lesson_and_a_new_session_starts() {
+    let content = make_kinds_content();
+    for broken in [
+        "{ 壊れた".to_string(),
+        json!({ "schema_version": 2, "session_id": "20261030T090000_l" }).to_string(),
+        json!({ "session_id": "20261030T090000_l", "lesson_id": "l" }).to_string(),
+    ] {
+        let data = tempfile::tempdir().unwrap();
+        write(data.path(), "attempts/20261030T090000_l.json", &broken);
+        let (_app, window) = app_with(content.path(), data.path());
+        let session_id = open_lesson(&window, "l").unwrap()["session_id"]
+            .as_str()
+            .unwrap()
+            .to_string();
+        assert_ne!(session_id, "20261030T090000_l", "{broken}");
+        let names = attempt_names(data.path());
+        assert_eq!(names.len(), 2, "{broken}: {names:?}");
+        assert!(
+            names[0].starts_with("20261030T090000_l.json.broken-"),
+            "{names:?}"
+        );
+        assert_eq!(names[1], format!("{session_id}.json"));
+        // 退避したファイルの中身は、そのまま残る。
+        assert_eq!(
+            fs::read_to_string(data.path().join("attempts").join(&names[0])).unwrap(),
+            broken
+        );
+    }
 }
 
 // ---- 下書き（spec/lesson-flow/drafts.md）----
