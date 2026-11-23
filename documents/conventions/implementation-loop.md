@@ -76,7 +76,7 @@ python3 tools/implement-loop.py
 
 | ファイル | 使うとき | 許可する主な操作 |
 | --- | --- | --- |
-| `.claude/loop-settings.json` | 実装 | ファイルの読み書き、`npm`・`cargo`・`tools/` の Python のツールの実行、git の読み取り、Issue の閲覧と起票 |
+| `.claude/loop-settings.json` | 実装 | ファイルの読み書き、作ったファイルの削除（`git rm`、`git clean -f -- （パス）`）、`npm`・`cargo`・`tools/` の Python のツールの実行、git の読み取り、Issue の閲覧と起票 |
 | `.claude/loop-review-settings.json` | レビュー | ファイルの読み取り、git の読み取り、Issue の閲覧と起票。ファイルは書けない |
 | `.claude/loop-triage-settings.json` | Issue の仕分け | Issue の閲覧・コメント・ラベルの変更・閉じること・起票。ファイルは書けない |
 

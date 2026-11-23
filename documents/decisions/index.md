@@ -217,6 +217,7 @@
 * [ADR 0164](0164-loop-triages-issues-between-tasks.md) - 実装のループが、ユーザーがループを始めたことを仕分けの依頼として、タスクの切れ目に `AI起票` の Issue を仕分け、直すと決めたものを `実装タスク` を付けてループのタスクとして直し、`実装タスク` の付いた Issue をスキル `triage-issues` の対象から外す
 * [ADR 0165](0165-implementation-plan-excludes-content.md) - 実装計画と実装のループの対象を、アプリ本体・開発用ツール・CI とし、教材（レッスン・動画・音声）を作ることは対象にしない
 * [ADR 0183](0183-stop-loop-when-blocked-by-permission-denials.md) - 実装のループで、実装する側が判断を求める Issue を挙げずに進められないと答え、その会話で権限に拒否された操作があったときは、タスクを行き詰まりにせず、仕組みの失敗としてラベルを付けずに止める
+* [ADR 0184](0184-allow-loop-to-delete-files-with-git-clean.md) - 実装のループの実装する側に、作ったファイルを消す操作として、`rm` ではなく、リポジトリの中の git に入っていないファイルだけを消す `git clean -f -- （パス）` を許可する
 
 # 置き換え済み・廃止
 

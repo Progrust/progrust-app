@@ -21,6 +21,7 @@
       "Bash(mkdir -p *)",
       "Bash(git mv *)",
       "Bash(git rm *)",
+      "Bash(git clean -f -- *)",
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",

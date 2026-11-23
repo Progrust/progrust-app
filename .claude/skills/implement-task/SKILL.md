@@ -3,7 +3,7 @@ name: implement-task
 description: 実装計画のタスクの Issue（または、ループが直すと決めた「AI起票」の Issue）を 1 件、仕様どおりに実装し、テストを書いて、機械のチェックを通す。実装のループが呼ぶほか、ユーザーが Issue の番号を指定して呼ぶ。
 argument-hint: "<Issue の番号> [--loop] [fix]"
 disable-model-invocation: true
-allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue create *) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git rev-parse*) Bash(python3 tools/check-documents.py*) Bash(python3 tools/design-system.py check*) Bash(npm run *) Bash(npm test*) Bash(cargo *)
+allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue create *) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git rev-parse*) Bash(git clean -f -- *) Bash(python3 tools/check-documents.py*) Bash(python3 tools/design-system.py check*) Bash(npm run *) Bash(npm test*) Bash(cargo *)
 ---
 
 # タスクの実装
@@ -67,6 +67,7 @@ git diff
 ```
 
 - タスクと関係のない変更、消し忘れた一時的なコード、保護するパス（`documents/conventions/implementation-loop.md`「保護するパス」）の変更が無いことを確かめる。
+- 一時的なファイル（データを作るためのスクリプトなど）は、なるべく作らない。作ったときは、結果を報告する前に消す。git に入っていないファイルは `git clean -f -- （パス）` で、git に入っているファイルは `git rm （パス）` で消す（ループでは `rm` は許可されていない）。消せないファイルを、中身を空にして残さない。
 - 受け入れ条件を 1 つずつ見て、テストがあるか、人が確かめることに入っているかを確かめる。
 
 ### 6. 結果を報告する
