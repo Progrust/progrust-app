@@ -1,6 +1,9 @@
 pub mod commands;
+pub mod storage;
 
-use tauri::{Builder, Context, Runtime};
+use tauri::{Builder, Context, Manager, Runtime};
+
+use storage::AppDataDir;
 
 /// コマンドのハンドラを載せたビルダーを返す。`run` と、モックの実行環境のテストで使う。
 pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
@@ -16,6 +19,13 @@ pub fn app_context<R: Runtime>() -> Context<R> {
 
 pub fn run() {
     app_builder(Builder::default())
+        // 学習者データのディレクトリは、アプリでは Tauri の `app_data_dir()` にする。
+        // `app_builder` には入れず、テストでは一時ディレクトリの `AppDataDir` を `manage` で置けるようにする。
+        .setup(|app| {
+            let data_dir = AppDataDir::from_app(app.handle())?;
+            app.manage(data_dir);
+            Ok(())
+        })
         .run(app_context())
         .expect("error while running tauri application");
 }
