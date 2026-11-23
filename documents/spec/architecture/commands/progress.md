@@ -55,7 +55,7 @@ description: "進捗のコマンド `get_progress`（進捗と推奨レッスン
 
 - 戻り値: `null`。`updated_at` はバックエンドが付ける。
 - 保存するときは [演習コードの下書き](../../lesson-flow/drafts.md) に従う。実行・提出の直前の保存は、`run_code`・`submit_code` が行う（[実行のコマンドとイベント](run.md)）。
-- エラー: ファイルパスが [実行・提出時のプロジェクトの組み立て](../../exercise-runner/project-assembly.md) の条件を満たさないときは `invalid_argument`。
+- エラー: ファイルパスが [実行・提出時のプロジェクトの組み立て](../../exercise-runner/project-assembly.md) の条件を満たさないときは `invalid_argument`。下書きは書かない。演習の無いレッスンのときも `invalid_argument`。
 
 ## reset_draft
 
@@ -63,6 +63,7 @@ description: "進捗のコマンド `get_progress`（進捗と推奨レッスン
 
 - 引数: `lesson_id`（`string`）。
 - 戻り値: 初期コードで上書きした後の下書き（[演習コードの下書き](../../lesson-flow/drafts.md) の形）。
+- エラー: 演習の無いレッスンのときは `invalid_argument`。
 
 ## get_passed_code
 

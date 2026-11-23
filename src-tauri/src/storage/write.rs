@@ -4,7 +4,7 @@
 //! 一度に入れ替わるので、書き込みの途中でプロセスが止まっても、元のファイルは書き込む前のまま残る。
 
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{ErrorKind, Write};
 use std::path::{Path, PathBuf};
 
 use serde::Serialize;
@@ -35,6 +35,18 @@ impl AppDataDir {
         let lock = self.lock_file(&path);
         let _guard = lock.hold();
         write_atomic(&path, &bytes)
+    }
+
+    /// `{app_data_dir}` からの相対パス `relative` のファイルを消す。ファイルが無いときは、何もしない。
+    pub fn remove_file(&self, relative: impl AsRef<Path>) -> Result<(), StorageError> {
+        let path = self.path(relative)?;
+        let lock = self.lock_file(&path);
+        let _guard = lock.hold();
+        match fs::remove_file(&path) {
+            Ok(()) => Ok(()),
+            Err(error) if error.kind() == ErrorKind::NotFound => Ok(()),
+            Err(error) => Err(StorageError::io(&path, error)),
+        }
     }
 }
 
@@ -165,6 +177,17 @@ mod tests {
         let name = temp.file_name().unwrap().to_str().unwrap();
         assert!(name.starts_with(".ch01-01.json."), "{name}");
         assert!(name.ends_with(".tmp"), "{name}");
+    }
+
+    #[test]
+    fn remove_file_deletes_the_file_and_ignores_a_missing_one() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = AppDataDir::new(temp.path());
+        dir.write_text("drafts/a.json", "{}").unwrap();
+        dir.remove_file("drafts/a.json").unwrap();
+        assert!(!exists(&temp.path().join("drafts/a.json")).unwrap());
+        dir.remove_file("drafts/a.json").unwrap();
+        dir.remove_file("drafts/none.json").unwrap();
     }
 
     #[test]
