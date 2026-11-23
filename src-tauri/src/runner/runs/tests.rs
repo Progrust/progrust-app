@@ -165,3 +165,36 @@ fn app_exit_overrides_a_user_stop() {
     runs.stop("a");
     assert!(run.stopped_for_app_exit());
 }
+
+#[test]
+fn stopping_a_submit_while_judging_stops_the_judge_processes() {
+    let runs = Runs::default();
+    let submit = runs.begin("s", "l", RunKind::Submit).unwrap();
+    let stopper = Stopper::new();
+    submit.set_judging(stopper.clone());
+    assert!(!stopper.is_stopped());
+    runs.stop("s");
+    assert!(stopper.is_stopped());
+    assert_eq!(submit.stop_cause(), Some(StopCause::User));
+}
+
+#[test]
+fn a_stop_before_judging_stops_the_judge_when_it_starts() {
+    let runs = Runs::default();
+    let submit = runs.begin("s", "l", RunKind::Submit).unwrap();
+    runs.stop_for_app_exit();
+    let stopper = Stopper::new();
+    submit.set_judging(stopper.clone());
+    assert!(stopper.is_stopped());
+    assert!(submit.stopped_for_app_exit());
+}
+
+#[test]
+fn a_submit_does_not_take_stdin() {
+    let runs = Runs::default();
+    let submit = runs.begin("s", "l", RunKind::Submit).unwrap();
+    assert_eq!(code(submit.write_stdin("x\n")), ErrorCode::InvalidState);
+    submit.set_judging(Stopper::new());
+    assert_eq!(code(submit.write_stdin("x\n")), ErrorCode::InvalidState);
+    assert_eq!(code(submit.close_stdin()), ErrorCode::InvalidState);
+}

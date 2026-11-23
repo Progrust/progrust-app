@@ -1,5 +1,4 @@
-// 実行のコマンドとイベント（documents/spec/architecture/commands/run.md）。
-// 提出（submit_code・submit_progress）と、run_finished の submit の形は、提出を作るときに足す。
+// 実行・提出のコマンドとイベント（documents/spec/architecture/commands/run.md）。
 import { invoke } from "@tauri-apps/api/core";
 
 import type { DraftFiles, LessonProgress } from "./progress";
@@ -34,8 +33,9 @@ export type CommandError = {
   detail: string | null;
 };
 
-// イベントの名前。受け取り（listen）を始めてから、run_code を呼ぶ。
+// イベントの名前。受け取り（listen）を始めてから、run_code・submit_code を呼ぶ。
 export const RUN_OUTPUT = "run_output";
+export const SUBMIT_PROGRESS = "submit_progress";
 export const RUN_FINISHED = "run_finished";
 
 // run_output の断片。stdout・stderr は学習者のプログラム（テスト実行では cargo test）とビルドの出力、
@@ -50,6 +50,56 @@ export type RunOutput = {
   request_id: string;
   // 受け取った順に並ぶ。
   chunks: RunOutputChunk[];
+};
+
+// イベント submit_progress の内容。提出の判定の段階が変わったときと、テストケースが 1 件終わるたびに届く。
+export type SubmitProgress = {
+  request_id: string;
+  // build はビルド中、judge はテストケースの実行中。
+  phase: "build" | "judge";
+  // 結果が決まったテストケースの数。build では 0。
+  completed: number;
+  // 全テストケースの数。決まる前（build と、test 方式で隠しテストの名前を得る前）は null。
+  total: number | null;
+};
+
+// 提出の判定結果の状態（documents/spec/exercise-runner/submit.md「判定結果」）。
+// crates_unavailable は判定をしていない提出、stopped は途中で止めた提出。
+export type SubmitStatus =
+  "passed" | "wrong" | "compile_error" | "crates_unavailable" | "stopped";
+
+// テストケースの結果の状態。
+export type CaseStatus = "pass" | "fail" | "timeout" | "runtime_error";
+
+// stdout 方式の fail の detail。どれも正規化する前のもの。
+export type StdoutFailDetail = {
+  // テストケースの標準入力。
+  input: string;
+  // 期待する出力。
+  expected: string;
+  // 実際の出力。出力過多のときは、上限までの標準出力。
+  actual: string;
+};
+
+// テストケース 1 件の結果。
+export type CaseResult = {
+  // 表示名。
+  name: string;
+  status: CaseStatus;
+  // pass では null。stdout 方式の fail ではオブジェクト。ほか（test 方式の fail の panic メッセージ、
+  // 学習者のテストの fail の説明、timeout・runtime_error の標準エラー出力の先頭）は文字列。
+  detail: StdoutFailDetail | string | null;
+};
+
+// run_finished の submit（提出の判定結果）。
+export type SubmitResult = {
+  status: SubmitStatus;
+  // 通過したテストケースの数。
+  passed: number;
+  // 全テストケースの数。compile_error・crates_unavailable・stopped では passed とともに 0。
+  total: number;
+  // テストケースごとの結果。compile_error・crates_unavailable・stopped では空。
+  cases: CaseResult[];
 };
 
 // run_finished の run。
@@ -72,7 +122,7 @@ export type RunFinished = {
   // kind が run のときの結果。
   run: RunResult | null;
   // kind が submit のときの判定結果。
-  submit: unknown | null;
+  submit: SubmitResult | null;
   // 提出で正解してレッスンを完了にしたときの、更新した後の進捗。
   progress: LessonProgress | null;
 };
@@ -89,6 +139,21 @@ export function runCode(
     request_id: requestId,
     lesson_id: lessonId,
     mode,
+    files,
+  });
+}
+
+// 「提出」。files を下書きに保存してから提出を始め、始めたら null で解決する。ビルドの出力は run_output、
+// 判定の進み具合は submit_progress、判定結果は run_finished で届く。正解すると、run_finished の progress に
+// 完了にした後の進捗が入る。ほかの実行・提出が動いているときは busy で拒否される。
+export function submitCode(
+  requestId: string,
+  lessonId: string,
+  files: DraftFiles,
+): Promise<null> {
+  return invoke<null>("submit_code", {
+    request_id: requestId,
+    lesson_id: lessonId,
     files,
   });
 }

@@ -8,6 +8,7 @@ use std::collections::BTreeMap;
 use std::fmt;
 use std::fs;
 use std::io;
+use std::num::NonZeroU32;
 use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
@@ -15,6 +16,7 @@ use serde_json::Value;
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::commands::error::{CommandError, ErrorCode};
+use crate::runner::judge::{StdoutCase, parse_cases};
 
 /// 生成問題のレッスン ID の接頭辞。生成問題を開くのは M6 で作るので、いまは無いレッスンと同じに扱う。
 const GENERATED_PREFIX: &str = "gen-";
@@ -71,6 +73,48 @@ pub struct Exercise {
     pub explanation_md: String,
     /// 初期コード。キーは cargo パッケージのルートからの相対パス（`/` 区切り）。
     pub starter_files: BTreeMap<String, String>,
+}
+
+/// 演習の判定方式と、判定に使うもの（[`ContentDir::exercise_judge`]）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum ExerciseJudge {
+    /// `stdout` 方式。
+    Stdout {
+        /// `cases.json` のテストケース。
+        cases: Vec<StdoutCase>,
+    },
+    /// `test` 方式。
+    Test {
+        /// `exercise.judge.target`。隠しテストを組み込むファイル（`src/main.rs` か `src/lib.rs`）。
+        target: String,
+        /// `judge_tests.rs` の内容。
+        judge_tests: String,
+        /// `exercise.case_labels`。テスト関数名から表示名への対応。
+        case_labels: BTreeMap<String, String>,
+        /// `exercise.judge.min_learner_tests`。無いときは、学習者が書いたテストを判定に含めない。
+        min_learner_tests: Option<NonZeroU32>,
+    },
+}
+
+/// `lesson.json` の `exercise` のうち、判定に使うもの。
+#[derive(Deserialize)]
+struct RawExerciseJudge {
+    judge: RawJudge,
+    #[serde(default)]
+    case_labels: BTreeMap<String, String>,
+}
+
+/// `lesson.json` の `exercise.judge`。
+#[derive(Deserialize)]
+#[serde(tag = "mode", rename_all = "snake_case")]
+enum RawJudge {
+    /// `target` は `src/main.rs` 固定なので、読まない。
+    Stdout {},
+    Test {
+        target: String,
+        #[serde(default)]
+        min_learner_tests: Option<NonZeroU32>,
+    },
 }
 
 /// 教材を読めなかった理由。コマンドでは `CommandError` に変えて返す（`?` で変わる）。
@@ -204,6 +248,44 @@ impl ContentDir {
         serde_json::from_value(dependencies.clone()).map_err(|error| ContentError::Invalid {
             path,
             reason: format!("exercise.dependencies が文字列の配列でない: {error}"),
+        })
+    }
+
+    /// 演習の判定方式と、判定に使うもの（`lesson.json` の `exercise.judge`・`exercise.case_labels` と、
+    /// `exercise/cases.json`・`exercise/judge_tests.rs`）を読む（spec/content-format/lesson-json.md、
+    /// spec/content-format/exercise.md「判定方式」）。レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn exercise_judge(&self, lesson_id: &str) -> Result<ExerciseJudge, ContentError> {
+        self.lesson_kind(lesson_id)?;
+        let dir = self.lesson_dir(lesson_id);
+        let path = dir.join("lesson.json");
+        let lesson = read_json(&path)?;
+        let exercise: RawExerciseJudge =
+            serde_json::from_value(lesson.get("exercise").cloned().unwrap_or(Value::Null))
+                .map_err(|error| ContentError::Invalid {
+                    path: path.clone(),
+                    reason: format!("exercise.judge・exercise.case_labels を読めない: {error}"),
+                })?;
+        let exercise_dir = dir.join("exercise");
+        Ok(match exercise.judge {
+            RawJudge::Stdout {} => {
+                let cases_path = exercise_dir.join("cases.json");
+                let cases = parse_cases(&read_text(&cases_path)?).map_err(|error| {
+                    ContentError::Invalid {
+                        path: cases_path,
+                        reason: format!("テストケースの配列として読めない: {error}"),
+                    }
+                })?;
+                ExerciseJudge::Stdout { cases }
+            }
+            RawJudge::Test {
+                target,
+                min_learner_tests,
+            } => ExerciseJudge::Test {
+                judge_tests: read_text(&exercise_dir.join("judge_tests.rs"))?,
+                target,
+                case_labels: exercise.case_labels,
+                min_learner_tests,
+            },
         })
     }
 

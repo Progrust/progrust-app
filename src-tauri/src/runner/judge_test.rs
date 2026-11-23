@@ -41,7 +41,7 @@ use super::build::{BuildOutcome, BuildOutputKind, BuildOutputPiece};
 use super::file_path::validate_file_path;
 use super::judge::{CaseDetail, CaseResult, CaseStatus, JudgeProgress, JudgeResult};
 use super::process::{
-    self, CollectedOutput, Limits, OutputLimit, ProcessSpec, Termination, TimeoutOutput,
+    CollectedOutput, Limits, OutputLimit, ProcessSpec, Stopper, Termination, TimeoutOutput,
 };
 
 /// 隠しテストを置くファイルの名前。`project/` の直下に置く。
@@ -174,17 +174,25 @@ struct HiddenTest {
 /// テストを判定する。判定結果を返す。テストケースが 1 件終わるたびに `on_progress` を呼ぶ。
 /// テストケースは、隠しテストを `--list` の出力の順に並べ、学習者のテストのテストケースを最後に置く。
 /// 進み具合の全テストケースの数には、学習者のテストのテストケースも数える。
+/// `stop` で止めたときは、動いているプロセスを止め、残りを起動せずに、途中で止めた判定結果
+/// （[`JudgeResult::stopped`]）を返す。
 ///
 /// 次のときは、アプリの側の失敗として `Err` を返す。
 /// - テスト実行ファイルか cargo を起動できなかった。
-/// - 隠しテストの名前を得る起動（`--list`）が、終了コード 0 で終わらなかった。
+/// - 隠しテストの名前を得る起動（`--list`）が、止める操作で止めたとき以外で、終了コード 0 で終わらなかった。
 /// - 隠しテストが 1 件も無かった（教材の誤り。判定しないまま正解にしない）。
-pub fn judge_tests<F>(spec: &TestJudgeSpec, mut on_progress: F) -> io::Result<JudgeResult>
+pub fn judge_tests<F>(
+    spec: &TestJudgeSpec,
+    stop: &Stopper,
+    mut on_progress: F,
+) -> io::Result<JudgeResult>
 where
     F: FnMut(JudgeProgress),
 {
     let deadline = Instant::now() + spec.limits.time;
-    let tests = list_hidden_tests(spec, deadline)?;
+    let Some(tests) = list_hidden_tests(spec, stop, deadline)? else {
+        return Ok(JudgeResult::stopped());
+    };
     let hidden_total = tests.len();
     let total = hidden_total + usize::from(spec.learner_tests.is_some());
     let workers = spec.limits.parallelism.get().min(hidden_total);
@@ -202,7 +210,7 @@ where
                     let index = next.fetch_add(1, Ordering::SeqCst);
                     let Some(test) = tests.get(index) else { break };
                     if sender
-                        .send((index, run_test(spec, test, deadline)))
+                        .send((index, run_test(spec, stop, test, deadline)))
                         .is_err()
                     {
                         break;
@@ -240,7 +248,7 @@ where
         .collect::<Option<Vec<_>>>()
         .ok_or_else(|| io::Error::other("結果の決まらなかった隠しテストがある"))?;
     if let Some(learner) = &spec.learner_tests {
-        let Some(case) = judge_learner_tests(spec, learner)? else {
+        let Some(case) = judge_learner_tests(spec, stop, learner)? else {
             return Ok(JudgeResult::stopped());
         };
         cases.push(case);
@@ -252,13 +260,20 @@ where
     Ok(JudgeResult::from_cases(cases))
 }
 
-/// テスト実行ファイルを `--list progrust_judge::` で起動し、隠しテストを得る。
-fn list_hidden_tests(spec: &TestJudgeSpec, deadline: Instant) -> io::Result<Vec<HiddenTest>> {
-    let collected = process::collect_output(test_process(
+/// テスト実行ファイルを `--list progrust_judge::` で起動し、隠しテストを得る。止める操作で止めたときは `None`。
+fn list_hidden_tests(
+    spec: &TestJudgeSpec,
+    stop: &Stopper,
+    deadline: Instant,
+) -> io::Result<Option<Vec<HiddenTest>>> {
+    let collected = stop.collect_output(test_process(
         spec,
         &["--list", "progrust_judge::"],
         deadline.saturating_duration_since(Instant::now()),
     ))?;
+    if collected.termination == Termination::Stopped {
+        return Ok(None);
+    }
     if collected.termination != Termination::Exited(0) {
         return Err(io::Error::other(format!(
             "隠しテストの名前を得られなかった（{:?}）: {}",
@@ -280,7 +295,7 @@ fn list_hidden_tests(spec: &TestJudgeSpec, deadline: Instant) -> io::Result<Vec<
     if tests.is_empty() {
         return Err(io::Error::other("隠しテストが 1 件も無い"));
     }
-    Ok(tests)
+    Ok(Some(tests))
 }
 
 /// `--list` の出力の `{名前}: test` の行から、隠しテストの名前を、出てきた順に得る。名前に `progrust_judge` の
@@ -308,6 +323,7 @@ fn function_name(name: &str) -> Option<&str> {
 /// 止める操作で止めたときは `None`。
 fn run_test(
     spec: &TestJudgeSpec,
+    stop: &Stopper,
     test: &HiddenTest,
     deadline: Instant,
 ) -> io::Result<Option<CaseResult>> {
@@ -319,7 +335,7 @@ fn run_test(
             detail: Some(CaseDetail::Stderr(String::new())),
         }));
     }
-    let collected = process::collect_output(test_process(
+    let collected = stop.collect_output(test_process(
         spec,
         &["--exact", &test.name, "--test-threads=1"],
         remaining,
@@ -477,6 +493,7 @@ fn learner_tests_args() -> Vec<OsString> {
 /// まとめて実行し、テストケース 1 件の結果を決める。止める操作で止めたときは `None`。
 fn judge_learner_tests(
     spec: &TestJudgeSpec,
+    stop: &Stopper,
     learner: &LearnerTestsSpec,
 ) -> io::Result<Option<CaseResult>> {
     let mut process = ProcessSpec::new(
@@ -497,7 +514,7 @@ fn judge_learner_tests(
         .push((OsString::from("CARGO_TERM_COLOR"), OsString::from("never")));
     // 時間切れの `detail` に、止めるまでに受け取った標準エラー出力を使う。
     process.on_timeout = TimeoutOutput::Deliver;
-    let collected = process::collect_output(process)?;
+    let collected = stop.collect_output(process)?;
     Ok(learner_case_result(learner.min_tests, &collected))
 }
 

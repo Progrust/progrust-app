@@ -4,7 +4,7 @@
 //! - [`Runs`] は、動いている要求（[`ActiveRun`]）を 1 つだけ持つ。アプリでは Tauri の状態として `manage` で置く。
 //!   [`Runs::begin`] で要求を始め、終わったら [`Runs::release`] で外す。動いているものがあるときは `busy`、
 //!   動いている要求と同じ `request_id` は `invalid_argument` にする。
-//! - [`ActiveRun`] は、いまの段階（準備中・ビルド中・プログラムの実行中・終わり）と、止める操作の受け付け、
+//! - [`ActiveRun`] は、いまの段階（準備中・ビルド中・プログラムの実行中・提出の判定中・終わり）と、止める操作の受け付け、
 //!   標準入力の書き込みと閉じる操作、学習者が入力した標準入力の記録を持つ。
 //! - 止める操作が、止める相手（ビルドの cargo、プログラム）を起動する前に来ても失わないように、止める指示を覚えておき、
 //!   相手を起動して登録したときに、すぐに止める。
@@ -13,7 +13,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use super::build::{BUILD_TIME_LIMIT, BuildHandle};
-use super::process::ProcessHandle;
+use super::process::{ProcessHandle, Stopper};
 use crate::commands::error::{CommandError, ErrorCode};
 
 /// 実行時間の制限（run。テスト実行を含む。spec/exercise-runner/limits.md）。
@@ -189,7 +189,9 @@ enum Phase {
         process: ProcessHandle,
         stdin: StdinState,
     },
-    /// プログラムが終わった後。
+    /// 提出の判定中（テストケースのプロセスを、続けて、または同時に動かす）。
+    Judging(Stopper),
+    /// プログラムが終わった後（提出では、判定が終わった後）。
     Finished,
 }
 
@@ -232,6 +234,7 @@ impl ActiveRun {
         match &state.phase {
             Phase::Building(build) => build.stop(),
             Phase::Running { process, .. } => process.stop(),
+            Phase::Judging(stopper) => stopper.stop(),
             Phase::Preparing | Phase::Finished => {}
         }
     }
@@ -264,7 +267,16 @@ impl ActiveRun {
         state.phase = Phase::Running { process, stdin };
     }
 
-    /// プログラムが終わったときに呼ぶ。この後は、標準入力を書けない。
+    /// 提出の判定を始めたときに、止める操作の相手として登録する。既に止める指示があれば、すぐに止める。
+    pub fn set_judging(&self, stopper: Stopper) {
+        let mut state = self.state();
+        if state.stop.is_some() {
+            stopper.stop();
+        }
+        state.phase = Phase::Judging(stopper);
+    }
+
+    /// プログラム（提出では判定）が終わったときに呼ぶ。この後は、標準入力を書けない。
     pub fn set_finished(&self) {
         self.state().phase = Phase::Finished;
     }
@@ -273,7 +285,7 @@ impl ActiveRun {
     /// 終わった後、標準入力を閉じた後は `invalid_state`。
     pub fn write_stdin(&self, text: &str) -> Result<(), CommandError> {
         let mut state = self.state();
-        let process = open_stdin(&state.phase)?;
+        let process = open_stdin(self.kind, &state.phase)?;
         process.write_stdin(text).map_err(|_| stdin_closed())?;
         state.stdin_log.push_str(text);
         Ok(())
@@ -282,7 +294,7 @@ impl ActiveRun {
     /// 標準入力を閉じる（`close_stdin`）。エラーは [`ActiveRun::write_stdin`] と同じ。
     pub fn close_stdin(&self) -> Result<(), CommandError> {
         let mut state = self.state();
-        open_stdin(&state.phase)?.close_stdin();
+        open_stdin(self.kind, &state.phase)?.close_stdin();
         if let Phase::Running { stdin, .. } = &mut state.phase {
             *stdin = StdinState::Closed;
         }
@@ -295,8 +307,11 @@ impl ActiveRun {
     }
 }
 
-/// 標準入力を書ける段階なら、プログラムへの操作を返す。
-fn open_stdin(phase: &Phase) -> Result<&ProcessHandle, CommandError> {
+/// 標準入力を書ける段階なら、プログラムへの操作を返す。提出は、標準入力を受け付ける実行ではない。
+fn open_stdin(kind: RunKind, phase: &Phase) -> Result<&ProcessHandle, CommandError> {
+    if kind == RunKind::Submit {
+        return Err(not_running());
+    }
     match phase {
         Phase::Running {
             process,
@@ -310,7 +325,7 @@ fn open_stdin(phase: &Phase) -> Result<&ProcessHandle, CommandError> {
             "プログラムがまだ起動していません。",
             "ビルドが終わっていない",
         )),
-        Phase::Finished => Err(not_running()),
+        Phase::Judging(_) | Phase::Finished => Err(not_running()),
     }
 }
 

@@ -10,7 +10,8 @@
 //! - ビルド済みの実行ファイルを `stdout` 方式で判定する部品は [`judge`]、`test` 方式の隠しテストを組み込んで
 //!   判定し、`min_learner_tests` のある演習では学習者が書いたテストも判定する部品は [`judge_test`]。
 //! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
-//!   イベント `run_output`・`run_finished` の内容は [`run`]。
+//!   イベント `run_output`・`run_finished` の内容は [`run`]、提出のタスクとイベント `submit_progress` と
+//!   `run_finished` の `submit` の内容は [`submit`]。
 
 pub mod build;
 pub mod file_path;
@@ -20,6 +21,7 @@ pub mod process;
 pub mod project;
 pub mod run;
 pub mod runs;
+pub mod submit;
 pub mod workspace;
 
 use std::path::{Path, PathBuf};

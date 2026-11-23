@@ -545,7 +545,7 @@ fn each_hidden_test_runs_in_its_own_process_and_learner_tests_do_not_count() {
 
     let mut progress = Vec::new();
     let started = Instant::now();
-    let result = judge_tests(&spec, |step| progress.push(step)).unwrap();
+    let result = judge_tests(&spec, &Stopper::new(), |step| progress.push(step)).unwrap();
     let elapsed = started.elapsed();
 
     // exit(0) とスタックオーバーフローのテストだけが runtime_error になり、ほかのテストの結果は正しく出る。
@@ -637,7 +637,7 @@ fn d_panics_with_other_message() {
 "#,
     );
     let spec = built.spec("src/main.rs", &[], limits(10, 2));
-    let result = judge_tests(&spec, |_| {}).unwrap();
+    let result = judge_tests(&spec, &Stopper::new(), |_| {}).unwrap();
     assert_eq!(
         statuses(&result),
         [
@@ -682,7 +682,7 @@ fn tests_not_started_before_the_time_limit_are_timeouts() {
     );
     let spec = built.spec("src/main.rs", &[], limits(2, 1));
     let mut progress = Vec::new();
-    let result = judge_tests(&spec, |step| progress.push(step)).unwrap();
+    let result = judge_tests(&spec, &Stopper::new(), |step| progress.push(step)).unwrap();
     assert_eq!(
         statuses(&result),
         [
@@ -735,7 +735,7 @@ fn with_main_and_lib_the_hidden_tests_run_from_the_lib_test_executable() {
         &[("answer_is_two", "答えは 2")],
         limits(10, 2),
     );
-    let result = judge_tests(&spec, |_| {}).unwrap();
+    let result = judge_tests(&spec, &Stopper::new(), |_| {}).unwrap();
     assert_eq!(statuses(&result), [("答えは 2", CaseStatus::Pass)]);
     assert_eq!(result.status, JudgeStatus::Passed);
     assert_eq!((result.passed, result.total), (1, 1));
@@ -827,14 +827,14 @@ fn a_missing_test_executable_or_no_hidden_tests_is_an_error() {
 
     let spec = built.spec("src/main.rs", &[], limits(10, 2));
     let mut progress = Vec::new();
-    assert!(judge_tests(&spec, |step| progress.push(step)).is_err());
+    assert!(judge_tests(&spec, &Stopper::new(), |step| progress.push(step)).is_err());
     assert!(progress.is_empty());
 
     let missing = TestJudgeSpec {
         executable: built.workspace.project().join("無い"),
         ..spec
     };
-    assert!(judge_tests(&missing, |_| {}).is_err());
+    assert!(judge_tests(&missing, &Stopper::new(), |_| {}).is_err());
 }
 
 // ---- 学習者のテストの判定 ----
@@ -1117,7 +1117,10 @@ fn learner_tests_pass_only_when_enough_of_them_pass_and_hidden_and_ignored_tests
     // 通る学習者のテストは、単体テスト 2 件、統合テスト 1 件、ドキュメントテスト 1 件の 4 件。隠しテスト 2 件と、
     // ignored の 2 件は数えないので、4 件以上なら pass になり、5 件以上なら fail になる。
     let mut progress = Vec::new();
-    let enough = judge_tests(&learner_spec(&built, 4, 60), |step| progress.push(step)).unwrap();
+    let enough = judge_tests(&learner_spec(&built, 4, 60), &Stopper::new(), |step| {
+        progress.push(step)
+    })
+    .unwrap();
     assert_eq!(
         statuses(&enough),
         [
@@ -1140,7 +1143,7 @@ fn learner_tests_pass_only_when_enough_of_them_pass_and_hidden_and_ignored_tests
             .collect::<Vec<_>>()
     );
 
-    let too_few = judge_tests(&learner_spec(&built, 5, 60), |_| {}).unwrap();
+    let too_few = judge_tests(&learner_spec(&built, 5, 60), &Stopper::new(), |_| {}).unwrap();
     assert_eq!(
         learner_case(&too_few),
         &CaseResult {
@@ -1182,7 +1185,7 @@ fn failed_learner_tests_of_every_kind_are_named_in_the_detail() {
         "src/lib.rs",
         "use super::*;\n\n#[test]\nfn doubles() {\n    assert_eq!(double(5), 10);\n}\n",
     );
-    let result = judge_tests(&learner_spec(&built, 1, 60), |_| {}).unwrap();
+    let result = judge_tests(&learner_spec(&built, 1, 60), &Stopper::new(), |_| {}).unwrap();
     assert_eq!(
         statuses(&result),
         [
@@ -1220,7 +1223,7 @@ fn a_crashed_learner_test_executable_is_a_runtime_error() {
         "src/lib.rs",
         HIDDEN_TESTS_FOR_LIB,
     );
-    let result = judge_tests(&learner_spec(&built, 1, 60), |_| {}).unwrap();
+    let result = judge_tests(&learner_spec(&built, 1, 60), &Stopper::new(), |_| {}).unwrap();
     let case = learner_case(&result);
     assert_eq!(case.status, CaseStatus::RuntimeError, "{case:?}");
     let Some(CaseDetail::Stderr(stderr)) = &case.detail else {
@@ -1247,7 +1250,7 @@ fn learner_tests_that_do_not_finish_in_time_are_a_timeout() {
         "use super::*;\n\n#[test]\nfn doubles() {\n    assert_eq!(double(5), 10);\n}\n",
     );
     let started = Instant::now();
-    let result = judge_tests(&learner_spec(&built, 1, 3), |_| {}).unwrap();
+    let result = judge_tests(&learner_spec(&built, 1, 3), &Stopper::new(), |_| {}).unwrap();
     let elapsed = started.elapsed();
     assert_eq!(
         statuses(&result),

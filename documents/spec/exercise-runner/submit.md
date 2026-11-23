@@ -79,6 +79,8 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
 | `passed` / `total` | 通過したテストケース数 / 全テストケース数 |
 | `cases[]` | テストケースごとの `name`（表示名）・`status`（`pass` / `fail` / `timeout` / `runtime_error`）・`detail` |
 
+- `compile_error` の提出は、テストケースを 1 件も実行していない。`passed` と `total` は 0、`cases[]` は空にする。
+
 `detail` の内容:
 
 - stdout 方式の `fail`: 入力・期待する出力・実際の出力
