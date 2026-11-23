@@ -20,7 +20,8 @@
     "format": "prettier --write \"{src,tools}/**/*.{ts,tsx,css}\" \"*.config.ts\" && cargo fmt --manifest-path src-tauri/Cargo.toml",
     "format:check": "prettier --check \"{src,tools}/**/*.{ts,tsx,css}\" \"*.config.ts\" && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
     "test": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml --locked",
-    "check": "npm run lint && npm run format:check && npm test"
+    "check": "npm run lint && npm run format:check && npm test",
+    "content:check": "node tools/content-check/main.ts"
   },
   "dependencies": {
     "@tauri-apps/api": "~2.12.5",
