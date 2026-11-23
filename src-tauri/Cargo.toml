@@ -18,6 +18,8 @@ tauri-build = { version = "2", features = [] }
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+# 許可クレートの一覧（runner/allowed-crates.toml）を読む（spec/exercise-runner/project-assembly.md）。
+toml = "1.2.2"
 # `protocol-asset`: 動画の音声をアセットプロトコル（asset://）で読む（spec/architecture/tauri-permissions.md）。
 tauri = { version = "~2.12.7", features = ["protocol-asset"] }
 
