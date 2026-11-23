@@ -8,6 +8,8 @@
 //! - 止めるときは、プロセスグループ全体に SIGKILL を送る。自分で別のプロセスグループやセッションに移った子は止めない。
 //! - 起動したプロセスが終わったら、同じプロセスグループに残ったプロセスを止め、その後に届く出力を
 //!   [`GRACE_AFTER_EXIT`] だけ待って終える。パイプの終わり（EOF）は待たない。
+//! - 出力量の上限は、実行では標準出力と標準エラー出力の合計で、stdout 方式の判定では標準出力だけで数える
+//!   （[`OutputLimit`]）。
 //!
 //! Tauri の実行時に頼らない（判定だけを行うコマンドラインのプログラムからも使う。ADR 0208）。
 
@@ -67,9 +69,23 @@ pub enum StdinMode {
 pub struct Limits {
     /// 制限時間。起動から数え、標準入力を待つ間も含める（ADR 0013）。
     pub time: Duration,
-    /// 標準出力と標準エラー出力の合計の出力量の上限（バイト）。
-    pub output_bytes: usize,
+    /// 出力量の上限と、その数え方。
+    pub output: OutputLimit,
 }
+
+/// 出力量の上限と、その数え方。数える出力が上限を超えたら止めて [`Termination::OutputLimitExceeded`] にし、
+/// 上限までの出力だけを渡す。上限で切れた UTF-8 の文字と、上限を超えた後に読んだ出力は渡さない（ADR 0102）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputLimit {
+    /// 標準出力と標準エラー出力の合計で数える（実行。テスト実行を含む）。値は上限（バイト）。
+    Total(usize),
+    /// 標準出力だけで数える（stdout 方式の判定。spec/exercise-runner/submit.md「stdout 方式」）。値は上限（バイト）。
+    /// 標準エラー出力は上限に数えず、先頭の [`STDERR_HEAD_BYTES`] だけを渡し、それより後は止めずに読んで捨てる。
+    Stdout(usize),
+}
+
+/// [`OutputLimit::Stdout`] で渡す標準エラー出力の先頭の量（バイト）。判定の詳細（`detail`）に使う先頭の部分である。
+pub const STDERR_HEAD_BYTES: usize = 8 * 1024;
 
 /// 起動するプロセス。
 #[derive(Debug, Clone)]
@@ -195,20 +211,28 @@ where
         state: Mutex::new(GroupState::default()),
     });
     let (events, receiver) = mpsc::sync_channel(CHANNEL_CAPACITY);
-    let total = Arc::new(AtomicUsize::new(0));
+    let budgets = match spec.limits.output {
+        OutputLimit::Total(limit) => {
+            let budget = OutputBudget::new(limit, OverLimit::Stop);
+            [budget.clone(), budget]
+        }
+        OutputLimit::Stdout(limit) => [
+            OutputBudget::new(limit, OverLimit::Stop),
+            OutputBudget::new(STDERR_HEAD_BYTES, OverLimit::Discard),
+        ],
+    };
 
     let pipes = [
         (OutputStream::Stdout, child.stdout.take().map(boxed_reader)),
         (OutputStream::Stderr, child.stderr.take().map(boxed_reader)),
     ];
     let mut readers = 0;
-    for (stream, pipe) in pipes {
+    for ((stream, pipe), budget) in pipes.into_iter().zip(budgets) {
         let Some(pipe) = pipe else { continue };
         readers += 1;
         let reader = Reader {
             stream,
-            limit: spec.limits.output_bytes,
-            total: Arc::clone(&total),
+            budget,
             group: Arc::clone(&group),
             events: events.clone(),
         };
@@ -260,7 +284,8 @@ pub struct CollectedOutput {
 }
 
 /// `spec` のプロセスを起動し、終わるまでの標準出力と標準エラー出力を集めて返す。
-/// 出力量の上限で止めたときは、上限までの出力だけが入る。
+/// 出力量の上限で止めたときは、上限までの出力だけが入る。[`OutputLimit::Stdout`] のときは、
+/// 標準エラー出力は先頭の [`STDERR_HEAD_BYTES`] までだけが入る。
 pub fn collect_output(spec: ProcessSpec) -> io::Result<CollectedOutput> {
     let collected = Arc::new(Mutex::new((String::new(), String::new())));
     let process = {
@@ -442,12 +467,38 @@ fn boxed_reader(pipe: impl Read + Send + 'static) -> Box<dyn Read + Send> {
     Box::new(pipe)
 }
 
+/// 上限を超えたときにすること。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum OverLimit {
+    /// プロセスグループを止める。
+    Stop,
+    /// 止めずに、残りを読んで捨てる。読むのをやめると、パイプがいっぱいになってプログラムが書けずに待つため。
+    Discard,
+}
+
+/// 出力量を数える入れ物。数える量を共有する読み取りのスレッドには、同じ `read` を渡す。
+#[derive(Debug, Clone)]
+struct OutputBudget {
+    limit: usize,
+    /// これを共有する読み取りのスレッドが、合計で読んだ量。
+    read: Arc<AtomicUsize>,
+    over_limit: OverLimit,
+}
+
+impl OutputBudget {
+    fn new(limit: usize, over_limit: OverLimit) -> Self {
+        Self {
+            limit,
+            read: Arc::new(AtomicUsize::new(0)),
+            over_limit,
+        }
+    }
+}
+
 /// 標準出力か標準エラー出力を読むスレッド。
 struct Reader {
     stream: OutputStream,
-    limit: usize,
-    /// 標準出力と標準エラー出力の合計で、読んだ量。
-    total: Arc<AtomicUsize>,
+    budget: OutputBudget,
     group: Arc<Group>,
     events: SyncSender<Event>,
 }
@@ -456,6 +507,7 @@ impl Reader {
     fn run(self, mut pipe: Box<dyn Read + Send>) {
         let mut buffer = vec![0; READ_BUFFER_SIZE];
         let mut decoder = Utf8Decoder::default();
+        let budget = &self.budget;
         loop {
             let read = match pipe.read(&mut buffer) {
                 Ok(0) => break,
@@ -463,27 +515,42 @@ impl Reader {
                 Err(error) if error.kind() == io::ErrorKind::Interrupted => continue,
                 Err(_) => break,
             };
-            let before = self.total.fetch_add(read, Ordering::SeqCst);
-            let allowed = self.limit.saturating_sub(before).min(read);
+            let before = budget.read.fetch_add(read, Ordering::SeqCst);
+            let allowed = budget.limit.saturating_sub(before).min(read);
             let text = decoder.decode(&buffer[..allowed]);
             if !text.is_empty() && self.events.send(Event::Output(self.stream, text)).is_err() {
                 return;
             }
             if allowed < read {
                 // 上限を超えた。上限で切れた文字（持ち越した分）と、それより後の出力は渡さない。
-                self.group.request_stop(StopReason::OutputLimit);
+                match budget.over_limit {
+                    OverLimit::Stop => self.group.request_stop(StopReason::OutputLimit),
+                    OverLimit::Discard => discard_rest(&mut pipe, &mut buffer),
+                }
                 let _ = self.events.send(Event::ReaderDone);
                 return;
             }
         }
         // 終わりに、文字の途中で切れたバイトが残っていたら、置換文字にして渡す。上限を超えた後なら捨てる。
-        if self.total.load(Ordering::SeqCst) <= self.limit {
+        if budget.read.load(Ordering::SeqCst) <= budget.limit {
             let text = decoder.finish();
             if !text.is_empty() {
                 let _ = self.events.send(Event::Output(self.stream, text));
             }
         }
         let _ = self.events.send(Event::ReaderDone);
+    }
+}
+
+/// パイプの終わり（EOF）か、読めなくなるまで読んで捨てる。
+fn discard_rest(pipe: &mut Box<dyn Read + Send>, buffer: &mut [u8]) {
+    loop {
+        match pipe.read(buffer) {
+            Ok(0) => return,
+            Ok(_) => {}
+            Err(error) if error.kind() == io::ErrorKind::Interrupted => {}
+            Err(_) => return,
+        }
     }
 }
 
