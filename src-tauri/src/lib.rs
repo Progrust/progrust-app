@@ -96,6 +96,23 @@ mod tests {
         assert_eq!(directives, expected);
     }
 
+    /// アセットプロトコルで読める範囲は、同梱データの音声ファイルだけ（spec/architecture/tauri-permissions.md）。
+    /// Tauri のスコープの照合では、`*` は `/` をまたがない。
+    #[test]
+    fn asset_protocol_scope() {
+        let config = config();
+        assert!(config.app.security.asset_protocol.enable);
+        let raw: serde_json::Value = serde_json::from_str(include_str!("../tauri.conf.json"))
+            .expect("tauri.conf.json を読めない");
+        assert_eq!(
+            raw["app"]["security"]["assetProtocol"],
+            serde_json::json!({
+                "enable": true,
+                "scope": { "allow": ["$RESOURCE/content/lessons/*/video/voice/*.m4a"] }
+            })
+        );
+    }
+
     #[test]
     fn window_size() {
         let config = config();
