@@ -39,6 +39,7 @@ import {
   exerciseReducer,
 } from "./exerciseState";
 import type { ExerciseState } from "./exerciseState";
+import type { SubmitFinished } from "./judgeResult";
 import { useStopOnLeave } from "./useStopOnLeave";
 
 export type ExerciseConsoleProps = {
@@ -52,6 +53,8 @@ export type ExerciseConsoleProps = {
   draftSave: { cancel: () => void; edited: () => void };
   // 演習画面の状態が変わったとき（エディタを読み取り専用にするかを決めるため）。
   onStateChange: (state: ExerciseState) => void;
+  // 提出の run_finished が届いたとき（判定結果のカードと正解のモーダルのため）。押した時刻と、送ったファイルを添える。
+  onSubmitFinished: (finished: SubmitFinished) => void;
 };
 
 // cargo が見つかっているか。環境の状態はまだ読まないので、見つかっているものとする。
@@ -71,6 +74,7 @@ export function ExerciseConsole({
   enqueue,
   draftSave,
   onStateChange,
+  onSubmitFinished,
 }: ExerciseConsoleProps) {
   const [state, dispatch] = useReducer(exerciseReducer, INITIAL_EXERCISE_STATE);
   const [log, setLog] = useState(EMPTY_CONSOLE_LOG);
@@ -82,6 +86,10 @@ export function ExerciseConsole({
   const unlistenRef = useRef<(() => void) | null>(null);
   // 画面を離れた（アンマウントした）か。
   const leftRef = useRef(false);
+  // 動いている提出の、押した時刻と、submit_code に渡したファイル。
+  const submitRef = useRef<{ submittedAt: Date; files: DraftFiles } | null>(
+    null,
+  );
 
   const controls = exerciseControls(state, CARGO_FOUND);
   const requestId = activeRequestId(state);
@@ -130,6 +138,11 @@ export function ExerciseConsole({
         setProgress(null);
         setLog((current) => appendLines(current, finishedLines(event)));
         dispatch({ type: "finished", event });
+        const submitted = submitRef.current;
+        if (event.kind === "submit" && submitted !== null) {
+          submitRef.current = null;
+          onSubmitFinished({ event, ...submitted });
+        }
       },
     };
   };
@@ -140,6 +153,8 @@ export function ExerciseConsole({
     }
     busyRef.current = true;
     const id = crypto.randomUUID();
+    const startedAt = new Date();
+    submitRef.current = null;
     dispatch(
       startKind.kind === "submit"
         ? { type: "started", kind: "submit", requestId: id }
@@ -147,7 +162,7 @@ export function ExerciseConsole({
     );
     setProgress(null);
     setLog((current) =>
-      appendLine(current, "system", separatorLine(startKind, new Date()), {
+      appendLine(current, "system", separatorLine(startKind, startedAt), {
         blankLineBefore: true,
       }),
     );
@@ -178,9 +193,11 @@ export function ExerciseConsole({
         // 送るファイルを読むときに、待っている保存をやめる。この後の編集は、また保存を待つ。
         draftSave.cancel();
         const files = getFiles();
-        return startKind.kind === "submit"
-          ? submitCode(id, lessonId, files)
-          : runCode(id, lessonId, startKind.mode, files);
+        if (startKind.kind === "submit") {
+          submitRef.current = { submittedAt: startedAt, files };
+          return submitCode(id, lessonId, files);
+        }
+        return runCode(id, lessonId, startKind.mode, files);
       });
     } catch (error) {
       if (unlistenRef.current === unlisten) {

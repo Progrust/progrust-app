@@ -15,6 +15,7 @@ import type {
 } from "../commands/run";
 import { ExerciseConsole } from "./ExerciseConsole";
 import type { ExerciseState } from "./exerciseState";
+import type { SubmitFinished } from "./judgeResult";
 
 type Call = { command: string; args: Record<string, unknown> };
 
@@ -48,6 +49,7 @@ function setup(options: Options = {}) {
   );
   const draftSave = { cancel: vi.fn(), edited: vi.fn() };
   const states: ExerciseState[] = [];
+  const submits: SubmitFinished[] = [];
   const view = render(
     <ExerciseConsole
       lessonId="ch04-04"
@@ -55,9 +57,10 @@ function setup(options: Options = {}) {
       enqueue={(task) => task()}
       draftSave={draftSave}
       onStateChange={(state) => states.push(state)}
+      onSubmitFinished={(finished) => submits.push(finished)}
     />,
   );
-  return { calls, draftSave, states, ...view };
+  return { calls, draftSave, states, submits, ...view };
 }
 
 const button = (name: string) => screen.getByRole("button", { name });
@@ -368,6 +371,35 @@ describe("提出", () => {
     expect(output()).toHaveTextContent("3 件のテストがすべて通りました。");
     expect(button("実行")).toBeDisabled();
     expect(button("提出")).toBeDisabled();
+  });
+
+  it("提出の run_finished を、押した時刻と submit_code に渡したファイルと一緒に知らせる。実行の run_finished は知らせない", async () => {
+    const { calls, submits } = setup();
+    await press("実行");
+    await sendFinished(lastRequestId(calls), {
+      kind: "run",
+      run: { mode: "main", status: "success", exit_code: 0 },
+      submit: null,
+    });
+    expect(submits).toEqual([]);
+    const before = new Date();
+    await press("提出");
+    const id = lastRequestId(calls);
+    const submit = {
+      status: "wrong" as const,
+      passed: 0,
+      total: 1,
+      cases: [{ name: "a", status: "fail" as const, detail: "x" }],
+    };
+    await sendFinished(id, { kind: "submit", run: null, submit });
+    expect(submits).toHaveLength(1);
+    expect(submits[0].event).toEqual(
+      finished(id, { kind: "submit", run: null, submit }),
+    );
+    expect(submits[0].files).toEqual(FILES);
+    expect(submits[0].submittedAt.getTime()).toBeGreaterThanOrEqual(
+      before.getTime(),
+    );
   });
 });
 

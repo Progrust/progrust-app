@@ -51,9 +51,22 @@ const chapters: Chapter[] = [
       lesson("ch04-03", "lesson", "借用"),
     ],
   },
+  {
+    id: "ch05",
+    title: "参照と借用",
+    description: "",
+    lessons: [
+      lesson("ch05-01", "video_only", "参照の仕組み"),
+      lesson("ch05-02", "chapter_review", "第5章の復習"),
+    ],
+  },
 ];
 
-function lesson(id: string, kind: "lesson" | "video_only", title: string) {
+function lesson(
+  id: string,
+  kind: "lesson" | "video_only" | "chapter_review",
+  title: string,
+) {
   return {
     id,
     kind,
@@ -105,7 +118,10 @@ function setup(
   } = {},
 ) {
   const kind =
-    options.kind ?? (lessonId === "ch04-01" ? "video_only" : "lesson");
+    options.kind ??
+    (lessonId === "ch04-01" || lessonId === "ch05-01"
+      ? "video_only"
+      : "lesson");
   const calls: Calls = [];
   let lessonFailures = options.failLesson === true ? 1 : 0;
   mockIPC((command, args) => {
@@ -283,6 +299,18 @@ describe("右端の行動", () => {
     expect(navigate).toHaveBeenCalledWith({
       name: "video",
       lessonId: "ch04-02",
+    });
+  });
+
+  it("次のレッスンが章末復習レッスンなら、「次のレッスンへ」で演習画面に移る", async () => {
+    const { navigate } = setup("ch05-01", {
+      progress: { video_watched: true },
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "次のレッスンへ" }));
+    expect(navigate).toHaveBeenCalledWith({
+      name: "exercise",
+      lessonId: "ch05-02",
     });
   });
 });
