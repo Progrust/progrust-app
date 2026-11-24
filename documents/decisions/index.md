@@ -18,7 +18,7 @@
 * [ADR 0167](0167-allow-listening-to-backend-events.md) - フロントエンドに許可する Tauri の権限に、バックエンドが送るイベントの受け取り（listen・unlisten）を加え、それ以外の組み込みの API（フロントエンドからのイベントの送信を含む）は許可せず、本アプリのコマンドは権限の一覧に書かずに呼べるままにする
 * [ADR 0185](0185-name-temp-and-broken-files-and-define-unreadable.md) - 学習者データの一時ファイルを同じディレクトリの `.{ファイル名}.{プロセス ID}.tmp` にし、退避の `{日時}` を現地時刻の `YYYYMMDDTHHMMSS`（重なるときは `-2`…）にし、読み込めない場合を JSON・形・`schema_version` の誤りに限り、読み込みの失敗とファイルが無い場合は退避しない
 * [ADR 0187](0187-stage-bundled-content-in-build-script.md) - 同梱する教材を、ビルドスクリプトがリポジトリの content/ から選んで src-tauri/gen/bundled/content/ に写し、Tauri の bundle.resources はそのディレクトリだけを {app_resources}/content/ に入れる
-* [ADR 0199](0199-put-react-in-one-prebundled-chunk-for-dev.md) - 開発時の起動で Vite が前もってまとめる依存（optimizeDeps）の分け方を指定し、react・react-dom・scheduler を 1 つの塊に入れる
+* [ADR 0199](0199-put-react-in-one-prebundled-chunk-for-dev.md) - 開発時の起動で Vite が前もってまとめる依存（optimizeDeps）の分け方を指定し、react・react-dom・scheduler を 1 つの塊に入れる（ADR 0232 で自動テストの数え方を変えた）
 * [ADR 0200](0200-type-check-lesson-video-code-in-lint.md) - TypeScript の型検査（`npm run lint` の `tsc --noEmit -p tsconfig.json`）の対象に、教材の動画のコード（`content/lessons/*/video/` の `.ts`・`.tsx`）を加える
 * [ADR 0207](0207-schema-version-for-drafts-and-attempt-logs.md) - 下書き（`drafts/*.json`）と試行ログ（`attempts/*.json`）に `schema_version`（いまは 1）を持たせ、読み込めないときは `.broken-{日時}` を付けて退避し、作り直さずに無いものとして扱う
 * [ADR 0209](0209-regenerate-runner-lock-with-npm-script.md) - runner/Cargo.lock は、一時ディレクトリに allcrates/ と同じ形のライブラリを作って cargo generate-lockfile で生成する npm のスクリプト（npm run runner:lock）で作り直し、runner/ の 2 つのファイルは、教材と同じ仕組みで src-tauri/gen/bundled/runner/ に写して同梱する
@@ -26,6 +26,8 @@
 * [ADR 0211](0211-draft-commands-reject-lessons-without-exercise.md) - 演習の無いレッスン（動画のみのレッスン）に `save_draft`・`reset_draft` を呼んだときは、下書きを書かずに `invalid_argument` を返す
 * [ADR 0225](0225-lean-monaco-entry-rust-tokens-and-theme-from-css-variables.md) - Monaco Editor を、既定の入口から全言語の定義・言語機能・LSP を除いた自前の入口で読み込み、Rust の字句の定義に関数・マクロ・型の区分を足して自分で登録し、エディタの配色をデザインシステムの CSS 変数の値から実行時に作り、ショートカットを addCommand ではなく addAction で登録する
 * [ADR 0228](0228-render-content-markdown-with-react-markdown.md) - 教材の Markdown（問題文など）を、react-markdown で HTML の文字列を経ずに React の要素にして表示し、生の HTML は捨て、リンクは文字だけを表示する
+* [ADR 0230](0230-show-monaco-messages-in-japanese.md) - コードエディタの中に出る Monaco Editor の文言（右クリックのメニュー、検索・置換の欄、読み取り専用の知らせなど）を、monaco-editor に同梱された日本語の翻訳で日本語にし、翻訳は Monaco の入口で他の Monaco のモジュールより先に読み込む
+* [ADR 0232](0232-scan-only-app-index-html-for-dev-deps.md) - 開発時の起動で Vite が前もってまとめる依存を探す入口（optimizeDeps.entries）を、アプリの index.html だけにし、React の重複を確かめる自動テストを、塊の数ではなく全部の塊の中の React の本体の数で数えるようにする
 
 # 教材データ形式
 
@@ -218,6 +220,7 @@
 * [ADR 0197](0197-remove-font-import-from-design-system-css.md) - デザインシステムの `bundle.css` から書体を外部から読み込む `@import` の行を消し、ビルドと教材チェックツールの描画で取り除く仕組みをやめ、デザインシステムの CSS が外部から読み込まないことを検査で確かめる
 * [ADR 0204](0204-exercise-back-link-goes-to-list.md) - 演習画面の左上のリンクを、レッスンの演習では「レッスン一覧」、生成問題の演習では「生成問題一覧」にし、それぞれの一覧に移る
 * [ADR 0226](0226-read-console-ansi-into-six-theme-colors.md) - 演習画面のコンソールで、ANSI エスケープのうち SGR の色と太字だけを読み、明るい色と 256 色の 0〜15 番をデザインシステムの 6 色に寄せ、黒・白・それ以外の色・背景は既定の色で表示し、色の状態は実行・提出ごと・出力の種類ごとに持ち、残す文字数はエスケープを除いた表示する文字で数える
+* [ADR 0231](0231-exercise-shortcuts-off-while-modal-is-open.md) - 演習画面のキーボードショートカット（実行・テスト実行・提出・停止）は、モーダル（前回の正解コード、初期コードに戻すの確認、正解のモーダル）を開いている間は効かないようにする
 
 # 非機能要件
 

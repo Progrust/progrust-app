@@ -10,6 +10,11 @@
 // import の指定子に esm/vs/ を付けない（package.json の exports が付ける）。
 // .css は exports に当たらないので、相対パスで読む
 // （documents/verification/issue-21-monaco-in-tauri.md）。
+//
+// エディタの中の文言（右クリックのメニュー、検索の欄など）は、同梱の日本語の翻訳で日本語にする（ADR 0230）。
+// 翻訳は文言の一覧をグローバルな値に入れるだけなので、他の Monaco のモジュールより先に読み込む。
+// 必ず最初の import にする（monaco.test.ts で確かめる）。
+import "monaco-editor/nls/lang/ja";
 import { loader } from "@monaco-editor/react";
 import * as monaco from "monaco-editor/editor/editor.api";
 import EditorWorker from "monaco-editor/editor/editor.worker?worker";
