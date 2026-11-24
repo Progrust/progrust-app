@@ -77,6 +77,13 @@ PROMPT_IMPLEMENT = "/implement-task {number} --loop"
 PROMPT_FIX = "/implement-task {number} --loop fix\n\n{findings}"
 PROMPT_REVIEW = "/review-task {number} --loop"
 PROMPT_TRIAGE = "/triage-issues --loop {numbers}"
+# 実装する側が結果を決まった形で返せなかったときに、引き上げるモデルで同じ会話の続きに送る（ADR 0229）
+PROMPT_REPORT = (
+    "この会話の前の応答は、作業の結果を決まった形（StructuredOutput）で返せずに終わった。"
+    "作業はもう済んでいるので、ファイルを変えずに、この会話でした作業の結果を、決まった形で返して。"
+)
+# claude が、決まった形の結果を書き直しの上限まで返せずに終わったときの subtype
+STRUCTURED_OUTPUT_FAILURE = "error_max_structured_output_retries"
 
 # ループの仕分けが、ユーザーの判断が要るとして `未判断` のまま残した Issue に書くコメントの、1 行目の始まり。
 # このコメントがあり、`未判断` が付いたままの Issue は、ループでは仕分け直さない（ADR 0193）
@@ -205,6 +212,14 @@ RUN_LINK_RE = re.compile(r"/actions/runs/(\d+)")
 
 class InfraError(Exception):
     """仕組みの失敗。タスクにラベルを付けずに、ループを止める。"""
+
+
+class StructuredOutputError(InfraError):
+    """claude が、決まった形の結果を書き直しの上限まで返せずに終わった。作業の会話は session_id で続けられる。"""
+
+    def __init__(self, message: str, session_id: Optional[str]) -> None:
+        super().__init__(message)
+        self.session_id = session_id
 
 
 class Task:
@@ -673,6 +688,11 @@ class Loop:
                 detail = one_line(" ".join(str(error) for error in errors))[:300]
             if data.get("api_error_status"):
                 detail = f"API のエラー {data['api_error_status']}: {detail}"
+            if data.get("subtype") == STRUCTURED_OUTPUT_FAILURE:
+                raise StructuredOutputError(
+                    f"claude（{name}）が、結果を決まった形で返せずに終わりました。{detail}",
+                    data.get("session_id"),
+                )
         if result.returncode != 0:
             raise InfraError(
                 f"claude（{name}）が終了コード {result.returncode} で終わりました。{detail or tail(result.stderr).strip()[:300]}"
@@ -707,8 +727,19 @@ class Loop:
         else:
             prompt = PROMPT_IMPLEMENT.format(number=task.number)
         name = f"task{task.number}-implement{step}"
+        escalate = MODELS[str(task.difficulty)]["escalate"]
         try:
             data = self.call_claude(name, prompt, model, SETTINGS_IMPLEMENT, IMPLEMENT_SCHEMA, IMPLEMENT_TIMEOUT, resume)
+        except StructuredOutputError as error:
+            if not escalate or escalate == model or not error.session_id:
+                raise
+            # 作業は済んでいて、結果の形だけを書き損じた。作業を捨てずに、引き上げるモデルで結果だけを返させる（ADR 0229）
+            self.say(f"  結果を決まった形で返せなかったので、{escalate} で同じ会話の続きから結果を返させる")
+            data = self.call_claude(
+                name + "-report", PROMPT_REPORT, str(escalate), SETTINGS_IMPLEMENT, IMPLEMENT_SCHEMA, IMPLEMENT_TIMEOUT,
+                error.session_id,
+            )
+            data["reported_by"] = str(escalate)
         except InfraError:
             if not resume:
                 raise
@@ -952,7 +983,11 @@ class Loop:
             summary = (result.get("summary") or "").strip() or summary
 
             label = f"{step} 回目（{model}）"
-            checked = self.verify(task, branch, str(models["review"]), step, label, title, summary, fixed, human, history)
+            if data.get("reported_by"):
+                history.append(
+                    f"{label}: 結果を決まった形で返せなかったので、{data['reported_by']} で同じ会話の続きから結果だけを返させた"
+                )
+            checked =self.verify(task, branch, str(models["review"]), step, label, title, summary, fixed, human, history)
             if checked["status"] == "conflict":
                 if allow_restart:
                     return "conflict"
