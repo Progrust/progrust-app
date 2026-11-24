@@ -147,3 +147,8 @@
   flex: 1;
   min-width: 0;
 }
+
+/* コンソールの中の環境の案内（design-system/ui-design/PartsExercise.dc.html のコンソールの案内）。 */
+.exercise-banner {
+  margin: 0 var(--space-10) var(--space-8);
+}

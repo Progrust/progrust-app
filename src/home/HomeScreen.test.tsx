@@ -1,5 +1,6 @@
+import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { expect, it, vi } from "vitest";
+import { afterEach, expect, it, vi } from "vitest";
 import type { Chapter, ChapterList } from "../commands/content";
 import type { ChapterCount, Dashboard } from "../commands/learningRecord";
 import { NavigationContext } from "../router";
@@ -200,4 +201,56 @@ it("次にやるべきレッスンが無いときは、章の色を使わない�
   ).toBeInTheDocument();
   fireEvent.click(within(hero).getByRole("button", { name: "問題を生成する" }));
   expect(navigate).toHaveBeenLastCalledWith({ name: "generated" });
+});
+
+afterEach(() => {
+  clearMocks();
+});
+
+function mockCargo(status: "found" | "not_found" | "version_too_old") {
+  mockIPC(
+    (command) =>
+      command === "get_environment_status"
+        ? {
+            cargo: {
+              status,
+              cargo_path: null,
+              rustc_path: null,
+              rustc_version: status === "version_too_old" ? "1.99.0" : null,
+              required_rustc_version: "1.100.0",
+            },
+            claude: { status: "not_found", path: null, version: null },
+            crates: { status: "preparing", error: null },
+          }
+        : null,
+    { shouldMockEvents: true },
+  );
+}
+
+it("cargo が見つからないときは、rustup の導入手順を案内する（claude と初回準備の案内は出さない）", async () => {
+  mockCargo("not_found");
+  renderHome(dashboard);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Rust ツールチェーンが見つかりません");
+  expect(alert).toHaveTextContent("https://rustup.rs");
+  expect(screen.getAllByRole("alert")).toHaveLength(1);
+  expect(screen.queryByText(/Claude Code/)).toBeNull();
+  expect(screen.queryByText(/外部クレート/)).toBeNull();
+});
+
+it("rustc が古いときは、今のバージョンと必要なバージョンと更新の手順を案内する", async () => {
+  mockCargo("version_too_old");
+  renderHome(dashboard);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("1.99.0");
+  expect(alert).toHaveTextContent("1.100.0");
+  expect(alert).toHaveTextContent("rustup update stable");
+});
+
+it("cargo が見つかっているときは、案内を出さない", async () => {
+  mockCargo("found");
+  renderHome(dashboard);
+  await screen.findByRole("region", { name: "次のレッスン" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(screen.queryByRole("alert")).toBeNull();
 });

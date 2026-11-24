@@ -1,5 +1,6 @@
 // 環境のコマンド（documents/spec/architecture/commands/environment.md）。
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 // cargo・rustc の検出結果。
 export type CargoStatus = {
@@ -38,4 +39,22 @@ export type EnvironmentStatus = {
 // 環境の状態を、バックエンドから受け取る。起動時の検出が終わっていなければ、終わってから返る。
 export function getEnvironmentStatus(): Promise<EnvironmentStatus> {
   return invoke<EnvironmentStatus>("get_environment_status");
+}
+
+// 環境の状態が変わったときのイベント。内容は、変わった後の環境の状態（全体）。
+const ENVIRONMENT_UPDATED = "environment_updated";
+
+// environment_updated の受け取りを始める。受け取りをやめる関数で解決する。
+// やめるのに失敗しても（画面を離れる途中など）、何もしない。
+export async function listenEnvironmentUpdated(
+  handler: (status: EnvironmentStatus) => void,
+): Promise<() => void> {
+  const unlisten = await listen<EnvironmentStatus>(
+    ENVIRONMENT_UPDATED,
+    (event) => handler(event.payload),
+  );
+  return () => {
+    // listen の返す関数は、実際には Promise を返す。
+    Promise.resolve(unlisten()).catch(() => {});
+  };
 }
