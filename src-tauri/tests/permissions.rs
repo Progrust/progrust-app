@@ -1,6 +1,7 @@
 //! フロントエンドに許可する Tauri の権限（spec/architecture/tauri-permissions.md）と、
 //! フロントエンドがファイルシステム・子プロセスを直接扱えないこと
-//! （spec/architecture/responsibilities.md）を確かめる。
+//! （spec/architecture/responsibilities.md）と、フロントエンドから開ける外部の URL が
+//! 導入手順の URL だけであること（spec/architecture/external-tools.md「見つからない場合」）を確かめる。
 
 mod common;
 
@@ -9,12 +10,22 @@ use std::{fs, path::Path};
 use common::{LOCAL_URL, app, invoke};
 use serde_json::{Value, json};
 
-/// フロントエンドに許可してよい権限。本アプリのコマンドは、権限を書かなくても呼べる。
+/// フロントエンドに許可してよい、スコープの無い権限。本アプリのコマンドは、権限を書かなくても呼べる。
 const ALLOWED_PERMISSIONS: [&str; 2] = [
     // バックエンドが送るイベントの受け取り（`listen` と、受け取りをやめる `unlisten`）。
     "core:event:allow-listen",
     "core:event:allow-unlisten",
 ];
+
+/// 外部 URL を OS の既定ブラウザで開く権限。開ける URL を、スコープで絞る。
+const OPEN_URL_PERMISSION: &str = "opener:allow-open-url";
+
+/// フロントエンドから開ける外部の URL。導入手順の URL だけ
+/// （spec/architecture/external-tools.md「見つからない場合」、ADR 0240）。
+const OPENABLE_URLS: [&str; 2] = ["https://rustup.rs", "https://code.claude.com/docs/ja/setup"];
+
+/// 外部 URL を開くコマンド。
+const OPEN_URL_COMMAND: &str = "plugin:opener|open_url";
 
 /// フロントエンドに公開しないプラグイン。
 const FORBIDDEN_PLUGINS: [&str; 2] = ["fs", "shell"];
@@ -57,22 +68,30 @@ fn capabilities_allow_only_listed_permissions() {
         None,
         "外部のページに権限を許可しない"
     );
-    let permissions: Vec<&str> = capability["permissions"]
+    let permissions = capability["permissions"]
         .as_array()
-        .expect("permissions は配列")
-        .iter()
-        .map(|permission| {
-            permission
-                .as_str()
-                .expect("permissions には識別子だけを書く（スコープ付きの権限を書かない）")
-        })
-        .collect();
-    for permission in &permissions {
-        assert!(
-            ALLOWED_PERMISSIONS.contains(permission),
-            "許可していない権限がある: {permission}"
-        );
+        .expect("permissions は配列");
+    let mut scoped = Vec::new();
+    for permission in permissions {
+        match permission.as_str() {
+            Some(identifier) => assert!(
+                ALLOWED_PERMISSIONS.contains(&identifier),
+                "許可していない権限がある: {identifier}"
+            ),
+            None => scoped.push(permission),
+        }
     }
+    // スコープ付きの権限は、外部 URL を開く権限の 1 つだけ。開ける URL は導入手順の 2 つだけで、
+    // 開くアプリ（`app`）は指定させない（既定ブラウザだけ）。ファイルやパスを開く権限は無い。
+    let allow: Vec<Value> = OPENABLE_URLS
+        .iter()
+        .map(|url| json!({ "url": url }))
+        .collect();
+    assert_eq!(
+        scoped,
+        [&json!({ "identifier": OPEN_URL_PERMISSION, "allow": allow })],
+        "スコープ付きの権限は、導入手順の URL を開く権限だけにする"
+    );
 }
 
 #[test]
@@ -105,12 +124,17 @@ fn forbidden_plugins_are_not_dependencies() {
 }
 
 /// Tauri の組み込みの API（`core:` の権限で許可するもの）のコマンドの一覧。
-/// `tauri-build` がビルドのときに書き出す `gen/schemas/acl-manifests.json` から読む。
 fn core_commands() -> Vec<String> {
+    plugin_commands(|key| key.strip_prefix("core:"))
+}
+
+/// 権限の定義のうち、`plugin` が名前を返すもののコマンドの一覧（`plugin:{名前}|{コマンド}` の形）。
+/// `tauri-build` がビルドのときに書き出す `gen/schemas/acl-manifests.json` から読む。
+fn plugin_commands(plugin: impl Fn(&str) -> Option<&str>) -> Vec<String> {
     let manifests = read_json(&manifest_dir().join("gen/schemas/acl-manifests.json"));
     let mut commands = Vec::new();
     for (key, manifest) in manifests.as_object().unwrap() {
-        let Some(plugin) = key.strip_prefix("core:") else {
+        let Some(plugin) = plugin(key) else {
             continue;
         };
         for permission in manifest["permissions"].as_object().unwrap().values() {
@@ -179,6 +203,98 @@ fn frontend_cannot_call_other_core_commands() {
     let (_app, window) = app();
     for command in commands {
         if command == "plugin:event|listen" || command == "plugin:event|unlisten" {
+            continue;
+        }
+        let response = invoke(&window, LOCAL_URL, &command, json!({}));
+        assert!(
+            response.as_ref().is_err_and(is_acl_rejection),
+            "{command} を呼べてしまう: {response:?}"
+        );
+    }
+}
+
+fn is_forbidden_url(error: &Value) -> bool {
+    error
+        .as_str()
+        .is_some_and(|message| message.starts_with("Not allowed to open url"))
+}
+
+/// 導入手順の 2 つのほかの URL は、開けない。スコープの照合は URL の文字列をそのまま比べるので、
+/// 末尾の `/`、`http`、別のパス、別のホストも、開けない。
+///
+/// 開ける URL は、ここでは呼ばない（モックの実行環境でも、本当に既定ブラウザで開く）。開ける URL は、
+/// 権限の設定（`capabilities_allow_only_listed_permissions`）で確かめる。
+#[test]
+fn frontend_can_open_only_install_guide_urls() {
+    let (_app, window) = app();
+    for url in [
+        "https://example.com",
+        "https://rustup.rs/",
+        "http://rustup.rs",
+        "https://rustup.rs.example.com",
+        "https://rustup.rs/../example",
+        "https://code.claude.com/docs/ja/setup/",
+        "https://code.claude.com/docs/en/setup",
+        "https://code.claude.com/docs/ja/setup?x=1",
+        "file:///etc/passwd",
+        "/etc/passwd",
+    ] {
+        let response = invoke(&window, LOCAL_URL, OPEN_URL_COMMAND, json!({ "url": url }));
+        assert!(
+            response.as_ref().is_err_and(is_forbidden_url),
+            "{url} を開けてしまう: {response:?}"
+        );
+    }
+}
+
+/// 導入手順の URL でも、既定ブラウザのほかのアプリでは開けない。
+#[test]
+fn frontend_cannot_choose_app_to_open_urls() {
+    let (_app, window) = app();
+    for url in OPENABLE_URLS {
+        let response = invoke(
+            &window,
+            LOCAL_URL,
+            OPEN_URL_COMMAND,
+            // 誤って通っても何も起動しないように、無いアプリの名前を渡す。
+            json!({ "url": url, "with": "progrust-no-such-app" }),
+        );
+        assert!(
+            response.as_ref().is_err_and(is_forbidden_url),
+            "{url} をほかのアプリで開けてしまう: {response:?}"
+        );
+    }
+}
+
+/// 外部のページからは、URL を開くコマンドを呼べない。スコープで拒否される URL を渡し、権限で
+/// 拒否されること（スコープの照合まで進まないこと）を確かめる。
+#[test]
+fn remote_pages_cannot_open_urls() {
+    let (_app, window) = app();
+    let response = invoke(
+        &window,
+        "https://example.com",
+        OPEN_URL_COMMAND,
+        json!({ "url": "https://example.com" }),
+    );
+    assert!(
+        response.as_ref().is_err_and(is_acl_rejection),
+        "外部のページから呼べてしまう: {response:?}"
+    );
+}
+
+/// opener のプラグインのコマンドは、URL を開くほかは、どれも呼べない（ファイルやパスを開く、
+/// フォルダに表示するなど）。
+#[test]
+fn frontend_cannot_call_other_opener_commands() {
+    let commands = plugin_commands(|key| (key == "opener").then_some("opener"));
+    assert!(
+        commands.contains(&"plugin:opener|open_path".to_string()),
+        "opener のコマンドの一覧を読めていない: {commands:?}"
+    );
+    let (_app, window) = app();
+    for command in commands {
+        if command == OPEN_URL_COMMAND {
             continue;
         }
         let response = invoke(&window, LOCAL_URL, &command, json!({}));

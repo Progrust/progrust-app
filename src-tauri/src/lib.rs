@@ -21,27 +21,31 @@ use storage::AppDataDir;
 
 /// コマンドのハンドラを載せたビルダーを返す。`run` と、モックの実行環境のテストで使う。
 pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
-    builder.invoke_handler(tauri::generate_handler![
-        commands::content::list_chapters,
-        commands::content::get_lesson,
-        commands::environment::get_environment_status,
-        commands::learning_record::get_dashboard,
-        commands::progress::end_session,
-        commands::progress::get_passed_code,
-        commands::progress::get_progress,
-        commands::progress::open_lesson,
-        commands::progress::reset_draft,
-        commands::progress::save_draft,
-        commands::progress::save_video_position,
-        commands::run::close_stdin,
-        commands::run::run_code,
-        commands::run::send_stdin,
-        commands::run::stop_run,
-        commands::run::submit_code,
-        commands::settings::get_app_version,
-        commands::settings::get_settings,
-        commands::settings::update_settings,
-    ])
+    builder
+        // 導入手順の URL を OS の既定ブラウザで開く。開ける URL は capabilities/ の権限で絞る
+        // （spec/architecture/tauri-permissions.md）。
+        .plugin(tauri_plugin_opener::init())
+        .invoke_handler(tauri::generate_handler![
+            commands::content::list_chapters,
+            commands::content::get_lesson,
+            commands::environment::get_environment_status,
+            commands::learning_record::get_dashboard,
+            commands::progress::end_session,
+            commands::progress::get_passed_code,
+            commands::progress::get_progress,
+            commands::progress::open_lesson,
+            commands::progress::reset_draft,
+            commands::progress::save_draft,
+            commands::progress::save_video_position,
+            commands::run::close_stdin,
+            commands::run::run_code,
+            commands::run::send_stdin,
+            commands::run::stop_run,
+            commands::run::submit_code,
+            commands::settings::get_app_version,
+            commands::settings::get_settings,
+            commands::settings::update_settings,
+        ])
 }
 
 /// `tauri.conf.json` と `capabilities/` から作ったアプリのコンテキスト。

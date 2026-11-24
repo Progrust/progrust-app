@@ -1,5 +1,11 @@
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { Chapter, ChapterList } from "../commands/content";
 import type { ChapterCount, Dashboard } from "../commands/learningRecord";
@@ -207,10 +213,15 @@ afterEach(() => {
   clearMocks();
 });
 
+// 導入手順を開いたときの open_url の引数を返す。
 function mockCargo(status: "found" | "not_found" | "version_too_old") {
+  const opened: unknown[] = [];
   mockIPC(
-    (command) =>
-      command === "get_environment_status"
+    (command, args) => {
+      if (command === "plugin:opener|open_url") {
+        opened.push(args);
+      }
+      return command === "get_environment_status"
         ? {
             cargo: {
               status,
@@ -222,17 +233,24 @@ function mockCargo(status: "found" | "not_found" | "version_too_old") {
             claude: { status: "not_found", path: null, version: null },
             crates: { status: "preparing", error: null },
           }
-        : null,
+        : null;
+    },
     { shouldMockEvents: true },
   );
+  return opened;
 }
 
 it("cargo が見つからないときは、rustup の導入手順を案内する（claude と初回準備の案内は出さない）", async () => {
-  mockCargo("not_found");
+  const opened = mockCargo("not_found");
   renderHome(dashboard);
   const alert = await screen.findByRole("alert");
   expect(alert).toHaveTextContent("Rust ツールチェーンが見つかりません");
-  expect(alert).toHaveTextContent("https://rustup.rs");
+  fireEvent.click(
+    within(alert).getByRole("button", { name: "rustup の導入手順" }),
+  );
+  await waitFor(() => {
+    expect(opened).toEqual([{ url: "https://rustup.rs", with: undefined }]);
+  });
   expect(screen.getAllByRole("alert")).toHaveLength(1);
   expect(screen.queryByText(/Claude Code/)).toBeNull();
   expect(screen.queryByText(/外部クレート/)).toBeNull();
