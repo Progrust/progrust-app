@@ -845,6 +845,11 @@ class Loop:
         raw = self.gh_json(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--limit", "1"])
         return int(raw[0]["number"]) if raw else None
 
+    def remote_head(self, branch: str) -> Optional[str]:
+        """origin のブランチの先頭のコミット。ブランチが無ければ None。"""
+        out = self.git(["ls-remote", REMOTE, f"refs/heads/{branch}"]).stdout.split()
+        return out[0] if out else None
+
     def publish(self, branch: str, title: str, body: str) -> int:
         """push して、PR を作る（既にあれば本文を直す）。PR の番号を返す。"""
         push = self.git(["push", "--force", REMOTE, f"{branch}:{branch}"], check=False)
@@ -1077,6 +1082,13 @@ class Loop:
                 [f"## 保護するパスの変更が残っている\n\n{listed}"],
                 notes,
             )
+
+        # 前の回に push したコミットと同じままだと、push しても CI が走らず、前の回の CI の結果を読んでしまう。
+        # 空のコミットを足して、この回の CI を走らせる。
+        if self.remote_head(branch) == self.git(["rev-parse", "HEAD"]).stdout.strip():
+            self.git(["commit", "--quiet", "--allow-empty", "-m", f"CI をやり直す（#{task.number}）\n\n{CO_AUTHOR}"])
+            history.append(f"{label}: 前の回に push したコミットから変わらなかったので、空のコミットを足して CI をやり直した")
+            self.say("  前の回から変わらなかったので、空のコミットで CI をやり直す")
 
         body = self.pr_body(task, summary, fixed, human, notes, history + [f"{label}: 機械のチェックとレビューを通った"])
         pr = self.publish(branch, title, body)

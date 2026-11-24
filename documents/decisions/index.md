@@ -275,6 +275,7 @@
 * [ADR 0194](0194-retry-loop-triage-once-after-permission-denials.md) - 実装のループで、Issue の仕分けの会話に権限で拒否された操作があったときは、その回の Issue を仕分け済みにせず、同じ実行の次のタスクの切れ目で、もう一度だけ仕分ける
 * [ADR 0195](0195-loop-checks-node-and-npm-series-before-start.md) - 実装のループは、始めるときに、始めた端末で見つかる node と npm の版が `package.json` の `engines` の系列に合うかを確かめ、合わないときは始めない
 * [ADR 0229](0229-escalate-report-when-loop-claude-fails-structured-output.md) - 実装のループで、実装する側の claude が作業の後に結果を決まった形で返せずに終わったときは、止まらずに、作業を捨てないで、引き上げるモデルに同じ会話の続きから結果だけを返させる
+* [ADR 0243](0243-rerun-ci-with-empty-commit-when-fix-changes-nothing.md) - 実装のループで、直しの回に前の回に push したコミットから変わらなかったときは、空のコミットを足して push し、CI をやり直す
 
 # 置き換え済み・廃止
 

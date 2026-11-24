@@ -1044,6 +1044,35 @@ class FlowTest(LoopTestCase):
         self.assertEqual(self.state["prs"]["100"]["state"], "MERGED")
         self.assertEqual(self.main_file("a.txt"), "A2\n")
         self.assertIn("1 回目（haiku）: CI で失敗した", self.state["prs"]["100"]["body"])
+        self.assertNotIn("空のコミット", self.state["prs"]["100"]["body"])
+
+    def test_ci_failure_with_unchanged_fix_reruns_ci_with_empty_commit(self) -> None:
+        # 直す側がタスクと関係しない失敗と見て変えなかったときも、前の回の CI の結果を使わずに、CI をやり直す
+        self.task(1)
+        self.state["checks_queue"] = [FAILING]
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A\n"}},
+            {"structured_output": done(summary="タスクと関係しない失敗なので変えなかった。"), "files": {"a.txt": "A\n"}},
+        ]
+        self.script["review"] = [review_pass(), review_pass()]
+        heads: List[str] = []
+        publish = self.mod.Loop.publish
+
+        def record_head(loop: Any, branch: str, title: str, body: str) -> int:
+            number = publish(loop, branch, title, body)
+            heads.append(loop.remote_head(branch))
+            return number
+
+        self.mod.Loop.publish = record_head
+        self.addCleanup(setattr, self.mod.Loop, "publish", publish)
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual(len(heads), 2)
+        self.assertNotEqual(heads[0], heads[1])
+        self.assertEqual(len(self.gh_calls("pr checks")), 2)
+        self.assertEqual(self.state["prs"]["100"]["state"], "MERGED")
+        self.assertEqual(self.main_file("a.txt"), "A\n")
+        self.assertIn("2 回目（haiku）: 前の回に push したコミットから変わらなかったので、空のコミットを足して CI をやり直した", self.state["prs"]["100"]["body"])
 
     def test_ci_failure_until_stuck_leaves_pull_request_open(self) -> None:
         self.task(1, difficulty="大")
@@ -1054,6 +1083,9 @@ class FlowTest(LoopTestCase):
         self.assertEqual(code, 0, self.output)
         self.assertIn("行き詰まり", self.issue(1)["labels"])
         self.assertIn("PR #100 が開いたままになっている", self.issue(1)["comments"][0])
+        # 直しで変わらなかった回も、前の回の結果を使わずに、空のコミットで CI をやり直してから失敗としている
+        self.assertIn("2 回目（opus）: 前の回に push したコミットから変わらなかったので、空のコミットを足して CI をやり直した", self.issue(1)["comments"][0])
+        self.assertIn("3 回目（opus）: 前の回に push したコミットから変わらなかったので、空のコミットを足して CI をやり直した", self.issue(1)["comments"][0])
         self.assertEqual(self.state["prs"]["100"]["state"], "OPEN")
         self.assertEqual(self.gh_calls("pr merge"), [])
         self.assertIsNone(self.main_file("a.txt"))
