@@ -667,6 +667,10 @@ class Loop:
         detail = ""
         if isinstance(data, dict):
             detail = one_line(str(data.get("result") or ""))[:300]
+            errors = data.get("errors")
+            if not detail and isinstance(errors, list) and errors:
+                # 決まった形の結果を返せなかったときなどは、result が無く、理由は errors にだけある
+                detail = one_line(" ".join(str(error) for error in errors))[:300]
             if data.get("api_error_status"):
                 detail = f"API のエラー {data['api_error_status']}: {detail}"
         if result.returncode != 0:
