@@ -6,6 +6,7 @@ import {
   fireEvent,
   render,
   screen,
+  waitFor,
   within,
 } from "@testing-library/react";
 import { useEffect, useRef } from "react";
@@ -1017,6 +1018,10 @@ describe("判定結果と正解", () => {
       fireEvent.change(await editor(), { target: { value: "fn main() {}" } });
       // 提出中に編集すると、保存を待つ状態になる。正解したら保存をやめ、終えた後に下書きを作り直さない。
       await press("提出");
+      // 提出のファイルを読むのは、提出のコマンドを送る直前である。その後に編集するように、送られたのを待つ。
+      await waitFor(() =>
+        expect(commands(calls, "submit_code")).toHaveLength(1),
+      );
       fireEvent.change(await editor(), {
         target: { value: "// 提出中の編集" },
       });
