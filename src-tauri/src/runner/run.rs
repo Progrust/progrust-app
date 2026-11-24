@@ -268,6 +268,8 @@ pub fn execute(job: RunJob, events: Arc<dyn RunEvents>) {
     };
 
     // 要求を外してから送る。受け取った画面が、すぐに次の実行を始められるように。
+    // 試行ログへの追記は、要求を外す前に済ませる。`end_session` は、要求が外れるのを待って、止めた実行の追記が
+    // 終わったとみなす（Runs::stop_lesson_run_and_wait）。
     job.runs.release(&job.active);
     if !job.active.stopped_for_app_exit() {
         events.finished(finished);

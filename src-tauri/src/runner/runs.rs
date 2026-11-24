@@ -8,8 +8,10 @@
 //!   標準入力の書き込みと閉じる操作、学習者が入力した標準入力の記録を持つ。
 //! - 止める操作が、止める相手（ビルドの cargo、プログラム）を起動する前に来ても失わないように、止める指示を覚えておき、
 //!   相手を起動して登録したときに、すぐに止める。
+//! - [`Runs::stop_lesson_run_and_wait`] は、レッスンの実行・テスト実行を止め、要求が外れるまで待つ（`end_session`）。
+//!   実行・テスト実行のタスクは、試行ログに追記してから要求を外すので、外れたときには追記が終わっている。
 
-use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use super::build::{BUILD_TIME_LIMIT, BuildHandle};
@@ -65,6 +67,8 @@ pub enum StopCause {
 #[derive(Clone)]
 pub struct Runs {
     active: Arc<Mutex<Option<Arc<ActiveRun>>>>,
+    /// 要求を外したことを、外れるのを待っている側に知らせる。
+    released: Arc<Condvar>,
     limits: RunLimits,
 }
 
@@ -79,6 +83,7 @@ impl Runs {
     pub fn new(limits: RunLimits) -> Self {
         Self {
             active: Arc::new(Mutex::new(None)),
+            released: Arc::new(Condvar::new()),
             limits,
         }
     }
@@ -129,6 +134,7 @@ impl Runs {
             .is_some_and(|current| Arc::ptr_eq(current, run))
         {
             *active = None;
+            self.released.notify_all();
         }
     }
 
@@ -150,6 +156,31 @@ impl Runs {
         if let Some(run) = self.find(request_id) {
             run.stop(StopCause::User);
         }
+    }
+
+    /// レッスン `lesson_id` の実行・テスト実行が動いていれば止め（停止ボタンと同じ）、その要求が外れるまで待つ
+    /// （`end_session`。spec/architecture/commands/progress.md「end_session」）。実行・テスト実行のタスクは、試行ログに
+    /// 追記してから要求を外すので、返ったときには、止めた実行の追記が終わっている。止める指示の後に外れるのを待つので、
+    /// 先に `stop_run` で止めていても同じである。
+    ///
+    /// 動いていないとき、ほかのレッスンの要求と、提出（止めた提出は追記しない）のときは、止めずにすぐ返る。
+    pub fn stop_lesson_run_and_wait(&self, lesson_id: &str) {
+        let Some(run) = self
+            .current()
+            .filter(|run| run.lesson_id == lesson_id && run.kind == RunKind::Run)
+        else {
+            return;
+        };
+        run.stop(StopCause::User);
+        let active = lock(&self.active);
+        let _released = self
+            .released
+            .wait_while(active, |active| {
+                active
+                    .as_ref()
+                    .is_some_and(|current| Arc::ptr_eq(current, &run))
+            })
+            .unwrap_or_else(PoisonError::into_inner);
     }
 
     /// アプリを終了するときに、動いている要求を止める。止めた要求は、`run_finished` を送らず、記録しない。

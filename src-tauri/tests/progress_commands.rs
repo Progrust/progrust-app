@@ -9,6 +9,7 @@ use std::path::Path;
 use common::{LOCAL_URL, app, invoke};
 use progrust_lib::attempts::{BuildOutput, SessionKind, SubmitRecord, SubmitStatus};
 use progrust_lib::content::ContentDir;
+use progrust_lib::runner::runs::Runs;
 use progrust_lib::storage::AppDataDir;
 use serde_json::{Value, json};
 use tauri::test::MockRuntime;
@@ -48,6 +49,7 @@ fn app_with(content: &Path, data: &Path) -> (App<MockRuntime>, WebviewWindow<Moc
     let (app, window) = app();
     app.manage(ContentDir::new(content));
     app.manage(AppDataDir::new(data));
+    app.manage(Runs::default());
     (app, window)
 }
 

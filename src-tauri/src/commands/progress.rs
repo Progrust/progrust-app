@@ -4,7 +4,7 @@ use std::collections::BTreeMap;
 
 use serde::Serialize;
 use serde_json::Value;
-use tauri::State;
+use tauri::{AppHandle, Manager, Runtime, State};
 
 use super::error::{CommandError, ErrorCode};
 use crate::attempts::SessionKind;
@@ -12,6 +12,7 @@ use crate::completion::PassedCode;
 use crate::content::{ContentDir, has_exercise};
 use crate::drafts::Draft;
 use crate::progress::{LessonProgress, ProgressSummary, now_string};
+use crate::runner::runs::Runs;
 use crate::storage::AppDataDir;
 
 /// 進捗と、推奨レッスンを返す。`progress.json` が無いときは、何も進んでいない状態として扱う。
@@ -71,18 +72,29 @@ pub fn open_lesson(
 }
 
 /// 画面の操作（「レッスン一覧へ」「次のレッスンへ」、解説表示中の演習画面から別の画面へ移った）で、試行セッションを終える。
-/// そのレッスンの未完了のセッションが正解済みのときだけ、下書きを消し、`ended_at` を書く。それ以外のときは何もしない。
+/// そのレッスンの実行・テスト実行が動いていれば、止めて、`stopped` の `run` イベントを試行ログに追記し終えるまで待つ。
+/// その後、そのレッスンの未完了のセッションが正解済みのときだけ、下書きを消し、`ended_at` を書く。それ以外のときは何もしない。
+///
+/// 実行が止まって追記し終えるのを待つので、async のコマンドにして、別のスレッドで行う（画面のスレッドを止めない）。
 #[tauri::command(rename_all = "snake_case")]
-pub fn end_session(
-    data_dir: State<'_, AppDataDir>,
-    content: State<'_, ContentDir>,
+pub async fn end_session<R: Runtime>(
+    app: AppHandle<R>,
     lesson_id: String,
 ) -> Result<(), CommandError> {
-    content.lesson_kind(&lesson_id)?;
-    // 仕様では、ここで、そのレッスンの動いている実行・テスト実行を止め、`stopped` の `run` イベントを追記し終えてから
-    // 終える（spec/architecture/commands/progress.md「end_session」）。その止める処理は、まだ作っていない。
-    data_dir.end_passed_session(&lesson_id)?;
-    Ok(())
+    tauri::async_runtime::spawn_blocking(move || {
+        app.state::<ContentDir>().lesson_kind(&lesson_id)?;
+        // フロントエンドが先に stop_run を呼んでいても、止めた実行は、終える前のセッションに追記される
+        // （spec/architecture/commands/progress.md「end_session」）。
+        app.state::<Runs>().stop_lesson_run_and_wait(&lesson_id);
+        app.state::<AppDataDir>().end_passed_session(&lesson_id)?;
+        Ok(())
+    })
+    .await
+    .map_err(|error| CommandError {
+        code: ErrorCode::Internal,
+        message: "試行セッションを終えられませんでした。".into(),
+        detail: Some(error.to_string()),
+    })?
 }
 
 /// 前回の正解コード（`last_passed_session_id` の試行ログの、正解した `submit` イベントの日時とファイル）を返す。
