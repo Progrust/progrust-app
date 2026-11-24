@@ -1,4 +1,5 @@
 pub mod attempts;
+pub mod claude;
 pub mod commands;
 pub mod completion;
 pub mod content;
@@ -13,7 +14,7 @@ pub mod storage;
 use tauri::{AppHandle, Builder, Context, Manager, Runtime};
 
 use content::ContentDir;
-use environment::CargoSearch;
+use environment::ToolSearch;
 use runner::RunnerDir;
 use runner::runs::Runs;
 use storage::AppDataDir;
@@ -54,8 +55,9 @@ pub fn run() {
         // `app_builder` には入れず、テストでは一時ディレクトリの `AppDataDir` を `manage` で置けるようにする。
         .setup(|app| {
             let data_dir = AppDataDir::from_app(app.handle())?;
-            // 設定の `tool_paths.cargo`。設定を読めないときは、設定のパスを使わずに探す。
+            // 設定の `tool_paths`。設定を読めないときは、設定のパスを使わずに探す。
             let configured_cargo = environment::configured_cargo(&data_dir);
+            let configured_claude = environment::configured_claude(&data_dir);
             // 正解した後に終わっていないセッション（前回、異常終了したときのもの）を終える。画面がレッスンを開く前に
             // 終えるように、ここで待って行う。終えられなくても、起動は止めない。
             report_session_errors("起動時", data_dir.end_all_passed_sessions());
@@ -66,8 +68,11 @@ pub fn run() {
             app.manage(RunnerDir::from_app(app.handle())?);
             // 実行・提出を同時に 1 つだけ行う状態。作業領域は `{app_data_dir}/workspace/`（実行のコマンドが使う）。
             app.manage(Runs::default());
-            // cargo・rustc を、画面の表示を待たせずに別のスレッドで探す。
-            environment::start_detection(app.handle(), CargoSearch::from_process(configured_cargo));
+            // cargo・rustc と claude を、画面の表示を待たせずに別のスレッドで探す。
+            environment::start_detection(
+                app.handle(),
+                ToolSearch::from_process(configured_cargo, configured_claude),
+            );
             Ok(())
         })
         .build(app_context())

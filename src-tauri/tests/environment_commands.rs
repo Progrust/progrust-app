@@ -1,11 +1,15 @@
-//! `cargo`・`rustc` の検出（spec/architecture/external-tools.md「検出」）と、環境のコマンドとイベント
-//! （spec/architecture/commands/environment.md）を、偽の `cargo`・`rustc` とモックの実行環境で確かめる。
+//! `cargo`・`rustc` と `claude` の検出（spec/architecture/external-tools.md「検出」）と、環境のコマンドと
+//! イベント（spec/architecture/commands/environment.md）を、偽の `cargo`・`rustc`・`claude` とモックの
+//! 実行環境で確かめる。
 
 mod common;
+#[path = "fake_tools/claude.rs"]
+mod fake_claude;
 #[path = "fake_tools/rust.rs"]
 mod fake_rust;
 
 use std::{
+    collections::BTreeMap,
     fs,
     os::unix::fs::PermissionsExt,
     path::{Path, PathBuf},
@@ -15,11 +19,14 @@ use std::{
 };
 
 use common::{LOCAL_URL, app, invoke};
+use fake_claude::FakeClaude;
 use fake_rust::FakeRust;
+use progrust_lib::claude::{ClaudeEnv, ENV_VAR_NAMES};
 use progrust_lib::commands::error::ErrorCode;
 use progrust_lib::environment::{
-    CargoSearch, ENVIRONMENT_UPDATED, Environment, REQUIRED_RUSTC_VERSION, RustTools,
-    configured_cargo, start_detection,
+    CargoSearch, ClaudeSearch, ClaudeTool, DetectedTools, ENVIRONMENT_UPDATED, Environment,
+    REQUIRED_RUSTC_VERSION, RustTools, ToolSearch, VERSION_TIMEOUT, configured_cargo,
+    configured_claude, start_detection,
 };
 use progrust_lib::settings::Settings;
 use progrust_lib::storage::AppDataDir;
@@ -46,7 +53,11 @@ fn search(configured: Option<&Path>, path: &[&Path], home: &Path) -> CargoSearch
 
 /// 検出の結果を、`get_environment_status` の `cargo` の形にする。
 fn cargo_status(search: &CargoSearch) -> Value {
-    let status = Environment::detected(search.detect()).status();
+    let status = Environment::detected(DetectedTools {
+        cargo: search.detect(),
+        claude: None,
+    })
+    .status();
     serde_json::to_value(status.cargo).unwrap()
 }
 
@@ -333,6 +344,14 @@ fn files_that_are_not_executable_are_skipped() {
 
 // ---- 実行・提出のコマンドが使う取り出し口 ----
 
+/// `cargo` だけが検出の結果にある（`claude` は見つからない）状態。
+fn cargo_only(cargo: Option<RustTools>) -> DetectedTools {
+    DetectedTools {
+        cargo,
+        claude: None,
+    }
+}
+
 fn tools(fake: &FakeRust, version: &str) -> RustTools {
     RustTools {
         cargo: fake.cargo().to_path_buf(),
@@ -345,7 +364,7 @@ fn tools(fake: &FakeRust, version: &str) -> RustTools {
 fn rust_tools_returns_paths_when_found_or_too_old() {
     for version in ["1.100.0", "1.99.0"] {
         let fake = FakeRust::new(version);
-        let environment = Environment::detected(Some(tools(&fake, version)));
+        let environment = Environment::detected(cargo_only(Some(tools(&fake, version))));
         let found = environment.rust_tools().unwrap();
         assert_eq!(found.cargo, fake.cargo());
         assert_eq!(found.rustc, fake.rustc());
@@ -355,7 +374,9 @@ fn rust_tools_returns_paths_when_found_or_too_old() {
 
 #[test]
 fn rust_tools_is_cargo_unavailable_when_not_found() {
-    let error = Environment::detected(None).rust_tools().unwrap_err();
+    let error = Environment::detected(DetectedTools::default())
+        .rust_tools()
+        .unwrap_err();
     assert_eq!(error.code, ErrorCode::CargoUnavailable);
     assert!(!error.message.is_empty());
 }
@@ -369,7 +390,7 @@ fn rust_tools_waits_for_detection() {
     let handle = thread::spawn(move || sender.send(reader.rust_tools()).unwrap());
     // 検出が終わるまでは返らない。
     assert!(receiver.recv_timeout(Duration::from_millis(300)).is_err());
-    environment.finish_detection(Some(tools(&fake, "1.100.0")));
+    environment.finish_detection(cargo_only(Some(tools(&fake, "1.100.0"))));
     let found = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
     assert_eq!(found.unwrap().cargo, fake.cargo());
     handle.join().unwrap();
@@ -377,11 +398,19 @@ fn rust_tools_waits_for_detection() {
 
 // ---- get_environment_status と environment_updated ----
 
+/// `cargo` だけを探し、`claude` はどこも探さない。
+fn cargo_search_only(cargo: CargoSearch) -> ToolSearch {
+    ToolSearch {
+        cargo,
+        claude: ClaudeSearch::nowhere(),
+    }
+}
+
 fn status_json(cargo: Value) -> Value {
     json!({
         "cargo": cargo,
-        // claude は M4 で検出するまで not_found、初回準備は M3 で作るまで not_started。
-        "claude": { "status": "not_found", "path": null, "version": null },
+        // claude はどこも探さないので not_found、初回準備は作るまで not_started。
+        "claude": claude_not_found_json(),
         "crates": { "status": "not_started", "error": null },
     })
 }
@@ -391,7 +420,10 @@ fn get_environment_status_without_cargo_returns_not_found() {
     let (app, window) = app();
     let path = empty_dir();
     let home = empty_dir();
-    start_detection(app.handle(), search(None, &[path.path()], home.path()));
+    start_detection(
+        app.handle(),
+        cargo_search_only(search(None, &[path.path()], home.path())),
+    );
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
     assert_eq!(response, Ok(status_json(not_found_json())));
 }
@@ -401,7 +433,10 @@ fn get_environment_status_returns_the_detected_tools() {
     let (app, window) = app();
     let fake = FakeRust::new("1.100.0");
     let home = empty_dir();
-    start_detection(app.handle(), search(None, &[dir_of(&fake)], home.path()));
+    start_detection(
+        app.handle(),
+        cargo_search_only(search(None, &[dir_of(&fake)], home.path())),
+    );
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
     assert_eq!(
         response,
@@ -418,7 +453,7 @@ fn get_environment_status_waits_for_detection() {
     let finished = tools(&fake, "1.99.0");
     let finisher = thread::spawn(move || {
         thread::sleep(Duration::from_millis(300));
-        environment.finish_detection(Some(finished));
+        environment.finish_detection(cargo_only(Some(finished)));
     });
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
     assert_eq!(
@@ -438,7 +473,10 @@ fn environment_updated_is_sent_when_detection_finishes() {
     });
     let fake = FakeRust::new("1.101.0");
     let home = empty_dir();
-    start_detection(app.handle(), search(None, &[dir_of(&fake)], home.path()));
+    start_detection(
+        app.handle(),
+        cargo_search_only(search(None, &[dir_of(&fake)], home.path())),
+    );
     let payload = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
     let expected = status_json(found_json("found", &fake, "1.101.0"));
     assert_eq!(payload, expected);
@@ -449,7 +487,7 @@ fn environment_updated_is_sent_when_detection_finishes() {
 
 #[test]
 fn required_rustc_version_is_reported_from_the_constant() {
-    let status = Environment::detected(None).status();
+    let status = Environment::detected(DetectedTools::default()).status();
     assert_eq!(status.cargo.required_rustc_version, REQUIRED_RUSTC_VERSION);
 }
 
@@ -464,6 +502,446 @@ fn found_paths_are_not_resolved_through_symlinks() {
         .unwrap()
         .cargo;
     assert_eq!(found, fake.cargo());
+    assert!(
+        fs::symlink_metadata(&found)
+            .unwrap()
+            .file_type()
+            .is_symlink()
+    );
+}
+
+// ---- claude の検出 ----
+
+fn claude_dir(fake: &FakeClaude) -> &Path {
+    fake.path().parent().unwrap()
+}
+
+/// `claude` を探す入力。`npm` は、npm のグローバルインストール先（アプリでは /opt/homebrew/bin と
+/// /usr/local/bin）の代わり。テストが作者の Mac にある実物の `claude` を見つけないよう、決めた場所だけを探す。
+fn claude_search(
+    configured: Option<&Path>,
+    path: &[&Path],
+    home: &Path,
+    npm: &[&Path],
+) -> ClaudeSearch {
+    ClaudeSearch {
+        configured_claude: configured.map(Path::to_path_buf),
+        path_var: Some(std::env::join_paths(path).unwrap()),
+        home: Some(home.to_path_buf()),
+        npm_global_dirs: npm.iter().map(|dir| dir.to_path_buf()).collect(),
+        env: ClaudeEnv::from_process(),
+        timeout: VERSION_TIMEOUT,
+    }
+}
+
+/// 検出の結果を、`get_environment_status` の `claude` の形にする。
+fn claude_status(search: &ClaudeSearch) -> Value {
+    let status = Environment::detected(DetectedTools {
+        cargo: None,
+        claude: search.detect(),
+    })
+    .status();
+    serde_json::to_value(status.claude).unwrap()
+}
+
+fn claude_found_json(fake: &FakeClaude, version: &str) -> Value {
+    json!({
+        "status": "found",
+        "path": fake.path().to_str().unwrap(),
+        "version": version,
+    })
+}
+
+fn claude_not_found_json() -> Value {
+    json!({ "status": "not_found", "path": null, "version": null })
+}
+
+/// `--version` で `version` を返す偽の `claude` を、`dir` に置く。
+fn claude_with_version(dir: &Path, version: &str) -> FakeClaude {
+    let fake = FakeClaude::place(dir);
+    fake.set_version_stdout(&format!("{version} (Claude Code)\n"));
+    fake
+}
+
+/// 偽の `claude` の `--version` を失敗させ、その場所を使えなくする。
+fn make_unusable(fake: &FakeClaude) {
+    fake.set_version_exit_code(1);
+}
+
+#[test]
+fn claude_in_path_is_found() {
+    let fake = FakeClaude::new();
+    let home = empty_dir();
+    assert_eq!(
+        claude_status(&claude_search(None, &[claude_dir(&fake)], home.path(), &[])),
+        claude_found_json(&fake, "2.1.329")
+    );
+}
+
+#[test]
+fn nothing_found_is_claude_not_found() {
+    let path = empty_dir();
+    let home = empty_dir();
+    let npm = empty_dir();
+    assert_eq!(
+        claude_status(&claude_search(
+            None,
+            &[path.path()],
+            home.path(),
+            &[npm.path()]
+        )),
+        claude_not_found_json()
+    );
+    // PATH もホームディレクトリも分からず、npm のグローバルインストール先も無いとき。
+    assert_eq!(
+        claude_status(&ClaudeSearch::nowhere()),
+        claude_not_found_json()
+    );
+}
+
+// ---- claude を探す順 ----
+
+/// 設定のパス → PATH → ~/.local/bin → ~/.claude/local → npm のグローバルインストール先の順に探し、
+/// `claude --version` が成功した最初の場所を使う。それより後の場所は調べない。
+#[test]
+fn claude_is_searched_in_order() {
+    let configured_dir = empty_dir();
+    let path_dir = empty_dir();
+    let home = empty_dir();
+    let homebrew = empty_dir();
+    let usr_local = empty_dir();
+    let places = [
+        claude_with_version(configured_dir.path(), "1.0.1"),
+        claude_with_version(path_dir.path(), "1.0.2"),
+        claude_with_version(&home.path().join(".local/bin"), "1.0.3"),
+        claude_with_version(&home.path().join(".claude/local"), "1.0.4"),
+        claude_with_version(homebrew.path(), "1.0.5"),
+        claude_with_version(usr_local.path(), "1.0.6"),
+    ];
+    let search = claude_search(
+        Some(places[0].path()),
+        &[path_dir.path()],
+        home.path(),
+        &[homebrew.path(), usr_local.path()],
+    );
+    for (index, place) in places.iter().enumerate() {
+        let version = format!("1.0.{}", index + 1);
+        assert_eq!(
+            claude_status(&search),
+            claude_found_json(place, &version),
+            "{version} の場所が使われるはず"
+        );
+        // 使った場所より後の場所は、調べていない。
+        for later in &places[index + 1..] {
+            assert!(
+                later.calls().is_empty(),
+                "{} を調べた",
+                later.path().display()
+            );
+        }
+        make_unusable(place);
+    }
+    assert_eq!(claude_status(&search), claude_not_found_json());
+}
+
+#[test]
+fn claude_path_directories_are_searched_in_order() {
+    let empty = empty_dir();
+    let first_dir = empty_dir();
+    let first = claude_with_version(first_dir.path(), "1.0.1");
+    let second_dir = empty_dir();
+    let second = claude_with_version(second_dir.path(), "1.0.2");
+    let home = empty_dir();
+    assert_eq!(
+        claude_status(&claude_search(
+            None,
+            &[empty.path(), first_dir.path(), second_dir.path()],
+            home.path(),
+            &[]
+        )),
+        claude_found_json(&first, "1.0.1")
+    );
+    assert!(second.calls().is_empty());
+}
+
+/// 設定ファイル（settings.json）の `tool_paths.claude` を、探す場所の最初に使う。
+#[test]
+fn tool_paths_claude_in_settings_json_is_used() {
+    let data = empty_dir();
+    let data_dir = AppDataDir::new(data.path());
+    let configured = FakeClaude::new();
+    configured.set_version_stdout("2.0.0 (Claude Code)\n");
+    let mut settings = Settings::default();
+    settings.tool_paths.claude = Some(configured.path().to_str().unwrap().to_string());
+    data_dir.write_settings(&settings).unwrap();
+
+    let in_path = FakeClaude::new();
+    let home = empty_dir();
+    let mut search = claude_search(None, &[claude_dir(&in_path)], home.path(), &[]);
+    search.configured_claude = configured_claude(&data_dir);
+    assert_eq!(search.configured_claude.as_deref(), Some(configured.path()));
+    assert_eq!(
+        claude_status(&search),
+        claude_found_json(&configured, "2.0.0")
+    );
+}
+
+/// `tool_paths.claude` が `null` のときと、settings.json が無いときは、設定のパスを使わない。
+#[test]
+fn without_tool_paths_claude_the_settings_give_no_path() {
+    let data = empty_dir();
+    let data_dir = AppDataDir::new(data.path());
+    assert_eq!(configured_claude(&data_dir), None);
+    data_dir.write_settings(&Settings::default()).unwrap();
+    assert_eq!(configured_claude(&data_dir), None);
+}
+
+// ---- claude の使えない場所は飛ばす ----
+
+/// `unusable` の場所だけでは見つからず、後ろに使える場所があれば、そちらを使う。
+fn assert_skipped(unusable: &Path) {
+    let home = empty_dir();
+    assert_eq!(
+        claude_status(&claude_search(Some(unusable), &[], home.path(), &[])),
+        claude_not_found_json(),
+        "{}",
+        unusable.display()
+    );
+    let next = FakeClaude::new();
+    assert_eq!(
+        claude_status(&claude_search(
+            Some(unusable),
+            &[claude_dir(&next)],
+            home.path(),
+            &[]
+        )),
+        claude_found_json(&next, "2.1.329"),
+        "{}",
+        unusable.display()
+    );
+}
+
+#[test]
+fn a_missing_configured_claude_is_skipped() {
+    let dir = empty_dir();
+    assert_skipped(&dir.path().join("no-such-dir/claude"));
+}
+
+#[test]
+fn a_relative_configured_claude_is_skipped() {
+    assert_skipped(Path::new("claude"));
+    assert_skipped(Path::new("bin/claude"));
+}
+
+#[test]
+fn a_claude_that_is_not_executable_is_skipped() {
+    let dir = empty_dir();
+    let path = dir.path().join("claude");
+    fs::write(&path, "#!/bin/sh\necho '2.1.329 (Claude Code)'\n").unwrap();
+    fs::set_permissions(&path, fs::Permissions::from_mode(0o644)).unwrap();
+    assert_skipped(&path);
+    // ディレクトリも使わない。
+    let dir_named_claude = dir.path().join("sub/claude");
+    fs::create_dir_all(&dir_named_claude).unwrap();
+    assert_skipped(&dir_named_claude);
+}
+
+#[test]
+fn a_claude_whose_version_fails_is_skipped() {
+    let failing = FakeClaude::new();
+    failing.set_version_exit_code(1);
+    assert_skipped(failing.path());
+    // 起動して確かめたうえで飛ばした（失敗の終了コードなら、バージョンの出力があっても使わない）。
+    assert!(!failing.calls().is_empty());
+}
+
+#[test]
+fn a_claude_with_empty_version_output_is_skipped() {
+    for output in ["", "\n", "   \n", "\n2.1.329 (Claude Code)\n"] {
+        let empty = FakeClaude::new();
+        empty.set_version_stdout(output);
+        assert_skipped(empty.path());
+    }
+}
+
+/// `claude --version` が時間内に終わらない場所は、止めて飛ばす。アプリでは 10 秒で打ち切る
+/// （VERSION_TIMEOUT。src/environment/mod.rs の単体テストで確かめる）が、ここでは短くする。
+#[test]
+fn a_claude_that_does_not_finish_in_time_is_skipped() {
+    let hanging = FakeClaude::new();
+    hanging.set_version_hang();
+    let next = FakeClaude::new();
+    let home = empty_dir();
+    let mut search = claude_search(Some(hanging.path()), &[claude_dir(&next)], home.path(), &[]);
+    search.timeout = Duration::from_secs(2);
+    let started = std::time::Instant::now();
+    assert_eq!(claude_status(&search), claude_found_json(&next, "2.1.329"));
+    assert!(
+        started.elapsed() < Duration::from_secs(8),
+        "{:?}",
+        started.elapsed()
+    );
+    assert_eq!(hanging.calls().len(), 1, "応答しない claude を起動したはず");
+
+    // 応答しない場所のほかに無ければ、見つからない。
+    search.path_var = None;
+    assert_eq!(claude_status(&search), claude_not_found_json());
+}
+
+// ---- claude に渡す環境変数 ----
+
+/// `claude --version` の呼び出しで、偽の `claude` が受け取った環境変数と引数を確かめる。
+fn recorded_version_env(env: ClaudeEnv) -> BTreeMap<String, String> {
+    let fake = FakeClaude::new();
+    let home = empty_dir();
+    let mut search = claude_search(None, &[claude_dir(&fake)], home.path(), &[]);
+    search.env = env;
+    assert_eq!(claude_status(&search), claude_found_json(&fake, "2.1.329"));
+    let calls = fake.calls();
+    assert_eq!(calls.len(), 1, "{calls:?}");
+    assert_eq!(calls[0].args, ["--version"]);
+    assert_eq!(calls[0].stdin, None, "--version では標準入力を渡さない");
+    calls[0].env.clone()
+}
+
+fn env_map(vars: &[(&str, &str)]) -> BTreeMap<String, String> {
+    vars.iter()
+        .map(|(name, value)| (name.to_string(), value.to_string()))
+        .collect()
+}
+
+#[test]
+fn claude_receives_only_the_six_env_vars() {
+    let six = [
+        ("HOME", "/Users/learner"),
+        ("USER", "learner"),
+        ("LOGNAME", "learner"),
+        ("PATH", "/usr/bin:/bin:/usr/sbin:/sbin"),
+        ("SHELL", "/bin/zsh"),
+        ("TMPDIR", "/var/folders/xx/progrust-test/T/"),
+    ];
+    let mut received = six.to_vec();
+    received.extend([
+        ("ANTHROPIC_API_KEY", "sk-test"),
+        ("CLAUDE_CONFIG_DIR", "/tmp/claude-config"),
+        ("HTTPS_PROXY", "http://proxy.example:8080"),
+        ("LANG", "ja_JP.UTF-8"),
+    ]);
+    assert_eq!(
+        recorded_version_env(ClaudeEnv::from_vars(received)),
+        env_map(&six)
+    );
+}
+
+/// アプリが受け取っていない変数は渡さない。
+#[test]
+fn claude_does_not_receive_env_vars_the_app_did_not_receive() {
+    let received = [("HOME", "/Users/learner"), ("PATH", "/usr/bin:/bin")];
+    assert_eq!(
+        recorded_version_env(ClaudeEnv::from_vars(received)),
+        env_map(&received)
+    );
+}
+
+/// アプリのプロセスの環境変数（テストでは cargo が足した CARGO_* なども含む）から、6 つだけを渡す。
+#[test]
+fn claude_receives_the_six_env_vars_of_the_app_process() {
+    let expected: BTreeMap<String, String> = std::env::vars()
+        .filter(|(name, _)| ENV_VAR_NAMES.contains(&name.as_str()))
+        .collect();
+    assert!(
+        std::env::vars().any(|(name, _)| !ENV_VAR_NAMES.contains(&name.as_str())),
+        "6 つのほかの環境変数が無く、確かめられない"
+    );
+    assert_eq!(recorded_version_env(ClaudeEnv::from_process()), expected);
+}
+
+// ---- claude の取り出し口と get_environment_status ----
+
+fn claude_tool(fake: &FakeClaude) -> ClaudeTool {
+    ClaudeTool {
+        path: fake.path().to_path_buf(),
+        version: "2.1.329".into(),
+    }
+}
+
+#[test]
+fn claude_returns_the_detected_claude() {
+    let fake = FakeClaude::new();
+    let environment = Environment::detected(DetectedTools {
+        cargo: None,
+        claude: Some(claude_tool(&fake)),
+    });
+    assert_eq!(environment.claude(), Some(claude_tool(&fake)));
+    assert_eq!(
+        Environment::detected(DetectedTools::default()).claude(),
+        None
+    );
+}
+
+#[test]
+fn claude_waits_for_detection() {
+    let fake = FakeClaude::new();
+    let environment = Environment::pending();
+    let (sender, receiver) = mpsc::channel();
+    let reader = environment.clone();
+    let handle = thread::spawn(move || sender.send(reader.claude()).unwrap());
+    // 検出が終わるまでは返らない。
+    assert!(receiver.recv_timeout(Duration::from_millis(300)).is_err());
+    environment.finish_detection(DetectedTools {
+        cargo: None,
+        claude: Some(claude_tool(&fake)),
+    });
+    let found = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert_eq!(found, Some(claude_tool(&fake)));
+    handle.join().unwrap();
+}
+
+/// 起動時の検出で、`cargo` と一緒に `claude` も探し、`get_environment_status` と
+/// `environment_updated` で返す。
+#[test]
+fn get_environment_status_returns_the_detected_claude() {
+    let (app, window) = app();
+    let (sender, receiver) = mpsc::channel();
+    app.listen(ENVIRONMENT_UPDATED, move |event| {
+        let payload: Value = serde_json::from_str(event.payload()).unwrap();
+        let _ = sender.send(payload);
+    });
+    let rust = FakeRust::new("1.100.0");
+    let claude = FakeClaude::new();
+    let home = empty_dir();
+    start_detection(
+        app.handle(),
+        ToolSearch {
+            cargo: search(None, &[dir_of(&rust)], home.path()),
+            claude: claude_search(None, &[claude_dir(&claude)], home.path(), &[]),
+        },
+    );
+    let expected = json!({
+        "cargo": found_json("found", &rust, "1.100.0"),
+        "claude": claude_found_json(&claude, "2.1.329"),
+        "crates": { "status": "not_started", "error": null },
+    });
+    let payload = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
+    assert_eq!(payload, expected);
+    let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
+    assert_eq!(response, Ok(expected));
+    assert_eq!(
+        app.state::<Environment>().claude(),
+        Some(claude_tool(&claude))
+    );
+}
+
+/// 検出は、`claude` のパスを書き換えない（シンボリックリンクの先にしない）。
+#[test]
+fn found_claude_path_is_not_resolved_through_symlinks() {
+    let fake = FakeClaude::new();
+    let home = empty_dir();
+    let found = claude_search(None, &[claude_dir(&fake)], home.path(), &[])
+        .detect()
+        .unwrap()
+        .path;
+    assert_eq!(found, fake.path());
     assert!(
         fs::symlink_metadata(&found)
             .unwrap()

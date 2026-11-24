@@ -10,6 +10,10 @@
 #   exit-code  `-p` の呼び出しの終了コード。無ければ 0
 #   hang       あれば、`-p` の呼び出しで stdout と stderr を書いた後、終了せずに止まる（応答しない）
 #
+#   version-stdout     `--version` で標準出力に書く内容。無ければ `2.1.329 (Claude Code)` の行を書く
+#   version-exit-code  `--version` の終了コード。無ければ 0
+#   version-hang       あれば、`--version` で終了せずに止まる（応答しない）。何も書かない
+#
 # 呼び出しごとに、受け取ったものを calls/{1 から始まる番号}/ に書き残す。
 #
 #   args   引数。1 つずつ NUL で終える
@@ -53,8 +57,13 @@ write_file("$call/args", join('', map { "$_\0" } @ARGV));
 write_file("$call/env", join('', map { "$_=$ENV{$_}\0" } sort keys %ENV));
 
 if (@ARGV == 1 && $ARGV[0] eq '--version') {
-    print "2.1.329 (Claude Code)\n";
-    exit 0;
+    # 子のプロセスを作らずに止まる。テストがこのプロセスを終了すれば、出力のパイプも閉じる。
+    sleep while -e "$dir/version-hang";
+    my $version = read_file("$dir/version-stdout");
+    binmode STDOUT;
+    print STDOUT defined $version ? $version : "2.1.329 (Claude Code)\n";
+    my $version_exit_code = read_file("$dir/version-exit-code");
+    exit(defined $version_exit_code ? int($version_exit_code) : 0);
 }
 
 unless (grep { $_ eq '-p' } @ARGV) {

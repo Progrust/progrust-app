@@ -18,7 +18,7 @@ use common::{LOCAL_URL, app, invoke};
 use progrust_lib::attempts::{AttemptLog, Event, RunEvent, RunStatus, SessionKind};
 use progrust_lib::commands::run::stop_runs_on_exit;
 use progrust_lib::content::ContentDir;
-use progrust_lib::environment::{Environment, RustTools};
+use progrust_lib::environment::{DetectedTools, Environment, RustTools};
 use progrust_lib::runner::RunnerDir;
 use progrust_lib::runner::run::{RUN_FINISHED, RUN_OUTPUT, RUN_STARTED};
 use progrust_lib::runner::runs::{RunLimits, Runs};
@@ -160,7 +160,10 @@ impl Fixture {
         app.manage(ContentDir::new(content.path()));
         app.manage(AppDataDir::new(data.path()));
         app.manage(runner);
-        app.manage(Environment::detected(tools));
+        app.manage(Environment::detected(DetectedTools {
+            cargo: tools,
+            claude: None,
+        }));
         app.manage(Runs::new(limits));
 
         let (sender, received) = mpsc::channel();

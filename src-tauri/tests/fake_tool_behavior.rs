@@ -124,6 +124,62 @@ fn claude_version_succeeds() {
 }
 
 #[test]
+fn claude_version_can_fail() {
+    let fake = FakeClaude::new();
+    fake.set_version_exit_code(1);
+    let output = run_version(&fake);
+    assert_eq!(output.status.code(), Some(1));
+    assert_eq!(stdout_text(&output), "2.1.329 (Claude Code)\n");
+}
+
+#[test]
+fn claude_version_can_return_prepared_output() {
+    let fake = FakeClaude::new();
+    fake.set_version_stdout("");
+    let output = run_version(&fake);
+    assert!(output.status.success(), "{output:?}");
+    assert!(output.stdout.is_empty());
+
+    fake.set_version_stdout("9.9.9 (Claude Code)\n");
+    assert_eq!(stdout_text(&run_version(&fake)), "9.9.9 (Claude Code)\n");
+}
+
+#[test]
+fn claude_version_can_stop_responding() {
+    let fake = FakeClaude::new();
+    fake.set_version_hang();
+    let mut child = spawn_claude(&fake, &["--version"], Stdio::null());
+    // 偽の claude は calls/1/ を作ってから args と env を書くので、最後に書く env を待つ。
+    wait_until("呼び出しを書き残す", || {
+        fake.path().with_file_name("calls/1/env").exists()
+    });
+    assert_still_running_then_kill(&mut child);
+    let mut stdout = Vec::new();
+    child
+        .stdout
+        .take()
+        .unwrap()
+        .read_to_end(&mut stdout)
+        .unwrap();
+    assert!(stdout.is_empty(), "何も出力しないはず");
+    assert_eq!(fake.calls()[0].args, ["--version"]);
+}
+
+/// `--version` の出力を決めるファイルは、`-p` の呼び出しに効かない。
+#[test]
+fn claude_version_settings_do_not_change_print_calls() {
+    let fake = FakeClaude::new();
+    fake.set_version_stdout("");
+    fake.set_version_exit_code(1);
+    fake.set_version_hang();
+    let prepared = stream_json::answer(&["はい。"]);
+    fake.set_stdout(&prepared);
+    let output = run_chat(&fake, &prompt());
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(stdout_text(&output), prepared);
+}
+
+#[test]
 fn claude_returns_prepared_stream_json() {
     let fake = FakeClaude::new();
     let prepared =

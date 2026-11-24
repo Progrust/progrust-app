@@ -1,9 +1,10 @@
 //! 外部ツールの検出と、環境の状態（spec/architecture/external-tools.md「検出」、
 //! spec/architecture/commands/environment.md「環境の状態」）。
 //!
-//! アプリの起動時に [`start_detection`] で、画面の表示を待たせずに別のスレッドで `cargo`・`rustc` を
-//! 探す。結果は [`Environment`] がメモリに持ち、`get_environment_status` と、実行・提出のコマンド
-//! （[`Environment::rust_tools`]）が使う。検出が終わる前に読まれたときは、終わるまで待つ。
+//! アプリの起動時に [`start_detection`] で、画面の表示を待たせずに別のスレッドで `cargo`・`rustc` と
+//! `claude` を探す。結果は [`Environment`] がメモリに持ち、`get_environment_status` と、実行・提出の
+//! コマンド（[`Environment::rust_tools`]）と、`claude` を起動する処理（[`Environment::claude`]）が使う。
+//! 検出が終わる前に読まれたときは、終わるまで待つ。
 
 use std::{
     ffi::OsString,
@@ -21,6 +22,7 @@ use std::{
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
+use crate::claude::ClaudeEnv;
 use crate::commands::error::{CommandError, ErrorCode};
 use crate::storage::AppDataDir;
 
@@ -30,8 +32,12 @@ pub const REQUIRED_RUSTC_VERSION: &str = "1.100.0";
 /// 検出が終わったときと、検出し直したときに送るイベントの名前。
 pub const ENVIRONMENT_UPDATED: &str = "environment_updated";
 
-/// `rustc --version` が終わるのを待つ時間。過ぎたら止めて、その `rustc` は使えないとする。
-const VERSION_TIMEOUT: Duration = Duration::from_secs(10);
+/// `rustc --version`・`claude --version` が終わるのを待つ時間。過ぎたら止めて、その場所は使えないとする。
+pub const VERSION_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// `claude` を探す npm のグローバルインストール先（spec/architecture/external-tools.md「検出」）。
+/// Homebrew の Node.js（Apple シリコン）と、公式のインストーラーの Node.js の場所を、この順に調べる。
+pub const NPM_GLOBAL_DIRS: [&str; 2] = ["/opt/homebrew/bin", "/usr/local/bin"];
 
 // ---- rustc のバージョン ----
 
@@ -213,8 +219,15 @@ fn rustc_version(rustc: &Path) -> Option<RustcVersion> {
 /// 標準出力が UTF-8 でないとき、`timeout` の間に終わらないとき（止める）は `None`。
 /// 標準出力は終わってから読むので、出力が短いもの（`--version` など）にだけ使う。
 pub(crate) fn tool_stdout(program: &Path, args: &[&str], timeout: Duration) -> Option<String> {
-    let mut child = Command::new(program)
-        .args(args)
+    let mut command = Command::new(program);
+    command.args(args);
+    command_stdout(command, timeout)
+}
+
+/// [`tool_stdout`] と同じく、組み立てた `command` を実行して、標準出力を返す。環境変数などを
+/// 呼び出し側で決めるときに使う。標準入力は空にし、標準エラー出力は捨てる。
+fn command_stdout(mut command: Command, timeout: Duration) -> Option<String> {
+    let mut child = command
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
@@ -238,6 +251,177 @@ pub(crate) fn tool_stdout(program: &Path, args: &[&str], timeout: Duration) -> O
     let mut stdout = String::new();
     child.stdout.take()?.read_to_string(&mut stdout).ok()?;
     Some(stdout)
+}
+
+// ---- claude の検出 ----
+
+/// 見つかった `claude`。`claude` を起動する処理は、これのパスで起動する。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClaudeTool {
+    /// `claude` の絶対パス。
+    pub path: PathBuf,
+    /// `claude --version` から取り出したバージョン（例: `2.1.329`）。
+    pub version: String,
+}
+
+/// `claude --version` の出力（例: `2.1.329 (Claude Code)`）から、1 行目の最初の語をバージョンとして
+/// 取り出す。語が無いときは `None`。必要なバージョンの条件が無いので、語の形は確かめない。
+pub fn claude_version_from_output(output: &str) -> Option<String> {
+    output
+        .lines()
+        .next()?
+        .split_whitespace()
+        .next()
+        .map(str::to_string)
+}
+
+/// `claude` を探すときの入力。
+///
+/// 探す順は、`configured_claude` → `path_var` の各ディレクトリ → `home` の `.local/bin` →
+/// `home` の `.claude/local` → `npm_global_dirs` の各ディレクトリとする。それぞれの場所で、`claude` が
+/// 実行できるファイルで、`claude --version` が `timeout` の間に終了コード 0 で終わり、出力の 1 行目の
+/// 最初の語が空でなければ、それを使う。
+#[derive(Debug, Clone)]
+pub struct ClaudeSearch {
+    /// 設定の `tool_paths.claude`（`claude` の実行ファイルのパス）。
+    pub configured_claude: Option<PathBuf>,
+    /// 環境変数 `PATH` の値。
+    pub path_var: Option<OsString>,
+    /// ホームディレクトリ。
+    pub home: Option<PathBuf>,
+    /// npm のグローバルインストール先。アプリでは [`NPM_GLOBAL_DIRS`]。
+    pub npm_global_dirs: Vec<PathBuf>,
+    /// `claude --version` に渡す環境変数。
+    pub env: ClaudeEnv,
+    /// `claude --version` が終わるのを待つ時間。アプリでは [`VERSION_TIMEOUT`]。
+    pub timeout: Duration,
+}
+
+/// 設定（`settings.json`）の `tool_paths.claude`。`null` のとき、設定を読めないときは `None`。
+pub fn configured_claude(data_dir: &AppDataDir) -> Option<PathBuf> {
+    data_dir
+        .read_settings()
+        .ok()
+        .and_then(|settings| settings.tool_paths.claude)
+        .map(PathBuf::from)
+}
+
+impl ClaudeSearch {
+    /// アプリのプロセスの `PATH`・ホームディレクトリ・環境変数と、設定の `tool_paths.claude`
+    /// （[`configured_claude`]）から作る。
+    pub fn from_process(configured_claude: Option<PathBuf>) -> Self {
+        Self {
+            configured_claude,
+            path_var: std::env::var_os("PATH"),
+            home: std::env::home_dir(),
+            npm_global_dirs: NPM_GLOBAL_DIRS.iter().map(PathBuf::from).collect(),
+            env: ClaudeEnv::from_process(),
+            timeout: VERSION_TIMEOUT,
+        }
+    }
+
+    /// どこも探さない。テストで、`claude` が見つからない状態にするときに使う。
+    pub fn nowhere() -> Self {
+        Self {
+            configured_claude: None,
+            path_var: None,
+            home: None,
+            npm_global_dirs: Vec::new(),
+            env: ClaudeEnv::default(),
+            timeout: VERSION_TIMEOUT,
+        }
+    }
+
+    /// 調べる `claude` を、探す順に返す。相対パスの場所は使わない。
+    fn candidates(&self) -> Vec<PathBuf> {
+        let mut candidates = Vec::new();
+        let mut push = |claude: PathBuf| {
+            if claude.is_absolute() && !candidates.contains(&claude) {
+                candidates.push(claude);
+            }
+        };
+        if let Some(claude) = &self.configured_claude {
+            push(claude.clone());
+        }
+        if let Some(path_var) = &self.path_var {
+            for dir in std::env::split_paths(path_var) {
+                push(dir.join("claude"));
+            }
+        }
+        if let Some(home) = &self.home {
+            push(home.join(".local/bin/claude"));
+            push(home.join(".claude/local/claude"));
+        }
+        for dir in &self.npm_global_dirs {
+            push(dir.join("claude"));
+        }
+        candidates
+    }
+
+    /// `claude` を探す。見つからないときは `None`。
+    pub fn detect(&self) -> Option<ClaudeTool> {
+        self.candidates().into_iter().find_map(|path| {
+            if !is_executable_file(&path) {
+                return None;
+            }
+            let version = self.version(&path)?;
+            Some(ClaudeTool { path, version })
+        })
+    }
+
+    /// `claude --version` を、[`ClaudeSearch::env`] の環境変数だけを渡して実行し、バージョンを取り出す。
+    /// 失敗したとき、時間内に終わらないとき、出力が空のときは `None`。
+    fn version(&self, claude: &Path) -> Option<String> {
+        let mut command = self.env.command(claude);
+        command.arg("--version");
+        let stdout = command_stdout(command, self.timeout)?;
+        claude_version_from_output(&stdout)
+    }
+}
+
+// ---- cargo と claude の検出 ----
+
+/// 検出の結果。
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
+pub struct DetectedTools {
+    /// 見つかった `cargo`・`rustc`。見つからないときは `None`。
+    pub cargo: Option<RustTools>,
+    /// 見つかった `claude`。見つからないときは `None`。
+    pub claude: Option<ClaudeTool>,
+}
+
+/// `cargo`・`rustc` と `claude` を探すときの入力。
+#[derive(Debug, Clone)]
+pub struct ToolSearch {
+    pub cargo: CargoSearch,
+    pub claude: ClaudeSearch,
+}
+
+impl ToolSearch {
+    /// アプリのプロセスの環境と、設定の `tool_paths` から作る。
+    pub fn from_process(
+        configured_cargo: Option<PathBuf>,
+        configured_claude: Option<PathBuf>,
+    ) -> Self {
+        Self {
+            cargo: CargoSearch::from_process(configured_cargo),
+            claude: ClaudeSearch::from_process(configured_claude),
+        }
+    }
+
+    /// `cargo`・`rustc` と `claude` を、並べて探す。どちらかに応答しない場所があっても、検出にかかる
+    /// 時間が 2 つの合計にならないようにする。
+    pub fn detect(&self) -> DetectedTools {
+        thread::scope(|scope| {
+            let claude = scope.spawn(|| self.claude.detect());
+            let cargo = self.cargo.detect();
+            DetectedTools {
+                cargo,
+                // 検出のスレッドが落ちたときは、見つからないとする。
+                claude: claude.join().ok().flatten(),
+            }
+        })
+    }
 }
 
 // ---- 環境の状態（get_environment_status の戻り値と environment_updated の内容）----
@@ -307,6 +491,23 @@ pub enum ClaudeState {
     NotFound,
 }
 
+impl ClaudeStatus {
+    fn from_tool(tool: Option<&ClaudeTool>) -> Self {
+        match tool {
+            None => Self {
+                status: ClaudeState::NotFound,
+                path: None,
+                version: None,
+            },
+            Some(tool) => Self {
+                status: ClaudeState::Found,
+                path: Some(tool.path.to_string_lossy().into_owned()),
+                version: Some(tool.version.clone()),
+            },
+        }
+    }
+}
+
 /// 初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CratesStatus {
@@ -333,8 +534,8 @@ pub struct Environment {
 
 #[derive(Debug)]
 struct Shared {
-    /// `cargo`・`rustc` の検出結果。検出が終わるまでは `None`。
-    cargo: Mutex<Option<Option<RustTools>>>,
+    /// `cargo`・`rustc` と `claude` の検出結果。検出が終わるまでは `None`。
+    tools: Mutex<Option<DetectedTools>>,
     detected: Condvar,
 }
 
@@ -343,54 +544,49 @@ impl Environment {
     pub fn pending() -> Self {
         Self {
             shared: Arc::new(Shared {
-                cargo: Mutex::new(None),
+                tools: Mutex::new(None),
                 detected: Condvar::new(),
             }),
         }
     }
 
     /// 検出が終わり、結果が `tools` の状態。テストでは、偽のツールのパスをここに与える。
-    pub fn detected(tools: Option<RustTools>) -> Self {
+    pub fn detected(tools: DetectedTools) -> Self {
         let environment = Self::pending();
         environment.finish_detection(tools);
         environment
     }
 
     /// 検出の結果を入れ、待っている読み手を起こす。
-    pub fn finish_detection(&self, tools: Option<RustTools>) {
+    pub fn finish_detection(&self, tools: DetectedTools) {
         *self.lock() = Some(tools);
         self.shared.detected.notify_all();
     }
 
-    fn lock(&self) -> MutexGuard<'_, Option<Option<RustTools>>> {
+    fn lock(&self) -> MutexGuard<'_, Option<DetectedTools>> {
         // 持っている値は検出結果の置き換えだけで、途中の状態にならないので、毒されていても使う。
         self.shared
-            .cargo
+            .tools
             .lock()
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
-    /// 検出が終わるまで待って、`cargo`・`rustc` の検出結果を返す。
-    fn wait_cargo(&self) -> Option<RustTools> {
+    /// 検出が終わるまで待って、検出結果を返す。
+    fn wait_tools(&self) -> DetectedTools {
         let guard = self
             .shared
             .detected
-            .wait_while(self.lock(), |cargo| cargo.is_none())
+            .wait_while(self.lock(), |tools| tools.is_none())
             .unwrap_or_else(|poisoned| poisoned.into_inner());
-        guard.clone().flatten()
+        guard.clone().unwrap_or_default()
     }
 
     /// 検出が終わるまで待って、環境の状態を返す。待つので、メインスレッドでは呼ばない。
     pub fn status(&self) -> EnvironmentStatus {
-        let tools = self.wait_cargo();
+        let tools = self.wait_tools();
         EnvironmentStatus {
-            cargo: CargoStatus::from_tools(tools.as_ref()),
-            // claude は M4 で検出する。それまでは、見つからないとして返す。
-            claude: ClaudeStatus {
-                status: ClaudeState::NotFound,
-                path: None,
-                version: None,
-            },
+            cargo: CargoStatus::from_tools(tools.cargo.as_ref()),
+            claude: ClaudeStatus::from_tool(tools.claude.as_ref()),
             crates: self.crates_status(),
         }
     }
@@ -423,17 +619,23 @@ impl Environment {
     /// 足りないときも返す（spec/architecture/external-tools.md「バージョンが足りない場合」）。
     /// 見つからないときは `cargo_unavailable`。待つので、メインスレッドでは呼ばない。
     pub fn rust_tools(&self) -> Result<RustTools, CommandError> {
-        self.wait_cargo().ok_or_else(|| CommandError {
+        self.wait_tools().cargo.ok_or_else(|| CommandError {
             code: ErrorCode::CargoUnavailable,
             message: "Rust（cargo）が見つかりません。rustup で Rust を導入してください。".into(),
             detail: None,
         })
     }
+
+    /// `claude` を起動するときに使う、見つかった `claude`。検出が終わるまで待つ。見つからないときは
+    /// `None`。待つので、メインスレッドでは呼ばない。
+    pub fn claude(&self) -> Option<ClaudeTool> {
+        self.wait_tools().claude
+    }
 }
 
 /// 検出を別のスレッドで始め、検出結果を持つ [`Environment`] をアプリの状態に置く。
 /// 検出が終わったら、結果を入れてから `environment_updated` を送る。
-pub fn start_detection<R: Runtime>(app: &AppHandle<R>, search: CargoSearch) {
+pub fn start_detection<R: Runtime>(app: &AppHandle<R>, search: ToolSearch) {
     let environment = Environment::pending();
     app.manage(environment.clone());
     let app = app.clone();
@@ -562,5 +764,90 @@ mod tests {
             home: None,
         };
         assert_eq!(search.candidates(), []);
+    }
+
+    #[test]
+    fn parses_claude_version_output() {
+        for (output, expected) in [
+            ("2.1.329 (Claude Code)\n", "2.1.329"),
+            ("2.1.329", "2.1.329"),
+            ("  2.2.0-beta (Claude Code)\nsecond line\n", "2.2.0-beta"),
+            // 語の形は確かめない。
+            ("unknown\n", "unknown"),
+        ] {
+            assert_eq!(
+                claude_version_from_output(output).as_deref(),
+                Some(expected),
+                "{output:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn empty_claude_version_output_has_no_version() {
+        for output in ["", "\n", "   \n", "\n2.1.329 (Claude Code)\n"] {
+            assert_eq!(claude_version_from_output(output), None, "{output:?}");
+        }
+    }
+
+    #[test]
+    fn claude_candidates_follow_the_search_order() {
+        let search = ClaudeSearch {
+            configured_claude: Some("/opt/claude/claude".into()),
+            path_var: Some("/usr/bin:relative/bin:/opt/claude:/home/me/.local/bin".into()),
+            home: Some("/home/me".into()),
+            npm_global_dirs: vec!["/opt/homebrew/bin".into(), "/usr/local/bin".into()],
+            ..ClaudeSearch::nowhere()
+        };
+        let expected: Vec<PathBuf> = [
+            "/opt/claude/claude",
+            "/usr/bin/claude",
+            "/home/me/.local/bin/claude",
+            "/home/me/.claude/local/claude",
+            "/opt/homebrew/bin/claude",
+            "/usr/local/bin/claude",
+        ]
+        .iter()
+        .map(PathBuf::from)
+        .collect();
+        // 相対パスの場所は使わず、同じ場所は 2 度調べない。
+        assert_eq!(search.candidates(), expected);
+    }
+
+    #[test]
+    fn a_relative_configured_claude_is_not_used() {
+        let search = ClaudeSearch {
+            configured_claude: Some("bin/claude".into()),
+            ..ClaudeSearch::nowhere()
+        };
+        assert_eq!(search.candidates(), Vec::<PathBuf>::new());
+    }
+
+    /// アプリでは、npm のグローバルインストール先として /opt/homebrew/bin → /usr/local/bin を調べ、
+    /// `claude --version` を 10 秒で打ち切り、6 つの環境変数だけを渡す。
+    #[test]
+    fn claude_search_from_process_uses_the_app_settings() {
+        let search = ClaudeSearch::from_process(Some("/opt/claude/claude".into()));
+        assert_eq!(
+            search.configured_claude.as_deref(),
+            Some(Path::new("/opt/claude/claude"))
+        );
+        assert_eq!(
+            search.npm_global_dirs,
+            [
+                PathBuf::from("/opt/homebrew/bin"),
+                PathBuf::from("/usr/local/bin")
+            ]
+        );
+        assert_eq!(search.timeout, Duration::from_secs(10));
+        assert_eq!(VERSION_TIMEOUT, Duration::from_secs(10));
+        assert_eq!(search.env, ClaudeEnv::from_process());
+        assert_eq!(search.path_var, std::env::var_os("PATH"));
+        assert_eq!(search.home, std::env::home_dir());
+    }
+
+    #[test]
+    fn nowhere_has_no_candidates() {
+        assert_eq!(ClaudeSearch::nowhere().candidates(), Vec::<PathBuf>::new());
     }
 }
