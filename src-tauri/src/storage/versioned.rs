@@ -86,7 +86,7 @@ impl AppDataDir {
             }
             Err(error) => return Err(StorageError::io(&path, error)),
         };
-        if let Some(value) = parse(&bytes, schema_version) {
+        if let Some(value) = parse_versioned_json(&bytes, schema_version) {
             return Ok(Loaded {
                 value: Some(value),
                 broken_backup: None,
@@ -126,7 +126,7 @@ impl AppDataDir {
             }
             Err(error) => return Err(StorageError::io(&path, error)),
         };
-        if let Some(value) = parse(&bytes, schema_version) {
+        if let Some(value) = parse_versioned_json(&bytes, schema_version) {
             return Ok(Loaded {
                 value,
                 broken_backup: None,
@@ -145,8 +145,9 @@ impl AppDataDir {
     }
 }
 
-/// ファイルの内容を読む。読み込めないときは `None`。
-fn parse<T: DeserializeOwned>(bytes: &[u8], schema_version: u64) -> Option<T> {
+/// `schema_version` を持つ JSON のファイルの内容 `bytes` を読む。読み込めないとき（JSON として読めない、
+/// `T` の形に合わない、`schema_version` が無いか `schema_version` と違う）は `None`。退避はしない。
+pub fn parse_versioned_json<T: DeserializeOwned>(bytes: &[u8], schema_version: u64) -> Option<T> {
     let json: Value = serde_json::from_slice(bytes).ok()?;
     if json.get("schema_version")?.as_u64()? != schema_version {
         return None;

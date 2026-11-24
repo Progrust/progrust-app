@@ -317,6 +317,18 @@ fn rustc_and_cargo_return_prepared_version() {
     assert_eq!(fake.rustc().parent(), fake.cargo().parent());
 }
 
+#[test]
+fn rustc_verbose_version_has_the_prepared_version() {
+    let fake = FakeRust::new("1.99.0");
+    let output = Command::new(fake.rustc()).arg("-vV").output().unwrap();
+    assert!(output.status.success(), "{output:?}");
+    let stdout = stdout_text(&output);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(lines[0], "rustc 1.99.0 (0123456789 2026-01-01)");
+    assert!(lines.contains(&"release: 1.99.0"), "{stdout}");
+    assert!(lines.contains(&"binary: rustc"), "{stdout}");
+}
+
 // ---- 偽のツールがアプリに同梱されないこと ----
 
 fn manifest_dir() -> &'static Path {

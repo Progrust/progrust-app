@@ -50,6 +50,15 @@ impl AppDataDir {
     }
 }
 
+/// `{app_data_dir}` の外にもありうるファイル（作業領域の `prepared.json` など）の `path` に、`value` を JSON で、
+/// 一時ファイルとリネームで書く。要るディレクトリは作る。
+///
+/// [`AppDataDir`] のファイル単位のロックは使わない。同じファイルへの書き込みは、呼ぶ側が直列化すること。
+pub fn write_json_file<T: Serialize + ?Sized>(path: &Path, value: &T) -> Result<(), StorageError> {
+    let bytes = to_json_bytes(path, value)?;
+    write_atomic(path, &bytes)
+}
+
 /// 書き込む JSON。人が開いても読めるように、字下げして、最後に改行を付ける。
 pub(super) fn to_json_bytes<T: Serialize + ?Sized>(
     path: &Path,

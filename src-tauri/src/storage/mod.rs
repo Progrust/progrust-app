@@ -6,6 +6,8 @@
 //!   `.broken-{日時}` を付けて退避し、初期状態で作り直す（[`versioned`]）。
 //! - 下書き・試行ログのように、無い状態が初期状態であるファイルは [`AppDataDir::read_optional_versioned_json`]
 //!   で読む。読み込めないときは退避し、作り直さずに、無いものとして扱う。
+//! - `{app_data_dir}` の外にもありうるファイル（作業領域の `prepared.json` など）は、パスを渡して
+//!   [`write_json_file`] で書き、読んだ内容を [`parse_versioned_json`] で読む。
 
 mod error;
 mod versioned;
@@ -18,7 +20,8 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use tauri::{AppHandle, Manager, Runtime};
 
 pub use error::StorageError;
-pub use versioned::Loaded;
+pub use versioned::{Loaded, parse_versioned_json};
+pub use write::write_json_file;
 
 /// 学習者データのディレクトリ。ファイルの読み書きは、すべてこれを通して行う。
 ///

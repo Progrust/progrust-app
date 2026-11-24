@@ -2,16 +2,25 @@
 # テスト用の偽の rustc（spec/non-functional/testing.md「偽の claude と偽の cargo」）。
 #
 # テストでは、この原本を指すシンボリックリンクを一時ディレクトリに置いて使う
-# （tests/fake_tools/mod.rs）。`--version` が返す版は、実行ファイル（リンク）と同じ
+# （tests/fake_tools/mod.rs）。`--version` と `-vV` が返す版は、実行ファイル（リンク）と同じ
 # ディレクトリの rust-version に書く。ほかの引数には対応しない。
+# `-vV` の出力の行は、実物の rustc 1.100.0 の `rustc -vV` の出力に合わせる。
 
 dir=${0%/*}
-if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+if [ "$#" -eq 1 ] && { [ "$1" = --version ] || [ "$1" = -vV ]; }; then
   IFS= read -r version < "$dir/rust-version" || [ -n "$version" ] || {
     echo "fake rustc: $dir/rust-version を読めない" >&2
     exit 1
   }
   echo "rustc $version (0123456789 2026-01-01)"
+  if [ "$1" = -vV ]; then
+    echo "binary: rustc"
+    echo "commit-hash: 0123456789012345678901234567890123456789"
+    echo "commit-date: 2026-01-01"
+    echo "host: aarch64-apple-darwin"
+    echo "release: $version"
+    echo "LLVM version: 23.1.5"
+  fi
   exit 0
 fi
 echo "fake rustc: 対応していない引数: $*" >&2

@@ -12,6 +12,7 @@
 //! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
 //!   イベント `run_started`・`run_output`・`run_finished` の内容は [`run`]、提出のタスクとイベント `submit_progress` と
 //!   `run_finished` の `submit` の内容は [`submit`]。
+//! - 初回準備の状態の記録 `prepared.json` の読み書きと、初回準備を実行する条件の判定は [`prepared`]。
 //! - 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム（`src/bin/progrust-judge.rs`）の中身は
 //!   [`lesson_judge`]（ADR 0208）。
 
@@ -20,6 +21,7 @@ pub mod file_path;
 pub mod judge;
 pub mod judge_test;
 pub mod lesson_judge;
+pub mod prepared;
 pub mod process;
 pub mod project;
 pub mod run;
