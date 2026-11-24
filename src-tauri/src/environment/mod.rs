@@ -205,14 +205,22 @@ fn is_executable_file(path: &Path) -> bool {
 
 /// `rustc --version` を実行して、バージョンを取り出す。失敗したとき、時間内に終わらないときは `None`。
 fn rustc_version(rustc: &Path) -> Option<RustcVersion> {
-    let mut child = Command::new(rustc)
-        .arg("--version")
+    let stdout = tool_stdout(rustc, &["--version"], VERSION_TIMEOUT)?;
+    RustcVersion::from_version_output(&stdout)
+}
+
+/// ツール `program` を引数 `args` で実行して、標準出力を返す。起動できないとき、終了コードが 0 でないとき、
+/// 標準出力が UTF-8 でないとき、`timeout` の間に終わらないとき（止める）は `None`。
+/// 標準出力は終わってから読むので、出力が短いもの（`--version` など）にだけ使う。
+pub(crate) fn tool_stdout(program: &Path, args: &[&str], timeout: Duration) -> Option<String> {
+    let mut child = Command::new(program)
+        .args(args)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::null())
         .spawn()
         .ok()?;
-    let deadline = Instant::now() + VERSION_TIMEOUT;
+    let deadline = Instant::now() + timeout;
     let status = loop {
         match child.try_wait() {
             Ok(Some(status)) => break status,
@@ -229,7 +237,7 @@ fn rustc_version(rustc: &Path) -> Option<RustcVersion> {
     }
     let mut stdout = String::new();
     child.stdout.take()?.read_to_string(&mut stdout).ok()?;
-    RustcVersion::from_version_output(&stdout)
+    Some(stdout)
 }
 
 // ---- 環境の状態（get_environment_status の戻り値と environment_updated の内容）----
@@ -509,6 +517,41 @@ mod tests {
                 .collect();
         // 相対パスの場所は使わず、同じ場所は 2 度調べない。
         assert_eq!(search.candidates(), candidates);
+    }
+
+    #[test]
+    fn tool_stdout_returns_the_standard_output() {
+        assert_eq!(
+            tool_stdout(Path::new("/bin/echo"), &["a", "b"], VERSION_TIMEOUT).as_deref(),
+            Some("a b\n")
+        );
+    }
+
+    #[test]
+    fn tool_stdout_of_a_failing_or_missing_tool_is_none() {
+        assert_eq!(
+            tool_stdout(Path::new("/usr/bin/false"), &[], VERSION_TIMEOUT),
+            None
+        );
+        assert_eq!(
+            tool_stdout(Path::new("/nonexistent/rustc"), &["-vV"], VERSION_TIMEOUT),
+            None
+        );
+    }
+
+    /// 時間内に終わらないツールは、止めて `None` にする。
+    #[test]
+    fn tool_stdout_stops_a_tool_that_does_not_finish_in_time() {
+        let started = Instant::now();
+        assert_eq!(
+            tool_stdout(Path::new("/bin/sleep"), &["30"], Duration::from_millis(100)),
+            None
+        );
+        assert!(
+            started.elapsed() < Duration::from_secs(10),
+            "{:?}",
+            started.elapsed()
+        );
     }
 
     #[test]

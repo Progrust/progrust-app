@@ -32,6 +32,11 @@ impl WorkspaceDir {
         &self.root
     }
 
+    /// 初回準備の状態の記録（`prepared.json`。[`super::prepared`]）。
+    pub fn prepared_json(&self) -> PathBuf {
+        self.root.join("prepared.json")
+    }
+
     /// 実行・提出のたびに組み立てるプロジェクト（`project/`）。
     pub fn project(&self) -> PathBuf {
         self.root.join("project")
@@ -65,6 +70,10 @@ mod tests {
     fn paths_are_under_the_given_root() {
         let workspace = WorkspaceDir::new("/tmp/workspace");
         assert_eq!(workspace.root(), Path::new("/tmp/workspace"));
+        assert_eq!(
+            workspace.prepared_json(),
+            Path::new("/tmp/workspace/prepared.json")
+        );
         assert_eq!(workspace.project(), Path::new("/tmp/workspace/project"));
         assert_eq!(workspace.target(), Path::new("/tmp/workspace/target"));
         assert_eq!(
