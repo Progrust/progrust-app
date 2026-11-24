@@ -16,7 +16,9 @@ import {
 export const CONSOLE_TAIL_LIMIT = 64 * 1024;
 
 // 出力の種類。stdout・stderr・system は run_output の断片の stream、input は学習者が入力した行。
-export type ConsoleKind = "stdout" | "stderr" | "system" | "input";
+// progress は、演習画面が書く提出の経過の行（「ビルドしました」など）。演習画面が書く区切りの行と終わりの知らせは
+// system にする（design-system/progrust/components/Console/README.md）。
+export type ConsoleKind = "stdout" | "stderr" | "system" | "input" | "progress";
 
 // 種類と色が同じ一続きの文字列。id は、画面で描き直さずに済むように付ける、消えるまで変わらない番号。
 export type ConsoleSegment = {
@@ -147,4 +149,33 @@ export function appendInput(log: ConsoleLog, text: string): ConsoleLog {
     requestId: log.requestId,
     streams: log.streams,
   });
+}
+
+// 演習画面が書く 1 行（区切りの行、提出の経過、終わりの知らせ）を足す。text に改行は付けずに渡す。
+// それまでの出力が改行で終わっていない（入力を促す「名前: 」など）ときは、改行してから書く。
+// blankLineBefore では、それまでの出力があれば、空行を 1 つ挟む。
+export function appendLine(
+  log: ConsoleLog,
+  kind: "system" | "progress",
+  text: string,
+  options: { style?: AnsiStyle; blankLineBefore?: boolean } = {},
+): ConsoleLog {
+  const last = log.segments[log.segments.length - 1];
+  let before = "";
+  if (last !== undefined) {
+    if (!last.text.endsWith("\n")) {
+      before += "\n";
+    }
+    if (options.blankLineBefore === true) {
+      before += "\n";
+    }
+  }
+  return appendPieces(
+    log,
+    [
+      { kind, style: PLAIN_STYLE, text: before },
+      { kind, style: options.style ?? PLAIN_STYLE, text: `${text}\n` },
+    ],
+    { requestId: log.requestId, streams: log.streams },
+  );
 }

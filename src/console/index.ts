@@ -4,6 +4,7 @@ export {
   CONSOLE_TAIL_LIMIT,
   EMPTY_CONSOLE_LOG,
   appendInput,
+  appendLine,
   appendRunOutput,
   type ConsoleLog,
 } from "./consoleLog";

@@ -4,6 +4,7 @@ import {
   CONSOLE_TAIL_LIMIT,
   EMPTY_CONSOLE_LOG,
   appendInput,
+  appendLine,
   appendRunOutput,
   type ConsoleLog,
 } from "./consoleLog";
@@ -108,6 +109,42 @@ describe("足していく", () => {
     );
     expect(show(log)).toEqual(["stdout/red:red", "stdout/-:plain"]);
     expect(log.requestId).toBe("r2");
+  });
+});
+
+describe("演習画面が書く行", () => {
+  it("改行を付けて足す。空のコンソールでは、空行を挟まない", () => {
+    const log = appendLine(EMPTY_CONSOLE_LOG, "system", "── 実行 ──", {
+      blankLineBefore: true,
+    });
+    expect(show(log)).toEqual(["system/-:── 実行 ──\n"]);
+  });
+
+  it("改行で終わっていない出力の後では、改行してから書く。blankLineBefore では空行も挟む", () => {
+    let log = appendRunOutput(
+      EMPTY_CONSOLE_LOG,
+      output([{ stream: "stdout", text: "名前: " }]),
+    );
+    log = appendLine(log, "system", "停止しました");
+    expect(text(log)).toBe("名前: \n停止しました\n");
+    log = appendLine(log, "system", "── 提出 ──", { blankLineBefore: true });
+    expect(text(log)).toBe("名前: \n停止しました\n\n── 提出 ──\n");
+  });
+
+  it("色を付けられ、次の出力の色と読みかけを変えない", () => {
+    let log = appendRunOutput(
+      EMPTY_CONSOLE_LOG,
+      output([{ stream: "stdout", text: "\u001b[32mgreen\n" }]),
+    );
+    log = appendLine(log, "progress", "失敗しました。", {
+      style: { color: "red", bold: true },
+    });
+    log = appendRunOutput(log, output([{ stream: "stdout", text: "x\n" }]));
+    expect(show(log)).toEqual([
+      "stdout/green:green\n",
+      "progress/bred:失敗しました。\n",
+      "stdout/green:x\n",
+    ]);
   });
 });
 

@@ -13,12 +13,13 @@ import {
 import type { ConsoleKind, ConsoleLog, ConsoleSegment } from "./consoleLog";
 import "./console.css";
 
-// 種類ごとの文字の色のクラス（ADR 0224）。標準出力は既定の色。
+// 種類ごとの文字の色のクラス（ADR 0224）。標準出力と提出の経過の行は既定の色。
 const KIND_CLASS: Record<ConsoleKind, string | null> = {
   stdout: null,
   stderr: "pg-out-stderr",
   system: "pg-out-system",
   input: "pg-out-input",
+  progress: null,
 };
 
 export const TRUNCATED_NOTICE = "古い出力を省略しました";
