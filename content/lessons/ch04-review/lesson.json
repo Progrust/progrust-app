@@ -1,0 +1,38 @@
+{
+  "id": "ch04-review",
+  "chapter": "ch04",
+  "kind": "chapter_review",
+  "title": "章末復習",
+  "summary": "String を関数に渡して返す処理を、ムーブと clone を使い分けて組み立てる",
+  "primary_elements": [
+    "string.basic",
+    "ownership.move",
+    "ownership.clone_copy",
+    "ownership.function"
+  ],
+  "secondary_elements": [
+    "program.main",
+    "var.mutability",
+    "fmt.format_spec",
+    "scalar.integer",
+    "tuple.basic",
+    "fn.basic",
+    "control.loop_while"
+  ],
+  "estimated_minutes": 25,
+  "exercise": {
+    "layout": "single",
+    "judge": { "mode": "test", "target": "src/main.rs" },
+    "dependencies": [],
+    "readonly_files": [],
+    "case_labels": {
+      "exclaim_adds_marks": "exclaim: 「!」を 3 個付ける",
+      "exclaim_zero_count": "exclaim: 0 個のときはそのまま",
+      "exclaim_empty_text": "exclaim: 空の文字列に付ける",
+      "plain_and_loud_keeps_text": "plain_and_loud: 元の文字列と組にする",
+      "plain_and_loud_zero_count": "plain_and_loud: 0 個のとき",
+      "call_twice_joins_with_space": "call_twice: 空白でつなぐ",
+      "call_twice_zero_count": "call_twice: 0 個のとき"
+    }
+  }
+}
