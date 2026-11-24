@@ -3,6 +3,7 @@
 // design-system/progrust/components/Banner/README.md）。found のときは何も出さない。
 import { TriangleAlert } from "lucide-react";
 import type { CargoStatus } from "../commands/environment";
+import { openInstallGuide } from "./installGuide";
 
 export function CargoBanner({
   cargo,
@@ -25,12 +26,20 @@ export function CargoBanner({
         strokeWidth={2.2}
       />
       {cargo.status === "not_found" ? (
-        <p>
-          <b>Rust ツールチェーンが見つかりません。</b>
-          実行・テスト・提出はできません。動画の視聴は続けられます。rustup
-          の導入手順: https://rustup.rs
-          を開き、案内に従って導入してから、アプリを開き直してください。
-        </p>
+        <>
+          <p>
+            <b>Rust ツールチェーンが見つかりません。</b>
+            実行・テスト・提出はできません。動画の視聴は続けられます。rustup
+            の導入手順に従って導入してから、アプリを開き直してください。
+          </p>
+          <button
+            type="button"
+            className="pg-btn pg-btn--sm pg-btn--outline"
+            onClick={openRustupGuide}
+          >
+            rustup の導入手順
+          </button>
+        </>
       ) : (
         <p>
           <b>Rust のバージョンが古いです。</b>
@@ -43,4 +52,11 @@ export function CargoBanner({
       )}
     </div>
   );
+}
+
+// rustup の導入手順を既定ブラウザで開く。開けなかったときは、画面には出さず、記録だけする。
+function openRustupGuide() {
+  openInstallGuide("cargo").catch((error: unknown) => {
+    console.error("rustup の導入手順を開けなかった", error);
+  });
 }

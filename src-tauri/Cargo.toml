@@ -45,6 +45,9 @@ sha2 = "0.11.1"
 toml = "1.2.2"
 # `protocol-asset`: 動画の音声をアセットプロトコル（asset://）で読む（spec/architecture/tauri-permissions.md）。
 tauri = { version = "~2.12.7", features = ["protocol-asset"] }
+# 導入手順の URL を OS の既定ブラウザで開く（spec/architecture/tauri-permissions.md）。npm の
+# `@tauri-apps/plugin-opener` と同じ系列にそろえる（spec/architecture/development-environment.md）。
+tauri-plugin-opener = "~2.7.3"
 
 [dev-dependencies]
 # Tauri のモックの実行環境（`tauri::test`）でコマンドを確かめる。

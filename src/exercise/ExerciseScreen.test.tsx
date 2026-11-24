@@ -719,6 +719,19 @@ describe("環境の案内", () => {
     }
   });
 
+  it("cargo が見つからないときの案内の「rustup の導入手順」を押すと、https://rustup.rs を開く", async () => {
+    const { calls } = setup("ch04-02", { cargo: "not_found" });
+    const alert = await screen.findByRole("alert");
+    fireEvent.click(
+      within(alert).getByRole("button", { name: "rustup の導入手順" }),
+    );
+    await waitFor(() => {
+      expect(commands(calls, "plugin:opener|open_url")).toEqual([
+        { url: "https://rustup.rs", with: undefined },
+      ]);
+    });
+  });
+
   it("rustc が古いときは、バージョンと更新の手順を案内し、ボタンは無効にしない", async () => {
     setup("ch04-02", { cargo: "version_too_old" });
     const alert = await screen.findByRole("alert");

@@ -1,7 +1,17 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "アプリのウィンドウ。本アプリのコマンドの呼び出しと、バックエンドが送るイベントの受け取りだけを許可する（documents/spec/architecture/tauri-permissions.md）",
+  "description": "アプリのウィンドウ。本アプリのコマンドの呼び出しと、バックエンドが送るイベントの受け取りと、導入手順の 2 つの URL（rustup と Claude Code）を OS の既定ブラウザで開くことだけを許可する。ファイルやパスは開けない（documents/spec/architecture/tauri-permissions.md）",
   "windows": ["main"],
-  "permissions": ["core:event:allow-listen", "core:event:allow-unlisten"]
+  "permissions": [
+    "core:event:allow-listen",
+    "core:event:allow-unlisten",
+    {
+      "identifier": "opener:allow-open-url",
+      "allow": [
+        { "url": "https://rustup.rs" },
+        { "url": "https://code.claude.com/docs/ja/setup" }
+      ]
+    }
+  ]
 }
