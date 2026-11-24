@@ -272,7 +272,7 @@ def main():
     structured = entry.get("structured_output")
     out = {
         "type": "result",
-        "subtype": "success",
+        "subtype": entry.get("subtype", "success"),
         "is_error": bool(entry.get("is_error", False)),
         "result": entry.get("result", json.dumps(structured, ensure_ascii=False) if structured else "ok"),
         "session_id": value("--resume") or f"sess-{count}",
@@ -802,6 +802,43 @@ class FlowTest(LoopTestCase):
         self.assertEqual(self.run_loop(), 2)
         self.assertIn("Failed to provide valid structured output after 5 attempts", self.output)
         self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+
+    def test_structured_output_failure_is_reported_by_escalated_model(self) -> None:
+        self.task(1)
+        self.script["implement"] = [
+            {"exit": 1, "is_error": True, "subtype": "error_max_structured_output_retries", "result": "", "files": {"a.txt": "A\n"}},
+        ]
+        self.script["other"] = [{"structured_output": done()}]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        implement = self.claude_calls("implement")
+        report = self.claude_calls("other")
+        self.assertEqual([(c["model"], c["resume"]) for c in implement], [("haiku", None)])
+        # 作業を捨てずに、引き上げるモデルで同じ会話の続きから結果だけを返させる
+        self.assertEqual([(c["model"], c["resume"], c["has_schema"]) for c in report], [("sonnet", "sess-1", True)])
+        self.assertEqual(self.main_file("a.txt"), "A\n")
+        self.assertEqual(self.issue(1)["state"], "CLOSED")
+        self.assertIn("結果を決まった形で返せなかったので、sonnet で同じ会話の続きから結果だけを返させた", self.state["prs"]["100"]["body"])
+
+    def test_structured_output_failure_after_escalated_report_stops(self) -> None:
+        self.task(1)
+        failed = {"exit": 1, "is_error": True, "subtype": "error_max_structured_output_retries", "result": ""}
+        self.script["implement"] = [dict(failed, files={"a.txt": "A\n"})]
+        self.script["other"] = [failed]
+        self.assertEqual(self.run_loop(), 2)
+        self.assertIn("結果を決まった形で返せずに終わりました", self.output)
+        self.assertEqual(len(self.claude_calls("other")), 1)
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+        self.assertEqual(self.sh(["git", "status", "--porcelain"], cwd=self.worktree), "")
+
+    def test_structured_output_failure_without_escalation_stops(self) -> None:
+        self.task(1, difficulty="大")
+        self.script["implement"] = [{"exit": 1, "is_error": True, "subtype": "error_max_structured_output_retries", "result": ""}]
+        self.assertEqual(self.run_loop(), 2)
+        self.assertIn("結果を決まった形で返せずに終わりました", self.output)
+        self.assertEqual(self.claude_calls("other"), [])
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:大"])
 
     def test_unreadable_output_stops(self) -> None:
         self.task(1)
