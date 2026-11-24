@@ -68,5 +68,6 @@ git diff origin/main...HEAD
   - `verdict` は、`must` が 1 件でもあれば `fail`、無ければ `pass`。
   - `findings` の各項目は、`severity`（`must` か `note`）、`file`（パスと行）、`description`（何が誤っているかと、どの仕様・受け入れ条件・ADR・運用ルールに反するか）。
   - `summary` は、確かめたことと判定の理由を、短く書く。
+  - `description` と `summary` は、日本語で書く（運用ルールの「指摘の重さと判定」）。
 - ユーザーのいる会話では、判定と指摘を、重さの順に、平易な言葉で書く。
 - タスクと関係しない問題を見つけたときは、指摘にせず、`documents/conventions/issues.md` のとおりに起票し、起票した Issue の番号を `summary` に書く。

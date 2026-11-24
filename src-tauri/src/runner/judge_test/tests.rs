@@ -31,9 +31,11 @@ fn collected(termination: Termination, stdout: &str, stderr: &str) -> CollectedO
 fn limits_and_the_declaration_follow_the_spec() {
     assert_eq!(TESTS_TIME_LIMIT, Duration::from_secs(10));
     assert_eq!(LEARNER_TESTS_TIME_LIMIT, Duration::from_secs(10));
+    assert_eq!(TESTS_OUTPUT_LIMIT, 1024 * 1024);
     let limits = TestLimits::default();
     assert_eq!(limits.time, Duration::from_secs(10));
     assert_eq!(limits.learner_time, Duration::from_secs(10));
+    assert_eq!(limits.stdout, TESTS_OUTPUT_LIMIT);
     assert_eq!(
         limits.parallelism,
         thread::available_parallelism().unwrap_or(NonZeroUsize::MIN)
@@ -304,7 +306,7 @@ fn case_results_follow_the_table_in_the_spec() {
     let ok = "running 1 test\ntest progrust_judge::sums ... ok\n";
     let started = "running 1 test\ntest progrust_judge::sums ... ";
 
-    let pass = case_result(&test, &collected(Termination::Exited(0), ok, "")).unwrap();
+    let pass = judged(&test, &collected(Termination::Exited(0), ok, "")).unwrap();
     assert_eq!(
         pass,
         CaseResult {
@@ -314,7 +316,7 @@ fn case_results_follow_the_table_in_the_spec() {
         }
     );
 
-    let fail = case_result(
+    let fail = judged(
         &test,
         &collected(Termination::Exited(101), FAILED_OUTPUT, ""),
     )
@@ -328,15 +330,15 @@ fn case_results_follow_the_table_in_the_spec() {
     );
 
     // 結果の行がないまま終了コード 0 で終わった（process::exit(0)）。
-    let exited = case_result(&test, &collected(Termination::Exited(0), started, "")).unwrap();
+    let exited = judged(&test, &collected(Termination::Exited(0), started, "")).unwrap();
     assert_eq!(exited.status, CaseStatus::RuntimeError);
     assert_eq!(exited.detail, Some(CaseDetail::Stderr(String::new())));
 
     // ok の行があっても、終了コードが 0 でなければ通過にしない。
-    let nonzero = case_result(&test, &collected(Termination::Exited(3), ok, "")).unwrap();
+    let nonzero = judged(&test, &collected(Termination::Exited(3), ok, "")).unwrap();
     assert_eq!(nonzero.status, CaseStatus::RuntimeError);
 
-    let signaled = case_result(
+    let signaled = judged(
         &test,
         &collected(
             Termination::Signaled(6),
@@ -354,17 +356,52 @@ fn case_results_follow_the_table_in_the_spec() {
     );
 
     // 制限時間で止めたものは、ok の行があっても時間切れ。
-    let timed_out =
-        case_result(&test, &collected(Termination::TimedOut, ok, "眠ります\n")).unwrap();
+    let timed_out = judged(&test, &collected(Termination::TimedOut, ok, "眠ります\n")).unwrap();
     assert_eq!(timed_out.status, CaseStatus::Timeout);
     assert_eq!(
         timed_out.detail,
         Some(CaseDetail::Stderr("眠ります\n".into()))
     );
 
+    // 標準出力の量の上限で止めたものは、上限までに ok の行があっても出力過多の fail（ADR 0223）。
+    let too_much = judged(
+        &test,
+        &collected(Termination::OutputLimitExceeded, ok, "エラー\n"),
+    )
+    .unwrap();
+    assert_eq!(too_much.status, CaseStatus::Fail);
     assert_eq!(
-        case_result(&test, &collected(Termination::Stopped, ok, "")),
+        too_much.detail,
+        Some(CaseDetail::OutputLimit(
+            "標準出力の量が上限（1 MB）を超えたため停止しました。".into()
+        ))
+    );
+
+    assert_eq!(
+        judged(&test, &collected(Termination::Stopped, ok, "")),
         None
+    );
+}
+
+/// アプリの上限で、隠しテスト 1 件の結果を決める。
+fn judged(test: &HiddenTest, collected: &CollectedOutput) -> Option<CaseResult> {
+    case_result(test, collected, TESTS_OUTPUT_LIMIT)
+}
+
+#[test]
+fn the_output_limit_detail_serializes_as_a_string_with_the_limit() {
+    let result = JudgeResult::from_cases(vec![CaseResult {
+        name: "合計".into(),
+        status: CaseStatus::Fail,
+        detail: Some(output_limit_detail(64 * 1024)),
+    }]);
+    assert_eq!(
+        serde_json::to_value(&result).unwrap()["cases"][0],
+        serde_json::json!({
+            "name": "合計",
+            "status": "fail",
+            "detail": "標準出力の量が上限（64 KB）を超えたため停止しました。",
+        })
     );
 }
 
@@ -469,6 +506,7 @@ fn limits(seconds: u64, parallelism: usize) -> TestLimits {
         time: Duration::from_secs(seconds),
         parallelism: NonZeroUsize::new(parallelism).unwrap(),
         learner_time: LEARNER_TESTS_TIME_LIMIT,
+        stdout: TESTS_OUTPUT_LIMIT,
     }
 }
 
@@ -925,6 +963,7 @@ fn learner_case_results_follow_the_table_in_the_spec() {
         learner_case_result(
             min_tests(min),
             &collected(termination, stdout, "cargo の標準エラー出力\n"),
+            TESTS_OUTPUT_LIMIT,
         )
     };
 
@@ -998,6 +1037,16 @@ fn learner_case_results_follow_the_table_in_the_spec() {
     assert_eq!(
         timed_out.detail,
         Some(CaseDetail::Stderr("cargo の標準エラー出力\n".into()))
+    );
+
+    // 標準出力の量の上限で止めたものは、上限までに ok の行が足りていても出力過多の fail（ADR 0223）。
+    let too_much = result(1, Termination::OutputLimitExceeded, ok_lines).unwrap();
+    assert_eq!(too_much.status, CaseStatus::Fail);
+    assert_eq!(
+        too_much.detail,
+        Some(CaseDetail::OutputLimit(
+            "標準出力の量が上限（1 MB）を超えたため停止しました。".into()
+        ))
     );
 
     assert_eq!(result(1, Termination::Stopped, ok_lines), None);
@@ -1268,4 +1317,40 @@ fn learner_tests_that_do_not_finish_in_time_are_a_timeout() {
         elapsed >= Duration::from_secs(3) && elapsed < Duration::from_secs(20),
         "{elapsed:?}"
     );
+}
+
+#[test]
+fn hidden_and_learner_tests_that_write_too_much_to_stdout_fail_without_waiting_for_the_time_limit()
+{
+    // 学習者のコードが、libtest の捕捉を避けて標準出力に直接書き続ける。
+    let lib = "use std::io::Write;\n\n\
+               pub fn double(n: i32) -> i32 {\n    n * 2\n}\n\n\
+               pub fn flood() {\n    \
+               loop {\n        std::io::stdout().write_all(b\"0123456789\\n\").unwrap();\n    }\n}\n\n\
+               #[cfg(test)]\n\
+               mod tests {\n    #[test]\n    fn floods() {\n        super::flood();\n    }\n}\n";
+    let built = build_with_hidden_tests(
+        &files(&[("src/main.rs", MAIN_RS), ("src/lib.rs", lib)]),
+        "src/lib.rs",
+        "use super::*;\n\n\
+         #[test]\nfn doubles() {\n    assert_eq!(double(5), 10);\n}\n\n\
+         #[test]\nfn floods() {\n    flood();\n}\n",
+    );
+    let mut spec = learner_spec(&built, 1, 60);
+    spec.limits.stdout = 10_000;
+    let result = judge_tests(&spec, &Stopper::new(), |_| {}).unwrap();
+    // 制限時間で止めたのなら timeout になるので、fail であることで、制限時間を待たずに止めたことも確かめられる。
+    assert_eq!(
+        statuses(&result),
+        [
+            ("doubles", CaseStatus::Pass),
+            ("floods", CaseStatus::Fail),
+            ("自分で書いたテスト（1 件以上）", CaseStatus::Fail),
+        ]
+    );
+    let too_much = CaseDetail::OutputLimit(
+        "標準出力の量が上限（10000 バイト）を超えたため停止しました。".into(),
+    );
+    assert_eq!(detail_of(&result, "floods"), &too_much);
+    assert_eq!(learner_case(&result).detail.as_ref(), Some(&too_much));
 }
