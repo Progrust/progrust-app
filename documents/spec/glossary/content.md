@@ -43,5 +43,5 @@ description: "章、レッスン、動画、台本、演習、要素、判定方
 | 判定方式 | judge mode | `stdout`（標準出力の比較）または `test`（隠しテスト） |
 | テストケース | case | 判定の 1 単位。`stdout` 方式では入力と期待出力の組、`test` 方式では 1 つのテスト関数。学習者のテストの判定は、まとめて 1 件とする |
 | 学習者のテスト | learner tests | 学習者が自分で書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）。テスト実行で動かせ、`min_learner_tests` のある演習では判定に含める（[コードの提出（submit）](../exercise-runner/submit.md)「学習者のテストの判定」） |
-| 許可クレート | allowed crates | 演習で使ってよい外部クレートの一覧 |
+| 許可クレート | allowed crates | 演習で使ってよい外部クレートの一覧。画面の文言では「外部クレート」と呼ぶ |
 | 初回準備の状態 | preparation status | バックエンドが持つ、許可クレートの初回準備のいまの状態（`not_started`・`preparing`・`ready`・`failed`。[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「初回準備の状態」） |

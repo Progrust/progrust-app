@@ -24,7 +24,7 @@ description: "`cargo`・`claude` の検出結果と初回準備の状態を表�
     "path": "/Users/me/.local/bin/claude",
     "version": "2.1.329"
   },
-  "crates": { "status": "ready", "error": null }
+  "crates": { "status": "ready", "prepared_at": "2026-11-24T19:02:00+09:00", "error": null }
 }
 ```
 
@@ -50,6 +50,7 @@ description: "`cargo`・`claude` の検出結果と初回準備の状態を表�
 | 項目 | 型 | 内容 |
 |---|---|---|
 | `status` | `"not_started" \| "preparing" \| "ready" \| "failed"` | 初回準備の状態（[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「初回準備の状態」） |
+| `prepared_at` | `string \| null` | `ready` のときの、初回準備が終わった日時（`prepared.json` の `prepared_at`）。ほかの状態では `null` |
 | `error` | `string \| null` | `failed` のときのエラーの内容（`prepared.json` に書いたもの）。ほかの状態では `null` |
 
 ## コマンド
@@ -62,15 +63,16 @@ description: "`cargo`・`claude` の検出結果と初回準備の状態を表�
 
 **`redetect_tools`**
 
-設定画面の「再検出」で呼ぶ。
+設定画面と初回起動画面の「再検出」で呼ぶ。
 
 - 引数: なし。
 - 戻り値: 検出し直した後の環境の状態。
 - 検出の方法は [外部ツール（cargo・claude）への依存](../external-tools.md)「検出」に従い、設定の `tool_paths`（[設定画面と settings.json](../../screens/settings-screen.md)「settings.json」）を使う。検出し直したら、`environment_updated` も送る。
+- 検出し直した後、初回準備を始めるかどうかを判定する（[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「初回準備」）。始めたときは、戻り値の初回準備の状態は `preparing` になる。
 
 **`retry_crate_preparation`**
 
-初回準備に失敗したときの再試行のボタン（[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「準備中・失敗時の動作」、[設定画面と settings.json](../../screens/settings-screen.md)「設定項目」のクレートの準備）で呼ぶ。
+初回準備に失敗したときの再試行のボタン（[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「準備中・失敗時の動作」、[設定画面と settings.json](../../screens/settings-screen.md)「設定項目」の外部クレートの準備）で呼ぶ。
 
 - 引数: なし。
 - 戻り値: `null`。初回準備を始めたら返す。経過と結果は `environment_updated` で知らせる。

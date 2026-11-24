@@ -36,7 +36,7 @@ description: "`tools/` の教材チェックツールで検証するチェック
 - 判定は、学習者の提出（[コードの提出（submit）](../exercise-runner/submit.md)）と同じ手順・制限値で行う。判定結果の `status` が `passed` なら「模範解答」は通り、「初期コード」はエラーになる。
 - 判定結果の JSON は、提出の判定結果（[コードの提出（submit）](../exercise-runner/submit.md)「判定結果」）の `status`・`passed`・`total`・`cases` に、ビルドの出力（ANSI エスケープを除いたもの）の `build_output` を足したものとする。「模範解答」のエラーには、判定結果の要約（`status`、通過数、失敗したテストケース、最初に失敗したテストケースの `detail`）と、`compile_error` ではビルドの出力の先頭を入れる。
 - プログラムが判定結果を返さなかったとき（0 以外の終了コードで終わった、JSON を読めない、など）は、その検査（「模範解答」か「初期コード」）のエラーにする。
-- 許可クレートを使う演習（`lesson.json` の `exercise.dependencies` が空でない演習）は、「模範解答」「初期コード」を、まだ検査しない。判定に作業領域の初回準備が要るためで、検査のしかたは、初回準備を作るときに決める。検査しないことは、結果に表示しない（[ADR 0222](../../decisions/0222-build-judge-cli-only-with-content-check-feature.md)）。
+- 許可クレートを使う演習（`lesson.json` の `exercise.dependencies` が空でない演習）を判定するときは、`progrust-judge` が、判定の前に、判定の作業領域で初回準備（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「初回準備」）の「実行する条件」を判定し、当てはまれば同じ手順で初回準備をする。初回準備にはネットワークが要る。判定の作業領域の初回準備では、手順の 4（`target-validate/` の複製）を行わない。教材チェックツールは生成問題の検証をしないからである。初回準備が失敗したときは、判定結果を返さずに 0 以外の終了コードで終わり、その検査のエラーになる。判定のビルドは、アプリと同じく `--offline` で行う。
 
 準備中のレッスン（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)「準備中のレッスン」）は、次のように扱う。
 

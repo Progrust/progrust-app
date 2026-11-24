@@ -28,6 +28,9 @@
 * [ADR 0228](0228-render-content-markdown-with-react-markdown.md) - 教材の Markdown（問題文など）を、react-markdown で HTML の文字列を経ずに React の要素にして表示し、生の HTML は捨て、リンクは文字だけを表示する
 * [ADR 0230](0230-show-monaco-messages-in-japanese.md) - コードエディタの中に出る Monaco Editor の文言（右クリックのメニュー、検索・置換の欄、読み取り専用の知らせなど）を、monaco-editor に同梱された日本語の翻訳で日本語にし、翻訳は Monaco の入口で他の Monaco のモジュールより先に読み込む
 * [ADR 0232](0232-scan-only-app-index-html-for-dev-deps.md) - 開発時の起動で Vite が前もってまとめる依存を探す入口（optimizeDeps.entries）を、アプリの index.html だけにし、React の重複を確かめる自動テストを、塊の数ではなく全部の塊の中の React の本体の数で数えるようにする
+* [ADR 0233](0233-claude-detection-locations.md) - claude の検出で、npm のグローバルインストール先を npm を起動せずに /opt/homebrew/bin と /usr/local/bin とし、場所ごとの調べ方と使えない場所の飛ばし方を cargo と同じ形にする
+* [ADR 0237](0237-show-prepared-at.md) - 環境の状態の初回準備に、準備が終わった日時 prepared_at を足し、設定画面に「準備できています」と日時を表示する
+* [ADR 0240](0240-install-guide-urls-and-opener-scope.md) - 導入手順の URL を rustup（https://rustup.rs）と Claude Code（https://code.claude.com/docs/ja/setup）の 2 つに決め、フロントエンドが OS の既定ブラウザで開ける URL をこの 2 つだけに絞る
 
 # 教材データ形式
 
@@ -90,7 +93,8 @@
 * [ADR 0191](0191-count-lesson-title-on-rendered-frames.md) - 教材チェックツールの検査「表紙」で、最初のシーンの描画したフレームごとに、表示している `LessonTitle` を、`LessonTitle` 自身が知らせる数で数え、どのフレームでも表示していないときと、2 つ以上表示しているフレームがあるときをエラーにする
 * [ADR 0192](0192-report-browser-console-errors-in-render-check.md) - 教材チェックツールの描画のチェックで、描画時の例外に加えて、ブラウザの console に出たエラーもエラーにし、console の警告はエラーにしない
 * [ADR 0208](0208-content-check-runs-judge-via-backend-cli.md) - 教材チェックツールの「模範解答」「初期コード」の判定を、バックエンドのクレートに置いた判定だけを行うコマンドラインのプログラム（`src-tauri/src/bin/`）を `cargo run` で起動して行い、作業領域を `src-tauri/target/` の下の専用のディレクトリにする
-* [ADR 0222](0222-build-judge-cli-only-with-content-check-feature.md) - 教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない
+* [ADR 0222](0222-build-judge-cli-only-with-content-check-feature.md) - 教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない（ADR 0242 で許可クレートを使う演習の扱いを変えた）
+* [ADR 0242](0242-content-check-prepares-crates-before-judging.md) - 教材チェックツールは、許可クレートを使う演習の模範解答と初期コードも判定し、判定の前に progrust-judge が判定の作業領域で初回準備をする
 
 # コード実行・判定
 
@@ -132,6 +136,10 @@
 * [ADR 0223](0223-test-mode-stdout-limit.md) - `test` 方式の判定に、1 テストケースの標準出力の量の上限 1 MB を設け、超えたら止めてそのテストケースを `fail`（出力過多）にする
 * [ADR 0224](0224-console-output-colors-by-stream.md) - 演習画面のコンソールの文字の色を出力の種類で分け、標準エラー出力を一段淡い `ink-3`、アプリの知らせを `muted`、学習者の入力を `link` にする
 * [ADR 0227](0227-notify-program-start-with-run-started.md) - 実行（`main`）で学習者のプログラムを起動したことを、標準入力を受け付けるようにしてから送るイベント `run_started` で知らせ、演習画面は受け取ったら入力欄を有効にする。テスト実行・提出と、プログラムを起動しなかったときは送らない
+* [ADR 0234](0234-start-preparation-after-redetect.md) - 再検出で cargo が見つかったときは、初回準備の「実行する条件」を判定し直し、当てはまれば初回準備を始める。初回準備が動いているときは止めず、判定もし直さない
+* [ADR 0235](0235-prepared-json-format.md) - prepared.json に schema_version を持たせ、crates_hash を同梱の allowed-crates.toml と Cargo.lock を続けたものの SHA-256 にし、読み込めない prepared.json は退避も通知もせずに無いものとして扱う
+* [ADR 0236](0236-stop-preparation-on-app-exit.md) - アプリを終了するときに初回準備が動いていたら、初回準備の cargo を止め、prepared.json を書かずに、次回の起動でやり直す
+* [ADR 0238](0238-call-allowed-crates-external-crates-on-screen.md) - 画面の文言では、許可クレートを「外部クレート」と呼び、初回準備の案内を「外部クレートを準備しています」などにする
 
 # レッスン進行・進捗管理
 
@@ -221,6 +229,8 @@
 * [ADR 0204](0204-exercise-back-link-goes-to-list.md) - 演習画面の左上のリンクを、レッスンの演習では「レッスン一覧」、生成問題の演習では「生成問題一覧」にし、それぞれの一覧に移る
 * [ADR 0226](0226-read-console-ansi-into-six-theme-colors.md) - 演習画面のコンソールで、ANSI エスケープのうち SGR の色と太字だけを読み、明るい色と 256 色の 0〜15 番をデザインシステムの 6 色に寄せ、黒・白・それ以外の色・背景は既定の色で表示し、色の状態は実行・提出ごと・出力の種類ごとに持ち、残す文字数はエスケープを除いた表示する文字で数える
 * [ADR 0231](0231-exercise-shortcuts-off-while-modal-is-open.md) - 演習画面のキーボードショートカット（実行・テスト実行・提出・停止）は、モーダル（前回の正解コード、初期コードに戻すの確認、正解のモーダル）を開いている間は効かないようにする
+* [ADR 0239](0239-enter-tool-paths-as-text.md) - 設定画面の cargo・claude のパスの手動指定は文字の入力欄で行い、空にすると自動検出に戻し、保存したら検出し直す
+* [ADR 0241](0241-first-launch-redetect-and-crates-status.md) - 初回起動画面に、再検出のボタンと、外部クレートの初回準備の状態と再試行を置き、ヘッダーにはロゴだけを表示する
 
 # 非機能要件
 

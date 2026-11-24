@@ -1,10 +1,11 @@
 ---
 type: Specification
 title: "Tauri の権限"
-description: "フロントエンドに許可する Tauri の権限（capabilities）の範囲、アセットプロトコルで読める範囲、外部サイトをアプリ内で表示しないことを定める。"
+description: "フロントエンドに許可する Tauri の権限（capabilities）の範囲と、外部 URL を開ける範囲、アセットプロトコルで読める範囲、外部サイトをアプリ内で表示しないことを定める。"
 ---
 
 - フロントエンドに許可する Tauri の権限（capabilities）は、本アプリのコマンドの呼び出しと、バックエンドが送るイベントの受け取り（`listen` と、受け取りをやめる `unlisten`。[コマンドとイベントの共通の決まり](commands/conventions.md)「仕組み」）と、外部 URL を OS の既定ブラウザで開くことに限る。ファイルシステム・シェルのプラグインはフロントエンドに公開しない。
+- 外部 URL を開く権限は、開ける URL を、導入手順の URL（[外部ツール（cargo・claude）への依存](external-tools.md)「見つからない場合」の表）だけに絞る。
 - Tauri の組み込みの API（アプリ情報、ファイルのパス、ウィンドウの操作、フロントエンドからのイベントの送信など）は、イベントの受け取りのほかは、フロントエンドに許可しない。
 - Tauri のアセットプロトコル（`asset://`）を有効にする。読める範囲（スコープ）は、アプリ同梱データの動画の音声（`{app_resources}/content/lessons/{lesson_id}/video/voice/` の `.m4a`）に限る。使い方は [フロントエンドとバックエンドの役割分担](responsibilities.md) に定める。
 - 外部サイトのページをアプリ内で表示しない。

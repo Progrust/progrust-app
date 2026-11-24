@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "許可クレートと作業領域"
-description: "許可クレートの一覧（`runner/allowed-crates.toml`）と同梱の `Cargo.lock`、`workspace/` のディレクトリ構成とビルド先の分け方、アプリ起動時の初回準備の条件・手順・準備中や失敗時の動作、バックエンドが持つ初回準備の状態（`not_started`・`preparing`・`ready`・`failed`）、演習のビルドの失敗から初回準備のやり直しを判定する方法と、判定したときの実行・提出の扱いを定める。"
+description: "許可クレートの一覧（`runner/allowed-crates.toml`）と同梱の `Cargo.lock`、`workspace/` のディレクトリ構成とビルド先の分け方、アプリ起動時と再検出のときの初回準備の条件・手順・準備中や失敗時の動作・アプリの終了のときの扱い、`prepared.json` の形、バックエンドが持つ初回準備の状態（`not_started`・`preparing`・`ready`・`failed`）、演習のビルドの失敗から初回準備のやり直しを判定する方法と、判定したときの実行・提出の扱いを定める。"
 ---
 
 ## 許可クレート
@@ -40,14 +40,22 @@ rand = "=0.9.1"
 
 ## 初回準備
 
-**実行する条件**（アプリ起動時に判定する）
+**実行する条件**（アプリ起動時に判定する。`cargo` が見つからないときは判定しない）
 
 - `prepared.json` がない
 - `prepared.json` の `crates_hash`（`allowed-crates.toml` と `Cargo.lock` のハッシュ値）が同梱のものと異なる
 - `prepared.json` の `rustc_version`（`rustc -vV` の出力）が、今の `rustc -vV` の出力と異なる
 - `prepared.json` の `status` が `failed`
 
-起動時のほかに、演習のビルドの失敗から初回準備のやり直しが要ると判定したときにも実行する（下の「初回準備のやり直しが要る失敗」）。
+- `crates_hash` は、同梱の `allowed-crates.toml` のバイト列に `Cargo.lock` のバイト列を続けたものの SHA-256 を、小文字の 16 進数で書いたものとする。
+
+起動時のほかに、次のときにも実行する。
+
+- 演習のビルドの失敗から、初回準備のやり直しが要ると判定したとき（下の「初回準備のやり直しが要る失敗」）。
+- 「再検出」（[環境のコマンドとイベント](../architecture/commands/environment.md)「`redetect_tools`」）で `cargo` が見つかり、初回準備の状態が `preparing` でなく、「実行する条件」のどれかに当てはまるとき。起動時に `cargo` が見つからなかった後に見つかったときと、設定のパスを変えて別の `rustc` になったときが、これに当たる。
+  - どれにも当てはまらないときは、初回準備の状態を `ready` にする（起動時に `cargo` が見つからず `not_started` だった後に見つかり、前に準備したものがそのまま使えるとき）。
+  - 初回準備の状態が `preparing` のときは、動いている初回準備を止めず、条件も判定し直さない。
+  - 再検出で `cargo` が見つからなくなったときは、初回準備の状態を変えない。
 
 **手順**
 
@@ -57,12 +65,39 @@ rand = "=0.9.1"
 4. `target-validate/` を消し、`target/` を `target-validate/` に複製する。複製は APFS のクローン（`cp -c`）で行う。複製した後、`target-validate/` から、学習者の `project/` のビルド結果（パッケージ `progrust_exercise` の実行ファイル、`deps/` の `progrust_exercise-*`、`.fingerprint/` の `progrust_exercise-*`）を消す。
 5. 成功したら `prepared.json` に `status: ready` と `crates_hash`・`rustc_version`・`prepared_at` を書く。失敗したら `status: failed` と エラー内容を書き、次回起動時に再度実行する。
 
+- アプリを終了するときに初回準備が動いていたら、初回準備の `cargo` を止め、`prepared.json` は書かない。次回起動時には「実行する条件」に当てはまり、初回準備をやり直す（初回準備を始めるときの `prepared.json` は、無いか、`status` が `failed` か、`crates_hash`・`rustc_version` が今のものと異なる）。
+
 - 初回準備のビルドにも、演習のビルドにも、`--locked` と `--frozen` を付けない。同梱の `Cargo.lock` はルートのパッケージが `progrust_allowed_crates` で、演習が使わないクレートの entry も含む。cargo はビルドのときに、これを各プロジェクトに合わせて書き換える。
+
+**`prepared.json`**
+
+```json
+{
+  "schema_version": 1,
+  "status": "ready",
+  "crates_hash": "3f5a…",
+  "rustc_version": "rustc 1.100.0 (…)\nbinary: rustc\n…",
+  "prepared_at": "2026-11-24T19:02:00+09:00",
+  "error": null
+}
+```
+
+| 項目 | 内容 |
+|---|---|
+| `schema_version` | `1` |
+| `status` | `ready` か `failed` |
+| `crates_hash` | 初回準備に使った `allowed-crates.toml` と `Cargo.lock` のハッシュ値（上の「実行する条件」） |
+| `rustc_version` | 初回準備に使った `rustc` の `rustc -vV` の出力そのまま |
+| `prepared_at` | 初回準備が終わった日時（[コマンドとイベントの共通の決まり](../architecture/commands/conventions.md) の日時の書き方） |
+| `error` | `failed` のときのエラーの内容。`ready` のときは `null` |
+
+- 書き込みは [データの保存場所](../architecture/data-locations.md)「書き込みの規則」の一時ファイルとリネームで行う。
+- 読み込めない `prepared.json`（JSON として読めない、この形に合わない、`schema_version` が `1` でない）は、無いものとして扱う。退避も通知もしない。初回準備をやり直せば作り直せる、学習者のデータではないファイルだからである。
 
 **準備中・失敗時の動作**
 
 - 許可クレートを使わない演習は通常どおり実行・提出できる。
-- 許可クレートを使う演習は、実行・テスト・提出のボタンを無効にし、「クレートを準備しています」「クレートの準備に失敗しました（ネットワーク接続を確認してください）」と表示する。失敗時は再試行ボタンを表示する。
+- 許可クレートを使う演習は、実行・テスト・提出のボタンを無効にし、「外部クレートを準備しています」「外部クレートの準備に失敗しました（ネットワーク接続を確認してください）」と表示する。失敗時は再試行ボタンを表示する。
 - 許可クレートを使う生成問題の検証は、初回準備が終わるまで始めない。
 - 準備の状態は `environment_updated` イベントで通知する（[環境のコマンドとイベント](../architecture/commands/environment.md)）。
 
@@ -91,7 +126,7 @@ rand = "=0.9.1"
 
 - 文言は cargo の版で変わりうるので、1 つの語だけで判定せず、表の 2 つ以上の語の組で判定する。
 - E0786 は学習者のコードのコンパイルエラーと同じ形（コンパイラの診断）で出るので、`note:` のパスがビルド先の中を指すことを必ず確かめる。ビルド先の中のどこを指すかは cargo の版で変わりうるので、ビルド先の中であることだけを確かめる。
-- 実行・提出のビルドで当てはまったときは、その実行・提出を学習者のコードの誤りとして表示せず、「クレートを準備し直しています」と表示し、`prepared.json` の `status` を `failed` にして初回準備を始める。ネットワークが無いときは初回準備が失敗し、上の「準備中・失敗時の動作」になる。
+- 実行・提出のビルドで当てはまったときは、その実行・提出を学習者のコードの誤りとして表示せず、「外部クレートを準備し直しています」と表示し、`prepared.json` の `status` を `failed` にして初回準備を始める。ネットワークが無いときは初回準備が失敗し、上の「準備中・失敗時の動作」になる。
   - その実行・提出の結果の状態は `crates_unavailable` とする（[コードの実行（run）](run.md)「結果の状態」、[コードの提出（submit）](submit.md)「判定結果」）。試行ログへの記録は [実行・提出の試行ログへの記録](attempt-log.md) に従う。
   - 初回準備が終わっても、その実行・提出を自動ではやり直さない。学習者が、もう一度ボタンを押す。
 - 生成問題の検証のビルドで当てはまったときも、`prepared.json` の `status` を `failed` にして初回準備を始める。検証の扱いは [演習問題生成の出力と検証](../exercise-generation/output-and-validation.md)「初回準備のやり直しが要る失敗になった場合」に従う。

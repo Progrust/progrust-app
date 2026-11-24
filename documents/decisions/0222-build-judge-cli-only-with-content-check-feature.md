@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0222"
-description: "教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない"
+description: "教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない（ADR 0242 で許可クレートを使う演習の扱いを変えた）"
 ---
 
 - 日付: 2026-11-24
