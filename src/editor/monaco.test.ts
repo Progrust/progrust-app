@@ -51,6 +51,24 @@ describe("Monaco の入口", () => {
     expect(entryEditingImports()).toEqual(expected);
   });
 
+  it("日本語の翻訳を、ほかのどの import よりも先に読み込む", () => {
+    // 翻訳より先に読み込まれた Monaco のモジュールの文言は、英語のまま残る（ADR 0230）。
+    const first = /^import\s.*$/m.exec(entrySource)?.[0];
+    expect(first).toBe('import "monaco-editor/nls/lang/ja";');
+  });
+
+  it("日本語の翻訳は、Monaco の文言の一覧と日本語の言語をグローバルな値に入れる", async () => {
+    const globals = globalThis as {
+      _VSCODE_NLS_MESSAGES?: unknown;
+      _VSCODE_NLS_LANGUAGE?: unknown;
+    };
+    await import("monaco-editor/nls/lang/ja");
+    expect(globals._VSCODE_NLS_LANGUAGE).toBe("ja");
+    expect(globals._VSCODE_NLS_MESSAGES).toEqual(
+      expect.arrayContaining(["読み取り専用のエディターは編集できません"]),
+    );
+  });
+
   it("既定の入口の export は、editor.api のものだけ", () => {
     // 既定の入口が、編集機能の一覧の外で新しい物を読み込み始めたら、ここで気づく。
     const outside = [

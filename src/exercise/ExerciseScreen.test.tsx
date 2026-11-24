@@ -1321,6 +1321,74 @@ describe("キーボードショートカット", () => {
     expect(commands(calls, "submit_code")).toHaveLength(1);
   });
 
+  it("「前回の正解コード」のモーダルを開いている間は、ショートカットとして扱わず、閉じると効く", async () => {
+    const { calls } = setup("ch04-02", {
+      completed: true,
+      passedCode: {
+        session_id: "s0",
+        submitted_at: "2026-10-28T14:32:00+09:00",
+        files: { "src/main.rs": "// 前回の正解\n" },
+      },
+    });
+    await editor();
+    fireEvent.click(
+      screen.getByRole("button", { name: "前回の正解コードを見る" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "前回の正解コード" });
+    await screen.findByRole("textbox", {
+      name: "前回の正解コード src/main.rs",
+    });
+    // キーの既定の動作も止めず、モーダルの中の操作に渡す（ADR 0231）。
+    expect(await press(dialog, { key: "Enter" })).toBe(true);
+    expect(await press(dialog, { key: "T", shiftKey: true })).toBe(true);
+    expect(await press(dialog, { key: "Enter", shiftKey: true })).toBe(true);
+    expect(await press(document.body, { key: "Enter" })).toBe(true);
+    notStarted();
+    expect(commands(calls, "run_code")).toEqual([]);
+    expect(commands(calls, "submit_code")).toEqual([]);
+
+    fireEvent.click(
+      within(dialog).getAllByRole("button", { name: "閉じる" })[0],
+    );
+    expect(await press(problem(), { key: "Enter" })).toBe(false);
+    await sent(calls, "run_code");
+  });
+
+  it("実行中に「前回の正解コード」のモーダルを開いている間は、Cmd+. で止めない", async () => {
+    const { calls } = setup("ch04-02", { completed: true });
+    await editor();
+    await press(problem(), { key: "Enter" });
+    await sent(calls, "run_code");
+    fireEvent.click(
+      screen.getByRole("button", { name: "前回の正解コードを見る" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "前回の正解コード" });
+    expect(await press(dialog, { key: "." })).toBe(true);
+    expect(commands(calls, "stop_run")).toEqual([]);
+  });
+
+  it("「初期コードに戻す」の確認のダイアログを開いている間は、エディタの外でも中でも、ショートカットとして扱わない", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    fireEvent.click(screen.getByRole("button", { name: "初期コードに戻す" }));
+    const dialog = screen.getByRole("alertdialog", {
+      name: "初期コードに戻しますか？",
+    });
+    expect(await press(dialog, { key: "Enter" })).toBe(true);
+    expect(await press(document.body, { key: "Enter", shiftKey: true })).toBe(
+      true,
+    );
+    await pressInEditor("progrust.exercise.run", { key: "Enter" });
+    await pressInEditor("progrust.exercise.submit", {
+      key: "Enter",
+      shiftKey: true,
+    });
+    notStarted();
+    expect(commands(calls, "run_code")).toEqual([]);
+    expect(commands(calls, "submit_code")).toEqual([]);
+    expect(commands(calls, "reset_draft")).toEqual([]);
+  });
+
   it.each([
     ["isComposing が true", { isComposing: true }],
     ["keyCode が 229", { keyCode: 229 }],

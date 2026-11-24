@@ -13,7 +13,7 @@ afterAll(() => {
   rmSync(cacheDir, { recursive: true, force: true });
 });
 
-it("いまのリポジトリで、まとめた依存のうち React の本体を含む塊が 1 つだけである", async () => {
+it("いまのリポジトリで、まとめた依存に React の本体が 1 つだけ入る", async () => {
   const config = await resolveConfig(
     {
       root,
@@ -25,13 +25,16 @@ it("いまのリポジトリで、まとめた依存のうち React の本体を
   );
   await optimizeDeps(config, true);
   const depsDir = join(cacheDir, "deps");
-  const withReact = readdirSync(depsDir)
+  // React の本体（react/cjs/react.development.js）が定める関数。1 つの塊に 2 つの React が入ることもある
+  // （ADR 0232）ので、塊の数ではなく、全部の塊の中の数を数える。
+  const reactCopies = readdirSync(depsDir)
     .filter((file) => file.endsWith(".js"))
-    .filter((file) =>
-      // React の本体（react/cjs/react.development.js）が定める関数。
-      readFileSync(join(depsDir, file), "utf8").includes(
-        "exports.createElement = ",
-      ),
-    );
-  expect(withReact).toHaveLength(1);
+    .map(
+      (file) =>
+        readFileSync(join(depsDir, file), "utf8").split(
+          "exports.createElement = ",
+        ).length - 1,
+    )
+    .reduce((sum, count) => sum + count, 0);
+  expect(reactCopies).toBe(1);
 }, 120_000);

@@ -498,6 +498,13 @@ function ExerciseWorkspace({
 
   // キーボードショートカット。押したときの処理は、コンソールの部品（ExerciseConsole）が差し込む。
   const shortcutRef = useRef<((action: ShortcutAction) => void) | null>(null);
+  // モーダルを開いている間は、ショートカットを効かせない。キーはモーダルの中の操作に渡す（ADR 0231）。
+  const modalOpen =
+    (passed !== null && passOpen) || prevCodeOpen || resetState !== "closed";
+  const modalOpenRef = useRef(modalOpen);
+  useEffect(() => {
+    modalOpenRef.current = modalOpen;
+  }, [modalOpen]);
   // エディタの領域。ここにフォーカスがあるときのキーは、Monaco のコマンドが受ける。
   const editorAreaRef = useRef<HTMLDivElement>(null);
   // いま押されているキーが、日本語の変換中のものか。Monaco のコマンドからも見る。
@@ -506,6 +513,9 @@ function ExerciseWorkspace({
     // キャプチャで受けて、エディタの外のどこにフォーカスがあっても、ほかの処理より先に取る。
     const handleKeyDown = (event: KeyboardEvent) => {
       composingRef.current = isComposingKey(event);
+      if (modalOpenRef.current) {
+        return;
+      }
       if (
         event.target instanceof Node &&
         editorAreaRef.current?.contains(event.target) === true
@@ -532,7 +542,7 @@ function ExerciseWorkspace({
         label: SHORTCUT_LABELS[action],
         keybinding: SHORTCUT_KEYBINDINGS[action],
         run: () => {
-          if (!composingRef.current) {
+          if (!composingRef.current && !modalOpenRef.current) {
             shortcutRef.current?.(action);
           }
         },

@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0199"
-description: "開発時の起動で Vite が前もってまとめる依存（optimizeDeps）の分け方を指定し、react・react-dom・scheduler を 1 つの塊に入れる"
+description: "開発時の起動で Vite が前もってまとめる依存（optimizeDeps）の分け方を指定し、react・react-dom・scheduler を 1 つの塊に入れる（ADR 0232 で自動テストの数え方を変えた）"
 ---
 
 - 日付: 2026-11-23
