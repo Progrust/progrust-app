@@ -1,5 +1,6 @@
 // 実行・提出のコマンドとイベント（documents/spec/architecture/commands/run.md）。
 import { invoke } from "@tauri-apps/api/core";
+import { listen } from "@tauri-apps/api/event";
 
 import type { DraftFiles, LessonProgress } from "./progress";
 
@@ -182,4 +183,65 @@ export function closeStdin(requestId: string): Promise<null> {
 // 動いていない ID のときは、何もせずに null で解決する。
 export function stopRun(requestId: string): Promise<null> {
   return invoke<null>("stop_run", { request_id: requestId });
+}
+
+// 1 つの実行・テスト実行・提出のイベントを受け取る関数。
+export type RunEventHandlers = {
+  started: (event: RunStarted) => void;
+  output: (event: RunOutput) => void;
+  progress: (event: SubmitProgress) => void;
+  finished: (event: RunFinished) => void;
+};
+
+// requestId のイベント（run_started・run_output・submit_progress・run_finished）の受け取りを始める。
+// 受け取りを始めたら、受け取りをやめる関数で解決する。この後に run_code・submit_code を呼ぶ
+// （documents/spec/architecture/commands/conventions.md「要求を見分ける ID」）。
+// 受け取りを始められなかったイベントがあれば、始めた分をやめてから、拒否する。
+export async function listenRunEvents(
+  requestId: string,
+  handlers: RunEventHandlers,
+): Promise<() => void> {
+  const mine =
+    <T extends { request_id: string }>(handler: (payload: T) => void) =>
+    (event: { payload: T }) => {
+      if (event.payload.request_id === requestId) {
+        handler(event.payload);
+      }
+    };
+  const results = await Promise.allSettled([
+    listen<RunStarted>(RUN_STARTED, mine(handlers.started)),
+    listen<RunOutput>(RUN_OUTPUT, mine(handlers.output)),
+    listen<SubmitProgress>(SUBMIT_PROGRESS, mine(handlers.progress)),
+    listen<RunFinished>(RUN_FINISHED, mine(handlers.finished)),
+  ]);
+  const unlisteners = results.flatMap((result) =>
+    result.status === "fulfilled" ? [result.value] : [],
+  );
+  const unlistenAll = () => {
+    for (const unlisten of unlisteners.splice(0)) {
+      unlisten();
+    }
+  };
+  const failed = results.find((result) => result.status === "rejected");
+  if (failed !== undefined) {
+    unlistenAll();
+    throw failed.reason;
+  }
+  return unlistenAll;
+}
+
+// コマンドが拒否されたときに、画面に出す文。コマンドのエラー（CommandError）の message（学習者に見せてよい日本語）を
+// 使う。CommandError でないもの（コマンドを呼べなかったときの Error など）は、決まった文にする。
+export function commandErrorMessage(error: unknown): string {
+  if (
+    typeof error === "object" &&
+    error !== null &&
+    !(error instanceof Error) &&
+    "message" in error &&
+    typeof error.message === "string" &&
+    error.message !== ""
+  ) {
+    return error.message;
+  }
+  return "コマンドを実行できませんでした。";
 }

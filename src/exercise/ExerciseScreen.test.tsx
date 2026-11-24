@@ -1,5 +1,12 @@
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { emit } from "@tauri-apps/api/event";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Chapter, LessonKind } from "../commands/content";
@@ -95,7 +102,7 @@ type Options = {
 
 function mockCommands(calls: Calls, options: Options = {}) {
   let lessonFailures = options.failLesson === true ? 1 : 0;
-  mockIPC((command, args) => {
+  const handle: Parameters<typeof mockIPC>[0] = (command, args) => {
     calls.push({ command, args });
     const lessonId = (args as { lesson_id?: string }).lesson_id ?? "";
     const title =
@@ -176,7 +183,8 @@ function mockCommands(calls: Calls, options: Options = {}) {
       default:
         return undefined;
     }
-  });
+  };
+  mockIPC(handle, { shouldMockEvents: true });
 }
 
 function setup(lessonId: string, options: Options = {}) {
@@ -214,6 +222,8 @@ async function flush() {
 }
 
 afterEach(() => {
+  // 画面を離れるときの保存・stop_run・受け取りの解除が、置き換えたコマンドに届くように、先にアンマウントする。
+  cleanup();
   clearMocks();
   vi.useRealTimers();
   editorProps.current = null;
@@ -572,5 +582,68 @@ describe("multi レイアウトのファイル操作", () => {
       "src/main.rs",
       "tests/it.rs",
     ]);
+  });
+});
+
+describe("実行・提出", () => {
+  const requestId = (calls: Calls, name: string) =>
+    (commands(calls, name).at(-1) as { request_id: string }).request_id;
+
+  it("「実行」で、エディタ上の全ファイルを run_code に渡す", async () => {
+    const { calls } = setup("ch04-02");
+    fireEvent.change(await editor(), { target: { value: "fn main() {}" } });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "実行" }));
+    });
+    expect(commands(calls, "run_code")).toEqual([
+      {
+        request_id: expect.any(String),
+        lesson_id: "ch04-02",
+        mode: "main",
+        files: { "src/main.rs": "fn main() {}" },
+      },
+    ]);
+  });
+
+  it.each([
+    ["実行", "run_code"],
+    ["テスト", "run_code"],
+    ["提出", "submit_code"],
+  ])(
+    "%sの途中で左上のリンクから画面を離れると、stop_run で止める",
+    async (name, command) => {
+      const { calls, navigate, unmount } = setup("ch04-02");
+      await editor();
+      await act(async () => {
+        fireEvent.click(screen.getByRole("button", { name }));
+      });
+      const id = requestId(calls, command);
+      fireEvent.click(screen.getByRole("link", { name: "レッスン一覧" }));
+      expect(navigate).toHaveBeenLastCalledWith({ name: "lessons" });
+      // 画面を移ると、演習画面はアンマウントされる。
+      unmount();
+      expect(commands(calls, "stop_run")).toEqual([{ request_id: id }]);
+    },
+  );
+
+  it("提出で正解すると、エディタが読み取り専用になる", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "提出" }));
+    });
+    expect(editorProps.current?.readOnly).toBe(false);
+    await act(async () => {
+      await emit("run_finished", {
+        request_id: requestId(calls, "submit_code"),
+        kind: "submit",
+        finished_at: "2026-11-24T10:00:00+09:00",
+        error: null,
+        run: null,
+        submit: { status: "passed", passed: 1, total: 1, cases: [] },
+        progress: null,
+      });
+    });
+    expect(editorProps.current?.readOnly).toBe(true);
   });
 });

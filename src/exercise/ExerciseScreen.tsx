@@ -2,6 +2,7 @@
 // 決まりは documents/spec/screens/exercise-screen.md、documents/spec/lesson-flow/flow.md、drafts.md。
 // 教材と下書きを読み込み、左に問題文、右上にエディタ、右下にコンソールを置く。
 // 下書きは、保存のきっかけ（draftSave.ts）で `save_draft` に保存し、「初期コードに戻す」で `reset_draft` を呼ぶ。
+// 実行・テスト・提出・停止と出力の表示は、コンソールの部品（ExerciseConsole.tsx）が行う。
 import { ChevronLeft, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
@@ -11,12 +12,14 @@ import type { Chapter, Exercise, LessonDetail } from "../commands/content";
 import { openLesson, resetDraft, saveDraft } from "../commands/progress";
 import type { DraftFiles } from "../commands/progress";
 import { getSettings } from "../commands/settings";
-import { Console, EMPTY_CONSOLE_LOG } from "../console";
 import { CodeEditor } from "../editor";
 import { Markdown } from "../markdown/Markdown";
 import { useNavigation } from "../router";
 import { useDraftSaveTrigger } from "./draftSave";
+import { ExerciseConsole } from "./ExerciseConsole";
 import { exerciseLinks } from "./exerciseLinks";
+import { exerciseControls } from "./exerciseState";
+import type { ExerciseState } from "./exerciseState";
 import {
   MAIN_FILE,
   addFile,
@@ -238,7 +241,13 @@ function ExerciseWorkspace({
   // 開いているファイル。消えたファイル（初期コードに戻したときなど）を指していたら、src/main.rs に戻す。
   const [selected, setSelected] = useState(MAIN_FILE);
   const activeFile = selected in files ? selected : MAIN_FILE;
-  const activeReadonly = isMulti && isReadonly(activeFile, readonlyFiles);
+  // 解説表示（正解の後）では、エディタを読み取り専用にする。
+  const [stateReadOnly, setStateReadOnly] = useState(false);
+  const handleStateChange = useCallback((state: ExerciseState) => {
+    setStateReadOnly(exerciseControls(state, true).editorReadOnly);
+  }, []);
+  const activeReadonly =
+    stateReadOnly || (isMulti && isReadonly(activeFile, readonlyFiles));
 
   const handleChange = (value: string) => {
     // エディタの内容を画面から差し替えたとき（初期コードに戻したとき、タブを切り替えたとき）は、編集として数えない。
@@ -505,9 +514,12 @@ function ExerciseWorkspace({
         />
 
         <div className="exercise-bottom">
-          <Console
-            log={EMPTY_CONSOLE_LOG}
-            stdin={{ enabled: false, onSend: () => {}, onClose: () => {} }}
+          <ExerciseConsole
+            lessonId={lessonId}
+            getFiles={() => filesRef.current}
+            enqueue={enqueue}
+            draftSave={scheduler}
+            onStateChange={handleStateChange}
           />
         </div>
       </div>
