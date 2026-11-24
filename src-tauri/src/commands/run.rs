@@ -18,7 +18,8 @@ use crate::environment::Environment;
 use crate::progress::LessonProgress;
 use crate::runner::RunnerDir;
 use crate::runner::run::{
-    self, RUN_FINISHED, RUN_OUTPUT, RunEvents, RunFinished, RunJob, RunOutput,
+    self, RUN_FINISHED, RUN_OUTPUT, RUN_STARTED, RunEvents, RunFinished, RunJob, RunOutput,
+    RunStarted,
 };
 use crate::runner::runs::{ActiveRun, RunKind, Runs, not_running};
 use crate::runner::submit::{self, SUBMIT_PROGRESS, SubmitJob, SubmitProgress};
@@ -26,7 +27,8 @@ use crate::runner::workspace::WorkspaceDir;
 use crate::storage::{AppDataDir, StorageError};
 
 /// 演習画面の「実行」（`mode` が `main`）と「テスト」（`test`）。下書きを保存し、`cargo` と初回準備の状態を確かめてから、
-/// 別のスレッドで実行を始めて返す。出力は `run_output`、結果は `run_finished` で送る。
+/// 別のスレッドで実行を始めて返す。実行（`main`）では、プログラムを起動したことを `run_started` で送る。
+/// 出力は `run_output`、結果は `run_finished` で送る。
 ///
 /// 確かめる間に `cargo` の検出が終わるのを待つことがあるので、async のコマンドにして、別のスレッドで行う。
 #[tauri::command(rename_all = "snake_case")]
@@ -234,6 +236,10 @@ pub fn stop_runs_on_exit<R: Runtime>(app: &AppHandle<R>) {
 struct AppEvents<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> RunEvents for AppEvents<R> {
+    fn started(&self, started: RunStarted) {
+        let _ = self.0.emit(RUN_STARTED, started);
+    }
+
     fn output(&self, output: RunOutput) {
         // 送れなくても（ウィンドウが無いなど）、実行は続ける。
         let _ = self.0.emit(RUN_OUTPUT, output);

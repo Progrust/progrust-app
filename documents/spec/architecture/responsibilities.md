@@ -35,6 +35,7 @@ description: "フロントエンドがファイルシステムや子プロセス
 
 | イベント | 内容 | 形 | 担当仕様 |
 |---|---|---|---|
+| `run_started` | 実行（`main`）で学習者のプログラムを起動したこと | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
 | `run_output` | 実行中の出力。1 つのイベントに、stdout / stderr / system の断片を受け取った順に複数入れる | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
 | `submit_progress` | 提出の判定の進み具合 | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
 | `run_finished` | 実行・提出の結果 | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |

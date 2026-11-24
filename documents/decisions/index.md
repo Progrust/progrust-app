@@ -128,6 +128,7 @@
 * [ADR 0221](0221-submit-stderr-from-failed-case-details.md) - 試行ログの `submit` イベントの `stderr` に入れるプログラムの標準エラー出力を、`timeout`・`runtime_error` のテストケースの `detail` を `cases[]` の順に連結したものにする
 * [ADR 0223](0223-test-mode-stdout-limit.md) - `test` 方式の判定に、1 テストケースの標準出力の量の上限 1 MB を設け、超えたら止めてそのテストケースを `fail`（出力過多）にする
 * [ADR 0224](0224-console-output-colors-by-stream.md) - 演習画面のコンソールの文字の色を出力の種類で分け、標準エラー出力を一段淡い `ink-3`、アプリの知らせを `muted`、学習者の入力を `link` にする
+* [ADR 0227](0227-notify-program-start-with-run-started.md) - 実行（`main`）で学習者のプログラムを起動したことを、標準入力を受け付けるようにしてから送るイベント `run_started` で知らせ、演習画面は受け取ったら入力欄を有効にする。テスト実行・提出と、プログラムを起動しなかったときは送らない
 
 # レッスン進行・進捗管理
 

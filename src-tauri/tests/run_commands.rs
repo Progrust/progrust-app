@@ -1,4 +1,4 @@
-//! 実行のコマンド `run_code`・`send_stdin`・`close_stdin`・`stop_run` とイベント `run_output`・`run_finished`
+//! 実行のコマンド `run_code`・`send_stdin`・`close_stdin`・`stop_run` とイベント `run_started`・`run_output`・`run_finished`
 //! （spec/architecture/commands/run.md、spec/exercise-runner/run.md、spec/exercise-runner/attempt-log.md）を、
 //! モックの実行環境と、実物の `cargo`（このテストを動かしている cargo）で確かめる。
 
@@ -20,7 +20,7 @@ use progrust_lib::commands::run::stop_runs_on_exit;
 use progrust_lib::content::ContentDir;
 use progrust_lib::environment::{Environment, RustTools};
 use progrust_lib::runner::RunnerDir;
-use progrust_lib::runner::run::{RUN_FINISHED, RUN_OUTPUT};
+use progrust_lib::runner::run::{RUN_FINISHED, RUN_OUTPUT, RUN_STARTED};
 use progrust_lib::runner::runs::{RunLimits, Runs};
 use progrust_lib::storage::AppDataDir;
 use serde_json::{Value, json};
@@ -126,6 +126,7 @@ fn real_cargo() -> RustTools {
 
 /// 受け取ったイベント。
 enum Received {
+    Started(Value),
     Output(Value),
     /// `run_finished` と、それを受け取った時点の試行ログ（レッスン [`LESSON`] の未完了のセッション）。
     Finished(Value, Option<AttemptLog>),
@@ -163,6 +164,13 @@ impl Fixture {
         app.manage(Runs::new(limits));
 
         let (sender, received) = mpsc::channel();
+        {
+            let sender = sender.clone();
+            app.listen(RUN_STARTED, move |event| {
+                let payload = serde_json::from_str(event.payload()).unwrap();
+                let _ = sender.send(Received::Started(payload));
+            });
+        }
         {
             let sender = sender.clone();
             app.listen(RUN_OUTPUT, move |event| {
@@ -217,12 +225,17 @@ impl Fixture {
     /// `run_finished` を受け取るまで、イベントを受け取る。
     fn wait_finished(&self, request_id: &str) -> Finished {
         let mut outputs = Vec::new();
+        let mut started = 0;
         loop {
             match self
                 .received
                 .recv_timeout(WAIT)
                 .expect("run_finished が届かない")
             {
+                Received::Started(payload) => {
+                    assert_eq!(payload, json!({ "request_id": request_id }));
+                    started += 1;
+                }
                 Received::Output(output) => {
                     assert_eq!(output["request_id"], request_id);
                     outputs.push(output);
@@ -232,6 +245,7 @@ impl Fixture {
                     return Finished {
                         payload,
                         outputs,
+                        started,
                         log,
                     };
                 }
@@ -239,12 +253,31 @@ impl Fixture {
         }
     }
 
+    /// `run_started` を受け取るまで、イベントを受け取る。受け取った出力は `outputs` に足す。
+    fn wait_started(&self, request_id: &str, outputs: &mut Vec<Value>) {
+        loop {
+            match self.received.recv_timeout(WAIT) {
+                Ok(Received::Started(payload)) => {
+                    assert_eq!(payload, json!({ "request_id": request_id }));
+                    return;
+                }
+                Ok(Received::Output(output)) => outputs.push(output),
+                Ok(Received::Finished(payload, _)) => {
+                    panic!("run_started の前に終わった: {payload}")
+                }
+                Err(_) => panic!("run_started が届かない"),
+            }
+        }
+    }
+
     /// 標準出力に `expected` が現れるまで、`run_output` を受け取る。受け取った出力は `outputs` に足す。
+    /// `run_started` は読み捨てる。
     fn wait_stdout(&self, outputs: &mut Vec<Value>, expected: &str) {
         let deadline = Instant::now() + WAIT;
         while !text_of(outputs, "stdout").contains(expected) {
             let left = deadline.saturating_duration_since(Instant::now());
             match self.received.recv_timeout(left) {
+                Ok(Received::Started(_)) => {}
                 Ok(Received::Output(output)) => outputs.push(output),
                 Ok(Received::Finished(payload, _)) => {
                     panic!("{expected:?} の前に終わった: {payload}")
@@ -260,7 +293,7 @@ impl Fixture {
         loop {
             let left = deadline.saturating_duration_since(Instant::now());
             match self.received.recv_timeout(left) {
-                Ok(Received::Output(_)) => {}
+                Ok(Received::Started(_) | Received::Output(_)) => {}
                 Ok(Received::Finished(payload, _)) => panic!("run_finished が届いた: {payload}"),
                 Err(_) => return,
             }
@@ -302,6 +335,8 @@ impl Fixture {
 struct Finished {
     payload: Value,
     outputs: Vec<Value>,
+    /// `run_finished` までに受け取った `run_started` の数。
+    started: usize,
     log: Option<AttemptLog>,
 }
 
@@ -409,6 +444,8 @@ fn a_run_is_recorded_in_the_attempt_log_before_run_finished_is_sent() {
     assert_eq!(finished.payload["submit"], Value::Null);
     assert_eq!(finished.payload["progress"], Value::Null);
     assert_eq!(finished.text("stdout"), "hello\n");
+    // プログラムを起動したことを、1 回だけ送る。
+    assert_eq!(finished.started, 1);
 
     // run_finished を受け取った時点で、試行ログに追記されている。
     let events = run_events(finished.log);
@@ -461,6 +498,8 @@ fn compile_errors_send_the_build_output_and_record_error_codes() {
     assert!(stderr.contains("E0382"), "{stderr}");
     assert!(stderr.contains("could not compile"), "{stderr}");
     assert_eq!(finished.text("stdout"), "");
+    // プログラムを起動していないので、run_started は送らない。
+    assert_eq!(finished.started, 0);
 
     let events = run_events(finished.log);
     assert_eq!(events[0].result.error_codes, ["E0382"]);
@@ -489,6 +528,7 @@ fn a_failure_on_the_app_side_is_sent_as_the_error_of_run_finished() {
     assert_eq!(finished.payload["submit"], Value::Null);
     assert_eq!(finished.payload["progress"], Value::Null);
     assert!(finished.outputs.is_empty(), "{:?}", finished.outputs);
+    assert_eq!(finished.started, 0);
     // 結果の状態が決まっていないので、試行ログには追記しない。
     assert!(run_events(finished.log).is_empty());
     assert!(fx.runs().current().is_none());
@@ -631,6 +671,7 @@ fn stopping_during_the_build_gives_stopped_and_the_next_build_succeeds() {
     assert_eq!(finished.exit_code(), &Value::Null);
     // ビルドの出力は送らずに捨てる。
     assert!(finished.outputs.is_empty(), "{:?}", finished.outputs);
+    assert_eq!(finished.started, 0);
     wait_until("ビルドの rustc が止まらない", || {
         fx.process_count() == 0
     });
@@ -894,6 +935,54 @@ fn lines_sent_to_stdin_are_read_by_read_line() {
     );
 }
 
+#[test]
+fn a_program_that_waits_for_stdin_without_a_prompt_accepts_input_after_run_started() {
+    let fx = Fixture::new();
+    // 何も出力せずに入力を待つ。警告の出ないコードにして、ビルドの出力も無くす。
+    let program = "fn main() {\n\
+             let mut line = String::new();\n\
+             std::io::stdin().read_line(&mut line).unwrap();\n\
+             println!(\"got: {}\", line.trim_end());\n\
+         }\n";
+    fx.run_code("r1", "main", &[("src/main.rs", program)])
+        .unwrap();
+    let send = |text: &str| fx.invoke("send_stdin", json!({ "request_id": "r1", "text": text }));
+    // ビルド中（run_started を送る前）は書けない。
+    assert_eq!(error_code(send("early\n")), "invalid_state");
+
+    let mut outputs = Vec::new();
+    fx.wait_started("r1", &mut outputs);
+    // 何も出力していなくても、起動したことが届く。
+    assert!(outputs.is_empty(), "{outputs:?}");
+    // 受け取ってすぐに書ける。
+    assert_eq!(send("abc\n"), Ok(Value::Null));
+
+    let finished = fx.wait_finished("r1");
+    assert_eq!(finished.status(), "success");
+    assert_eq!(finished.started, 0, "run_started が 2 回以上届いた");
+    outputs.extend(finished.outputs);
+    assert_eq!(text_of(&outputs, "stdout"), "got: abc\n");
+    assert_eq!(run_events(finished.log)[0].result.stdin, "abc\n");
+}
+
+#[test]
+fn run_started_comes_after_the_build_output() {
+    let fx = Fixture::new();
+    // 使わない変数の警告が、ビルドの出力として出る。
+    let program = "fn main() {\n    let unused = 1;\n    println!(\"hello\");\n}\n";
+    fx.run_code("r1", "main", &[("src/main.rs", program)])
+        .unwrap();
+    let mut outputs = Vec::new();
+    fx.wait_started("r1", &mut outputs);
+    // run_started の前に、ビルドの出力（警告）が届いている。
+    let stderr = text_of(&outputs, "stderr");
+    assert!(stderr.contains("unused"), "{stderr}");
+
+    let finished = fx.wait_finished("r1");
+    assert_eq!(finished.status(), "success");
+    assert_eq!(finished.started, 0, "run_started が 2 回以上届いた");
+}
+
 // ---- テスト実行 ----
 
 #[test]
@@ -938,6 +1027,8 @@ fn test_mode_runs_unit_integration_and_doc_tests_without_stopping_at_a_failure()
         finished.payload["run"],
         json!({ "mode": "test", "status": "runtime_error", "exit_code": 101 })
     );
+    // テスト実行は標準入力を使わないので、run_started は送らない。
+    assert_eq!(finished.started, 0);
     let console = strip_colors(&(finished.text("stdout") + &finished.text("stderr")));
     for line in [
         "test tests::fails ... FAILED",

@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "実行のコマンドとイベント"
-description: "実行のコマンド `run_code`（`mode` で実行とテスト実行を選ぶ）、`send_stdin`・`close_stdin`・`stop_run`、`submit_code` の引数と戻り値と、イベント `run_output`（出力の断片の `stream`）・`submit_progress`（判定の進み具合）・`run_finished`（実行の結果の状態と提出の判定結果）の内容を定める。"
+description: "実行のコマンド `run_code`（`mode` で実行とテスト実行を選ぶ）、`send_stdin`・`close_stdin`・`stop_run`、`submit_code` の引数と戻り値と、イベント `run_started`（実行で学習者のプログラムを起動したこと）・`run_output`（出力の断片の `stream`）・`submit_progress`（判定の進み具合）・`run_finished`（実行の結果の状態と提出の判定結果）の内容を定める。"
 ---
 
 動作は [コード実行・判定](../../exercise-runner/index.md) に従う。共通の決まりは [コマンドとイベントの共通の決まり](conventions.md) に従う。
@@ -22,7 +22,7 @@ description: "実行のコマンド `run_code`（`mode` で実行とテスト実
 | `mode` | `"main" \| "test"` | `main` は実行（[コードの実行（run）](../../exercise-runner/run.md)「手順」）、`test` はテスト実行（同じく「テスト実行」）。試行ログの `run` イベントの `mode` と同じ値 |
 | `files` | `{ [path: string]: string }` | エディタ上の全ファイル |
 
-- 戻り値: `null`。実行を始めたら返す。出力は `run_output`、結果は `run_finished` で知らせる。
+- 戻り値: `null`。実行を始めたら返す。`mode` が `main` の実行では、学習者のプログラムを起動したことを `run_started` で知らせる。出力は `run_output`、結果は `run_finished` で知らせる。
 - 始める前に、`files` を下書きとして保存する（[演習コードの下書き](../../lesson-flow/drafts.md) の、実行・提出の直前の保存）。
 - エラー: ファイルパスが [実行・提出時のプロジェクトの組み立て](../../exercise-runner/project-assembly.md) の条件を満たさないときは `invalid_argument`。`cargo` が見つからないときは `cargo_unavailable`。許可クレートを使う演習で初回準備の状態が `ready` でないときは `crates_not_ready`。
 
@@ -38,7 +38,8 @@ description: "実行のコマンド `run_code`（`mode` で実行とテスト実
 | `text` | `string` | 書き込む文字列。入力欄の 1 行に改行（`\n`）を付けたもの |
 
 - 戻り値: `null`。
-- エラー: その ID の実行が動いていないとき（無いとき、既に終わったとき）と、プログラムがまだ起動していないとき（ビルド中）、標準入力を閉じた後のときは `invalid_state`。
+- エラー: その ID の実行が動いていないとき（無いとき、既に終わったとき）と、プログラムがまだ起動していないとき（ビルド中など、`run_started` を送る前）、標準入力を閉じた後のときは `invalid_state`。テスト実行と提出の ID も `invalid_state` にする。
+- `run_started` を受け取った後は、プログラムが終わるか標準入力を閉じるまで、書き込める。
 
 ## close_stdin
 
@@ -75,6 +76,22 @@ description: "実行のコマンド `run_code`（`mode` で実行とテスト実
 - エラー: `run_code` と同じ。
 
 ## イベント
+
+**`run_started`**
+
+`run_code` の `mode` が `main` の実行で、学習者のプログラムを起動したときに 1 回送る（[コードの実行（run）](../../exercise-runner/run.md)「手順」の 3）。演習画面は、受け取ったら標準入力の入力欄を有効にする（同じく「対話的な標準入力」）。
+
+```json
+{ "request_id": "3f0c…" }
+```
+
+| 項目 | 型 | 内容 |
+|---|---|---|
+| `request_id` | `string` | 実行の ID |
+
+- バックエンドは、`send_stdin`・`close_stdin` を受け付けるようにしてから送る。
+- ビルドの出力の `run_output` より後、`run_finished` より前に届く。学習者のプログラムの出力の `run_output` との前後は決めない。
+- テスト実行（標準入力は起動した直後に閉じる）と提出では送らない。プログラムを起動しなかったとき（ビルドの失敗、`crates_unavailable`、起動する前に止めたとき、アプリの側の失敗）も送らない。
 
 **`run_output`**
 

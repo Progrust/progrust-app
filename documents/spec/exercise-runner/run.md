@@ -8,7 +8,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 
 1. `cargo build --offline --quiet --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
 2. ビルドに失敗したら、ビルドの出力（「ビルドの出力の表示」）を表示して終了する（`compile_error`）。ただし、失敗が [許可クレートと作業領域](crates-and-workspace.md)「初回準備のやり直しが要る失敗」に当てはまるときは、ビルドの出力を表示せずに終了する（`crates_unavailable`）。
-3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。起動する実行ファイルは、1 のビルドの標準出力の JSON のうち、`reason` が `compiler-artifact` で、`profile.test` が `false` で、`target.kind` に `bin` があり、`target.src_path` が `project/src/main.rs` であるものの `executable` とする。`src/bin/` に置いたファイルの実行ファイルは起動しない。見つからないときは、アプリの側の失敗（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」の `run_finished` の `error`）として終える。
+3. 成功したら、生成された実行ファイルを `project/` を作業ディレクトリとして、新しいプロセスグループで起動する。起動する実行ファイルは、1 のビルドの標準出力の JSON のうち、`reason` が `compiler-artifact` で、`profile.test` が `false` で、`target.kind` に `bin` があり、`target.src_path` が `project/src/main.rs` であるものの `executable` とする。`src/bin/` に置いたファイルの実行ファイルは起動しない。見つからないときは、アプリの側の失敗（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」の `run_finished` の `error`）として終える。起動したら、標準入力を受け付けるようにしてから、`run_started` イベントを送る（同じく「イベント」）。
 4. 標準出力・標準エラー出力を、「出力の送り方」のとおり `run_output` イベントで送る。
 5. 学習者のプログラム（3 で起動したプロセス）が終了したら、同じプロセスグループに残ったプロセスを止める（「停止」）。その後に届く出力は最大 300ms だけ待って受け取り、実行を終える。パイプの終わり（EOF）は待たない。
 6. 試行ログに `run` イベントを追記してから（[実行・提出の試行ログへの記録](attempt-log.md)）、`run_finished` イベントで結果を送る（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」）。`crates_unavailable` のときは、`run_finished` イベントは送るが、試行ログには追記しない。
@@ -28,7 +28,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 6. 試行ログに `run` イベント（`mode` は `test`）を追記してから（[実行・提出の試行ログへの記録](attempt-log.md)）、`run_finished` イベントで結果を送る。`crates_unavailable` のときの扱いは、実行の手順の 6 と同じにする。
 
 - 出力の送り方と停止は、実行と同じにする（「出力の送り方」「停止」）。制限値も実行と同じにする（[実行・判定の制限値](limits.md)）。
-- 標準入力は、3 で起動した直後に閉じる。入力欄は表示しない。
+- 標準入力は、3 で起動した直後に閉じる。入力欄は表示しない。`run_started` イベントは送らない。
 - 結果の状態は「結果の状態」の表に従う。テストが 1 件でも失敗すると、cargo の終了コードが 0 以外になるので `runtime_error` になる。ドキュメントテストのコンパイルエラーは、1 では見つからず、3 でそのテストの失敗として出る。
 
 ## ビルドの出力の表示
@@ -64,6 +64,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 ## 対話的な標準入力
 
 - 実行中、コンソールの下部に入力欄を表示する。
+- 入力欄は、学習者のプログラムが起動してから有効にする。ビルド中は無効にする。プログラムが起動したことは、`run_started` イベントで知る（[実行のコマンドとイベント](../architecture/commands/run.md)「イベント」）。プログラムが何も出力しないまま入力を待つときも、起動していれば入力できる。
 - Enter で入力した 1 行に改行を付けてプログラムの標準入力に送り（`send_stdin`）、コンソールにも入力として区別できる色で表示する。
 - 「入力終了」ボタン（または Ctrl+D）で標準入力を閉じる（`close_stdin`）。
 - プログラムが終了したら入力欄を無効にする。

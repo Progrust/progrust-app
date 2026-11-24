@@ -39,7 +39,7 @@ const running: ExerciseState = {
 };
 
 describe("状態の移り変わり", () => {
-  it("実行を始めるとビルド中になり、出力が届くとプログラムの実行中になる", () => {
+  it("実行を始めるとビルド中になり、run_started が届くとプログラムの実行中になる", () => {
     let s = exerciseReducer(INITIAL_EXERCISE_STATE, {
       type: "started",
       kind: "run",
@@ -47,12 +47,30 @@ describe("状態の移り変わり", () => {
       requestId: "r1",
     });
     expect(s).toEqual(running);
-    s = exerciseReducer(s, { type: "output", requestId: "r1" });
+    s = exerciseReducer(s, { type: "program_started", requestId: "r1" });
     expect(s).toMatchObject({ kind: "running", stage: "program" });
   });
 
-  it("ほかの要求の出力と終了は無視する", () => {
-    const s = exerciseReducer(running, { type: "output", requestId: "x" });
+  it("プロンプトを出さないプログラムでも、起動したら出力を待たずに入力欄が有効になる", () => {
+    let s = exerciseReducer(INITIAL_EXERCISE_STATE, {
+      type: "started",
+      kind: "run",
+      mode: "main",
+      requestId: "r1",
+    });
+    expect(exerciseControls(s, true).stdinEnabled).toBe(false);
+    s = exerciseReducer(s, { type: "program_started", requestId: "r1" });
+    expect(exerciseControls(s, true)).toMatchObject({
+      stdinVisible: true,
+      stdinEnabled: true,
+    });
+  });
+
+  it("ほかの要求の run_started と終了は無視する", () => {
+    const s = exerciseReducer(running, {
+      type: "program_started",
+      requestId: "x",
+    });
     expect(s).toBe(running);
     expect(
       exerciseReducer(running, {
@@ -100,6 +118,22 @@ describe("状態の移り変わり", () => {
         event: finished("s1", "submit", undefined, true),
       }),
     ).toEqual(INITIAL_EXERCISE_STATE);
+  });
+
+  it("テスト実行中・提出中・待機と、既にプログラムの実行中のときは、run_started で状態を変えない", () => {
+    for (const s of [
+      { kind: "testing", requestId: "r1" } as const,
+      { kind: "submitting", requestId: "r1" } as const,
+      INITIAL_EXERCISE_STATE,
+    ]) {
+      expect(
+        exerciseReducer(s, { type: "program_started", requestId: "r1" }),
+      ).toBe(s);
+    }
+    const program: ExerciseState = { ...running, stage: "program" };
+    expect(
+      exerciseReducer(program, { type: "program_started", requestId: "r1" }),
+    ).toBe(program);
   });
 
   it("処理中と解説表示では新しく始められない", () => {

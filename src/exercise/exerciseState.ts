@@ -5,7 +5,8 @@ import type { RunFinished, RunMode } from "../commands/run";
 
 // 演習画面の状態。
 // - idle: 待機（解答中で、何も動いていない）。
-// - running: 実行中（mode が main）。stage の build はビルド中、program はプログラムが動いている間。
+// - running: 実行中（mode が main）。stage の build はビルド中（run_started が届く前）、program はプログラムが
+//   動いている間。
 // - testing: テスト実行中。標準入力は使わない。
 // - submitting: 提出中。
 // - explanation: 解説表示（正解の後）。
@@ -28,9 +29,9 @@ export type ExerciseAction =
   // 「実行」「テスト」「提出」を押して、コマンドを呼んだ。
   | { type: "started"; kind: "run"; mode: RunMode; requestId: string }
   | { type: "started"; kind: "submit"; requestId: string }
-  // 実行の出力が届いた。ビルドの出力はビルドが終わってから送られる（documents/spec/exercise-runner/run.md
-  // 「ビルドの出力の表示」）ので、実行（main）では、出力が届いたら、プログラムが動いている段階に移る。
-  | { type: "output"; requestId: string }
+  // run_started が届いた（実行で学習者のプログラムを起動した）。プログラムが動いている段階に移り、入力欄を有効にする
+  // （documents/spec/exercise-runner/run.md「対話的な標準入力」）。プログラムが何も出力していなくても移る。
+  | { type: "program_started"; requestId: string }
   // 「入力終了」で標準入力を閉じた。
   | { type: "stdin_closed"; requestId: string }
   // run_finished が届いた。
@@ -73,7 +74,7 @@ export function exerciseReducer(
           }
         : { kind: "testing", requestId: action.requestId };
     }
-    case "output":
+    case "program_started":
       if (
         state.kind === "running" &&
         state.requestId === action.requestId &&
