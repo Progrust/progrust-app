@@ -3,23 +3,46 @@
 // 教材と下書きを読み込み、左に問題文、右上にエディタ、右下にコンソールを置く。
 // 下書きは、保存のきっかけ（draftSave.ts）で `save_draft` に保存し、「初期コードに戻す」で `reset_draft` を呼ぶ。
 // 実行・テスト・提出・停止と出力の表示は、コンソールの部品（ExerciseConsole.tsx）が行う。
-import { ChevronLeft, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
+// 提出の結果は、問題文の上の判定結果のカード（JudgeCard.tsx）に出し、正解したら正解のモーダル（PassModal.tsx）を開く。
+// 解説表示の状態で画面を離れるときは、`end_session` で試行セッションを終える
+// （documents/spec/learning-record-and-analysis/attempt-log.md「試行セッションのライフサイクル」）。
+import {
+  ChevronLeft,
+  Lock,
+  Pencil,
+  Plus,
+  RotateCcw,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { findLesson, numberChapters } from "../chapterNumbers";
 import { getLesson, listChapters } from "../commands/content";
 import type { Chapter, Exercise, LessonDetail } from "../commands/content";
-import { openLesson, resetDraft, saveDraft } from "../commands/progress";
+import {
+  endSession,
+  openLesson,
+  resetDraft,
+  saveDraft,
+} from "../commands/progress";
 import type { DraftFiles } from "../commands/progress";
+import type { SubmitResult } from "../commands/run";
 import { getSettings } from "../commands/settings";
 import { CodeEditor } from "../editor";
+import { lessonRoute, nextLesson } from "../lessons/nextLesson";
 import { Markdown } from "../markdown/Markdown";
 import { useNavigation } from "../router";
+import type { Route } from "../router";
 import { useDraftSaveTrigger } from "./draftSave";
 import { ExerciseConsole } from "./ExerciseConsole";
 import { exerciseLinks } from "./exerciseLinks";
-import { exerciseControls } from "./exerciseState";
 import type { ExerciseState } from "./exerciseState";
+import { JudgeCard } from "./JudgeCard";
+import { nextJudgeCard } from "./judgeResult";
+import type { JudgeCardState, SubmitFinished } from "./judgeResult";
+import { PassedCodeModal } from "./PassedCodeModal";
+import { PassModal } from "./PassModal";
+import { SolvedBar } from "./SolvedBar";
 import {
   MAIN_FILE,
   addFile,
@@ -57,6 +80,8 @@ type Loaded = {
   // 開いたときのエディタの全ファイル。下書きがあれば下書き、無ければ初期コード。
   files: DraftFiles;
   fontSize: number;
+  // 開いたときに、レッスンが完了済みだったか。完了済みなら「前回の正解コードを見る」を出す。
+  completed: boolean;
 };
 
 type State =
@@ -100,6 +125,7 @@ async function load(
     exercise: detail.exercise,
     files: openedLesson.draft?.files ?? detail.exercise.starter_files,
     fontSize: settings?.editor_font_size ?? DEFAULT_FONT_SIZE,
+    completed: openedLesson.progress?.status === "completed",
   };
 }
 
@@ -143,9 +169,40 @@ export function ExerciseScreen({ lessonId }: { lessonId: string }) {
     [chapters, lessonId],
   );
 
+  // 正解のモーダルと帯に出す、レッスンの番号と名前と、「次のレッスンへ」で開くレッスン。
+  const lessonLabel =
+    found !== null
+      ? `${found.lesson.number} ${found.lesson.lesson.title ?? ""}`
+      : (loaded?.detail.lesson.title ?? "");
+  const next = useMemo(() => {
+    if (chapters === null) {
+      return null;
+    }
+    const lesson = nextLesson(chapters, lessonId);
+    if (lesson === null) {
+      return null;
+    }
+    const numbered = findLesson(numberChapters(chapters), lesson.id);
+    return {
+      route: lessonRoute(lesson.id, lesson.kind),
+      label: `${numbered?.lesson.number ?? ""} ${lesson.title ?? ""}`.trim(),
+    };
+  }, [chapters, lessonId]);
+
+  // 画面の中のリンク・ボタンで移るとき。解説表示の状態では、試行セッションを終えてから移る（ExerciseWorkspace が
+  // 差し込む）。読み込む前と、解答中は、すぐ移る。
+  const leaveRef = useRef<((route: Route) => void) | null>(null);
+  const leave = (route: Route) => {
+    if (leaveRef.current !== null) {
+      leaveRef.current(route);
+    } else {
+      navigate(route);
+    }
+  };
+
   const back = (event: MouseEvent) => {
     event.preventDefault();
-    navigate(links.backRoute);
+    leave(links.backRoute);
   };
   const reviewVideoRoute = loaded === null ? null : links.reviewVideoRoute;
 
@@ -185,14 +242,28 @@ export function ExerciseScreen({ lessonId }: { lessonId: string }) {
           <button
             type="button"
             className="pg-btn pg-context-end"
-            onClick={() => navigate(reviewVideoRoute)}
+            onClick={() => leave(reviewVideoRoute)}
           >
             動画を見直す
           </button>
         )}
       </div>
       {loaded !== null ? (
-        <ExerciseWorkspace lessonId={lessonId} loaded={loaded} />
+        <ExerciseWorkspace
+          lessonId={lessonId}
+          loaded={loaded}
+          lessonLabel={lessonLabel}
+          chapter={
+            found === null
+              ? null
+              : {
+                  number: found.chapter.number,
+                  title: found.chapter.chapter.title,
+                }
+          }
+          next={next}
+          leaveRef={leaveRef}
+        />
       ) : state.state === "failed" ? (
         <div className="exercise-message">
           <p role="alert">演習を読み込めませんでした。</p>
@@ -205,14 +276,32 @@ export function ExerciseScreen({ lessonId }: { lessonId: string }) {
   );
 }
 
-// 読み込んだ後の、問題文・エディタ・コンソール。
+// 正解した提出。
+type Passed = {
+  result: SubmitResult;
+  // submit_code に渡したファイル（正解のモーダルの「提出したコード」）。
+  files: DraftFiles;
+};
+
+// 読み込んだ後の、問題文・エディタ・コンソールと、判定結果のカード・正解のモーダル・帯。
 function ExerciseWorkspace({
   lessonId,
   loaded,
+  lessonLabel,
+  chapter,
+  next,
+  leaveRef,
 }: {
   lessonId: string;
   loaded: Loaded;
+  lessonLabel: string;
+  chapter: { number: number; title: string } | null;
+  // 「次のレッスンへ」で開く画面と、ボタンに添える番号と名前。無いときは null で、ボタンを出さない。
+  next: { route: Route; label: string } | null;
+  // 画面の中のリンク・ボタン（左上のリンク、「動画を見直す」）で移るときの関数を、ここに差し込む。
+  leaveRef: { current: ((route: Route) => void) | null };
 }) {
+  const { navigate } = useNavigation();
   // エディタ上の全ファイル。保存は、画面を離れるとき（アンマウント）にも呼ぶので、ref からも読めるようにする。
   const [files, setFiles] = useState(loaded.files);
   const filesRef = useRef(files);
@@ -223,11 +312,11 @@ function ExerciseWorkspace({
 
   // 下書きのコマンドを 1 つずつ送る。保存と「初期コードに戻す」の順番が入れ替わらないようにする。
   const queue = useRef<Promise<unknown>>(Promise.resolve());
-  const enqueue = <T,>(task: () => Promise<T>): Promise<T> => {
+  const enqueue = useCallback(<T,>(task: () => Promise<T>): Promise<T> => {
     const next = queue.current.then(task);
     queue.current = next.catch(() => {});
     return next;
-  };
+  }, []);
 
   const scheduler = useDraftSaveTrigger(() => {
     const snapshot = filesRef.current;
@@ -241,13 +330,62 @@ function ExerciseWorkspace({
   // 開いているファイル。消えたファイル（初期コードに戻したときなど）を指していたら、src/main.rs に戻す。
   const [selected, setSelected] = useState(MAIN_FILE);
   const activeFile = selected in files ? selected : MAIN_FILE;
-  // 解説表示（正解の後）では、エディタを読み取り専用にする。
-  const [stateReadOnly, setStateReadOnly] = useState(false);
+  // 解説表示（正解の後）か。エディタを読み取り専用にし、ファイルの操作と「初期コードに戻す」を出さない・押せなくする
+  // （documents/spec/lesson-flow/flow.md）。
+  const [explaining, setExplaining] = useState(false);
+  // 画面を離れるとき（アンマウント）にも読めるように、ref にも持つ。
+  const explainingRef = useRef(false);
   const handleStateChange = useCallback((state: ExerciseState) => {
-    setStateReadOnly(exerciseControls(state, true).editorReadOnly);
+    explainingRef.current = state.kind === "explanation";
+    setExplaining(explainingRef.current);
   }, []);
   const activeReadonly =
-    stateReadOnly || (isMulti && isReadonly(activeFile, readonlyFiles));
+    explaining || (isMulti && isReadonly(activeFile, readonlyFiles));
+
+  // 試行セッションを終える（1 回だけ）。下書きのコマンドの列に並べ、待っている保存より後に送る。
+  const ended = useRef<Promise<unknown> | null>(null);
+  const endOnce = useCallback(() => {
+    if (ended.current === null) {
+      scheduler.cancel();
+      ended.current = enqueue(() => endSession(lessonId));
+    }
+    return ended.current;
+  }, [enqueue, scheduler, lessonId]);
+
+  // ヘッダーのメニューなど、画面の外から移ったとき（アンマウント）は、ここで試行セッションを終える。
+  // 画面を離れるときの下書きの保存（useDraftSaveTrigger）より後に宣言して、保存より後に送る。
+  useEffect(
+    () => () => {
+      if (explainingRef.current) {
+        endOnce().catch(() => {});
+      }
+    },
+    [endOnce],
+  );
+
+  // 解説表示の状態で、画面の中のボタン・リンクで移るときは、試行セッションを終えてから移る。同じレッスンを開き直したとき
+  // （「動画を見直す」）に、終える前のセッションが続かないようにするためである。終えられなくても、移る。
+  const [leaving, setLeaving] = useState(false);
+  const leave = (route: Route) => {
+    if (!explainingRef.current) {
+      navigate(route);
+      return;
+    }
+    setLeaving(true);
+    endOnce().then(
+      () => navigate(route),
+      () => navigate(route),
+    );
+  };
+  useEffect(() => {
+    leaveRef.current = leave;
+  });
+  useEffect(
+    () => () => {
+      leaveRef.current = null;
+    },
+    [leaveRef],
+  );
 
   const handleChange = (value: string) => {
     // エディタの内容を画面から差し替えたとき（初期コードに戻したとき、タブを切り替えたとき）は、編集として数えない。
@@ -296,6 +434,25 @@ function ExerciseWorkspace({
     setNameEdit(null);
   };
 
+  // 判定結果のカードと、正解した提出と、正解のモーダル・前回の正解コードのモーダルを開いているか。
+  const [judge, setJudge] = useState<JudgeCardState | null>(null);
+  const [passed, setPassed] = useState<Passed | null>(null);
+  const [passOpen, setPassOpen] = useState(false);
+  const [prevCodeOpen, setPrevCodeOpen] = useState(false);
+  const handleSubmitFinished = (finished: SubmitFinished) => {
+    setJudge((current) => nextJudgeCard(current, finished));
+    const result = finished.event.submit;
+    if (finished.event.error === null && result?.status === "passed") {
+      // 提出中の編集で待っている保存をやめる。正解したセッションを終えると下書きを消すので、後から作り直さない。
+      scheduler.cancel();
+      setNameEdit(null);
+      // 読み取り専用のエディタでは、提出したコードを見せる（ADR 0046）。提出中の編集は捨てる。
+      replaceFiles(finished.files);
+      setPassed({ result, files: finished.files });
+      setPassOpen(true);
+    }
+  };
+
   const [resetState, setResetState] = useState<"closed" | "open" | "busy">(
     "closed",
   );
@@ -320,217 +477,293 @@ function ExerciseWorkspace({
   const bodyRef = useRef<HTMLDivElement>(null);
   const workRef = useRef<HTMLDivElement>(null);
 
+  const goLessons = () => leave({ name: "lessons" });
+  const goNext = () => {
+    if (next !== null) {
+      leave(next.route);
+    }
+  };
+
   return (
-    <div
-      className="exercise-body"
-      ref={bodyRef}
-      style={{ "--exercise-side-width": `${sideWidth}px` } as object}
-    >
-      <div className="exercise-side">
-        <section className="pg-side" aria-label="問題文">
-          <div className="pg-side-head">問題文</div>
-          <div className="pg-side-scroll">
-            <Markdown source={loaded.exercise.problem_md} />
-          </div>
-        </section>
-      </div>
-
-      <Splitter
-        orientation="vertical"
-        label="問題文とエディタの境界"
-        value={sideWidth}
-        min={SIDE_WIDTH.min}
-        max={() =>
-          (bodyRef.current?.clientWidth ?? 0) - SPLIT_V_SIZE - EDITOR_MIN_WIDTH
-        }
-        direction={1}
-        onChange={setSideWidth}
-      />
-
+    <>
       <div
-        className="exercise-work"
-        ref={workRef}
-        style={{ "--exercise-console-height": `${consoleHeight}px` } as object}
+        className={
+          explaining ? "exercise-body exercise-body-solved" : "exercise-body"
+        }
+        ref={bodyRef}
+        style={{ "--exercise-side-width": `${sideWidth}px` } as object}
       >
-        <div className="pg-editor">
-          <div className="pg-editor-bar">
-            <div role="tablist" aria-label="ファイル" className="exercise-tabs">
-              {(isMulti ? tabOrder(files) : [MAIN_FILE]).map((path) => (
-                <button
-                  key={path}
-                  type="button"
-                  className="pg-filetab"
-                  role="tab"
-                  aria-selected={path === activeFile}
-                  onClick={() => {
-                    setSelected(path);
-                    setNameEdit(null);
-                  }}
-                >
-                  {path}
-                </button>
-              ))}
+        <div className="exercise-side">
+          {judge !== null && <JudgeCard key={judge.seq} card={judge} />}
+          <section className="pg-side" aria-label="問題文">
+            <div className="pg-side-head">問題文</div>
+            <div className="pg-side-scroll">
+              <Markdown source={loaded.exercise.problem_md} />
             </div>
-            {isMulti && (
-              <>
-                <button
-                  type="button"
-                  className="pg-icon-btn pg-icon-btn--sm"
-                  aria-label="ファイルを追加"
-                  onClick={() =>
-                    setNameEdit({ kind: "add", value: "src/", error: null })
-                  }
-                >
-                  <Plus
-                    className="pg-icon"
-                    aria-hidden="true"
-                    size={14}
-                    strokeWidth={2.4}
-                  />
-                </button>
-                {canRename(activeFile, readonlyFiles) && (
+          </section>
+        </div>
+
+        <Splitter
+          orientation="vertical"
+          label="問題文とエディタの境界"
+          value={sideWidth}
+          min={SIDE_WIDTH.min}
+          max={() =>
+            (bodyRef.current?.clientWidth ?? 0) -
+            SPLIT_V_SIZE -
+            EDITOR_MIN_WIDTH
+          }
+          direction={1}
+          onChange={setSideWidth}
+        />
+
+        <div
+          className="exercise-work"
+          ref={workRef}
+          style={
+            { "--exercise-console-height": `${consoleHeight}px` } as object
+          }
+        >
+          <div className="pg-editor">
+            <div className="pg-editor-bar">
+              <div
+                role="tablist"
+                aria-label="ファイル"
+                className="exercise-tabs"
+              >
+                {(isMulti ? tabOrder(files) : [MAIN_FILE]).map((path) => (
+                  <button
+                    key={path}
+                    type="button"
+                    className="pg-filetab"
+                    role="tab"
+                    aria-selected={path === activeFile}
+                    onClick={() => {
+                      setSelected(path);
+                      setNameEdit(null);
+                    }}
+                  >
+                    {path}
+                  </button>
+                ))}
+              </div>
+              {isMulti && !explaining && (
+                <>
                   <button
                     type="button"
                     className="pg-icon-btn pg-icon-btn--sm"
-                    aria-label="ファイルの名前を変える"
+                    aria-label="ファイルを追加"
                     onClick={() =>
-                      setNameEdit({
-                        kind: "rename",
-                        value: activeFile,
-                        error: null,
-                      })
+                      setNameEdit({ kind: "add", value: "src/", error: null })
                     }
                   >
-                    <Pencil
+                    <Plus
                       className="pg-icon"
                       aria-hidden="true"
                       size={14}
                       strokeWidth={2.4}
                     />
                   </button>
+                  {canRename(activeFile, readonlyFiles) && (
+                    <button
+                      type="button"
+                      className="pg-icon-btn pg-icon-btn--sm"
+                      aria-label="ファイルの名前を変える"
+                      onClick={() =>
+                        setNameEdit({
+                          kind: "rename",
+                          value: activeFile,
+                          error: null,
+                        })
+                      }
+                    >
+                      <Pencil
+                        className="pg-icon"
+                        aria-hidden="true"
+                        size={14}
+                        strokeWidth={2.4}
+                      />
+                    </button>
+                  )}
+                  {canDelete(activeFile, readonlyFiles) && (
+                    <button
+                      type="button"
+                      className="pg-icon-btn pg-icon-btn--sm"
+                      aria-label="ファイルを削除"
+                      onClick={removeActive}
+                    >
+                      <Trash2
+                        className="pg-icon"
+                        aria-hidden="true"
+                        size={14}
+                        strokeWidth={2.4}
+                      />
+                    </button>
+                  )}
+                </>
+              )}
+              <div className="exercise-editor-end">
+                {explaining && (
+                  <span className="pg-tag exercise-readonly-tag">
+                    <Lock
+                      className="pg-icon"
+                      aria-hidden="true"
+                      size={11}
+                      strokeWidth={2.6}
+                    />
+                    読み取り専用
+                  </span>
                 )}
-                {canDelete(activeFile, readonlyFiles) && (
+                {loaded.completed && (
                   <button
                     type="button"
-                    className="pg-icon-btn pg-icon-btn--sm"
-                    aria-label="ファイルを削除"
-                    onClick={removeActive}
+                    className="pg-btn pg-btn--sm pg-btn--text"
+                    onClick={() => setPrevCodeOpen(true)}
                   >
-                    <Trash2
-                      className="pg-icon"
-                      aria-hidden="true"
-                      size={14}
-                      strokeWidth={2.4}
-                    />
+                    前回の正解コードを見る
                   </button>
                 )}
-              </>
-            )}
-            <button
-              type="button"
-              className="pg-btn pg-btn--sm pg-btn--text"
-              onClick={() => setResetState("open")}
-            >
-              <RotateCcw
-                className="pg-icon"
-                aria-hidden="true"
-                size={13}
-                strokeWidth={2.4}
-              />
-              初期コードに戻す
-            </button>
-          </div>
-          {nameEdit !== null && (
-            <form
-              className="exercise-nameform"
-              onSubmit={(event) => {
-                event.preventDefault();
-                submitName();
-              }}
-            >
-              <input
-                className="pg-input pg-input--mono"
-                aria-label={
-                  nameEdit.kind === "add"
-                    ? "新しいファイルのパス"
-                    : "新しいパス"
-                }
-                aria-invalid={nameEdit.error !== null}
-                value={nameEdit.value}
-                autoFocus
-                onChange={(event) =>
-                  setNameEdit({
-                    ...nameEdit,
-                    value: event.target.value,
-                    error: null,
-                  })
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Escape") {
-                    setNameEdit(null);
-                  }
+                <button
+                  type="button"
+                  className="pg-btn pg-btn--sm pg-btn--text"
+                  disabled={explaining}
+                  onClick={() => setResetState("open")}
+                >
+                  <RotateCcw
+                    className="pg-icon"
+                    aria-hidden="true"
+                    size={13}
+                    strokeWidth={2.4}
+                  />
+                  初期コードに戻す
+                </button>
+              </div>
+            </div>
+            {nameEdit !== null && (
+              <form
+                className="exercise-nameform"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  submitName();
                 }}
-              />
-              <button type="submit" className="pg-btn pg-btn--sm">
-                {nameEdit.kind === "add" ? "追加" : "変更"}
-              </button>
-              <button
-                type="button"
-                className="pg-btn pg-btn--sm pg-btn--text"
-                onClick={() => setNameEdit(null)}
               >
-                やめる
-              </button>
-              {nameEdit.error !== null && (
-                <p role="alert" className="exercise-nameform-error">
-                  {nameEdit.error}
-                </p>
-              )}
-            </form>
-          )}
-          <div className="exercise-editor">
-            <CodeEditor
-              value={files[activeFile] ?? ""}
-              onChange={handleChange}
-              readOnly={activeReadonly}
-              fontSize={loaded.fontSize}
-              ariaLabel={`エディタ ${activeFile}`}
+                <input
+                  className="pg-input pg-input--mono"
+                  aria-label={
+                    nameEdit.kind === "add"
+                      ? "新しいファイルのパス"
+                      : "新しいパス"
+                  }
+                  aria-invalid={nameEdit.error !== null}
+                  value={nameEdit.value}
+                  autoFocus
+                  onChange={(event) =>
+                    setNameEdit({
+                      ...nameEdit,
+                      value: event.target.value,
+                      error: null,
+                    })
+                  }
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setNameEdit(null);
+                    }
+                  }}
+                />
+                <button type="submit" className="pg-btn pg-btn--sm">
+                  {nameEdit.kind === "add" ? "追加" : "変更"}
+                </button>
+                <button
+                  type="button"
+                  className="pg-btn pg-btn--sm pg-btn--text"
+                  onClick={() => setNameEdit(null)}
+                >
+                  やめる
+                </button>
+                {nameEdit.error !== null && (
+                  <p role="alert" className="exercise-nameform-error">
+                    {nameEdit.error}
+                  </p>
+                )}
+              </form>
+            )}
+            <div className="exercise-editor">
+              <CodeEditor
+                value={files[activeFile] ?? ""}
+                onChange={handleChange}
+                readOnly={activeReadonly}
+                fontSize={loaded.fontSize}
+                ariaLabel={`エディタ ${activeFile}`}
+              />
+            </div>
+          </div>
+
+          <Splitter
+            orientation="horizontal"
+            label="エディタとコンソールの境界"
+            value={consoleHeight}
+            min={CONSOLE_HEIGHT.min}
+            max={() =>
+              (workRef.current?.clientHeight ?? 0) -
+              SPLIT_H_SIZE -
+              EDITOR_MIN_HEIGHT
+            }
+            direction={-1}
+            onChange={setConsoleHeight}
+          />
+
+          <div className="exercise-bottom">
+            <ExerciseConsole
+              lessonId={lessonId}
+              getFiles={() => filesRef.current}
+              enqueue={enqueue}
+              draftSave={scheduler}
+              onStateChange={handleStateChange}
+              onSubmitFinished={handleSubmitFinished}
             />
           </div>
         </div>
 
-        <Splitter
-          orientation="horizontal"
-          label="エディタとコンソールの境界"
-          value={consoleHeight}
-          min={CONSOLE_HEIGHT.min}
-          max={() =>
-            (workRef.current?.clientHeight ?? 0) -
-            SPLIT_H_SIZE -
-            EDITOR_MIN_HEIGHT
-          }
-          direction={-1}
-          onChange={setConsoleHeight}
-        />
-
-        <div className="exercise-bottom">
-          <ExerciseConsole
-            lessonId={lessonId}
-            getFiles={() => filesRef.current}
-            enqueue={enqueue}
-            draftSave={scheduler}
-            onStateChange={handleStateChange}
+        {resetState !== "closed" && (
+          <ResetDraftDialog
+            busy={resetState === "busy"}
+            onCancel={() => setResetState("closed")}
+            onConfirm={confirmReset}
           />
-        </div>
+        )}
       </div>
 
-      {resetState !== "closed" && (
-        <ResetDraftDialog
-          busy={resetState === "busy"}
-          onCancel={() => setResetState("closed")}
-          onConfirm={confirmReset}
+      {passed !== null && (
+        <SolvedBar
+          nextLabel={next?.label ?? null}
+          leaving={leaving}
+          onOpen={() => setPassOpen(true)}
+          onLessons={goLessons}
+          onNext={goNext}
         />
       )}
-    </div>
+      {passed !== null && passOpen && (
+        <PassModal
+          total={passed.result.total}
+          lessonLabel={lessonLabel}
+          chapter={chapter}
+          explanationMd={loaded.exercise.explanation_md}
+          problemMd={loaded.exercise.problem_md}
+          files={passed.files}
+          nextLabel={next?.label ?? null}
+          leaving={leaving}
+          onClose={() => setPassOpen(false)}
+          onLessons={goLessons}
+          onNext={goNext}
+        />
+      )}
+      {prevCodeOpen && (
+        <PassedCodeModal
+          lessonId={lessonId}
+          fontSize={loaded.fontSize}
+          onClose={() => setPrevCodeOpen(false)}
+        />
+      )}
+    </>
   );
 }

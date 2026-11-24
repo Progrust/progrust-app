@@ -111,3 +111,39 @@
   color: var(--danger);
   font-size: 12px;
 }
+
+/* 判定結果のカード。問題文の上に置き、開いた詳細が長くても問題文を残す（styles/app.css の .pgx-ex-side .pg-judge）。 */
+.exercise-judge {
+  flex-shrink: 0;
+  max-height: 58%;
+  margin: 0 0 var(--space-10);
+}
+
+/* エディタの上の帯の右端（「読み取り専用」「前回の正解コードを見る」「初期コードに戻す」）。 */
+.exercise-editor-end {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+}
+
+.exercise-readonly-tag {
+  gap: var(--space-4);
+}
+
+/* 解説表示では、下に帯を置くので、問題文・エディタ・コンソールの下の余白を帯に譲る。 */
+.exercise-body-solved {
+  padding-bottom: 0;
+}
+
+/* 正解のモーダルを閉じた後の帯（SolvedBar）。 */
+.exercise-solved {
+  flex-shrink: 0;
+  padding: var(--space-12) var(--space-20) var(--space-14);
+}
+
+/* 正解のモーダルの見出しの文。章のチップが無くても、閉じるボタンを右端に寄せる。 */
+.exercise-pass-head-text {
+  flex: 1;
+  min-width: 0;
+}

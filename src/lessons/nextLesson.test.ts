@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Chapter, LessonSummary } from "../commands/content";
-import { nextLessonId } from "./nextLesson";
+import { lessonRoute, nextLesson, nextLessonId } from "./nextLesson";
 
 function lesson(id: string, inPreparation = false): LessonSummary {
   return inPreparation
@@ -62,5 +62,28 @@ describe("次のレッスンへ", () => {
   it("章の並びにないレッスンでは、無し", () => {
     const chapters = [chapter("ch01", [lesson("ch01-01")])];
     expect(nextLessonId(chapters, "nope")).toBeNull();
+  });
+});
+
+describe("レッスンを開く画面", () => {
+  it("章末復習レッスンは演習画面、ほかは動画画面", () => {
+    expect(lessonRoute("ch04-07", "chapter_review")).toEqual({
+      name: "exercise",
+      lessonId: "ch04-07",
+    });
+    expect(lessonRoute("ch04-01", "lesson")).toEqual({
+      name: "video",
+      lessonId: "ch04-01",
+    });
+    expect(lessonRoute("ch04-02", "video_only")).toEqual({
+      name: "video",
+      lessonId: "ch04-02",
+    });
+  });
+
+  it("nextLesson は、次のレッスンの種類も返す", () => {
+    const review = { ...lesson("ch04-02"), kind: "chapter_review" as const };
+    const chapters = [chapter("ch04", [lesson("ch04-01"), review])];
+    expect(nextLesson(chapters, "ch04-01")).toEqual(review);
   });
 });

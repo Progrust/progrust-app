@@ -14,7 +14,7 @@ import { openLesson, saveVideoPosition } from "../commands/progress";
 import type { LessonProgress } from "../commands/progress";
 import { getSettings, updateSettings } from "../commands/settings";
 import type { Settings } from "../commands/settings";
-import { nextLessonId } from "../lessons/nextLesson";
+import { lessonRoute, nextLesson } from "../lessons/nextLesson";
 import { useNavigation } from "../router";
 import { currentSentence, sentenceStarts } from "./playerMath";
 import { computeTimeline } from "./timeline";
@@ -285,10 +285,15 @@ function VideoScreenBody({
     [chapters, lessonId],
   );
 
-  const nextId = chapters === null ? null : nextLessonId(chapters, lessonId);
+  const following = chapters === null ? null : nextLesson(chapters, lessonId);
   const kind = known.kind ?? found?.lesson.lesson.kind ?? "lesson";
   // 表示する条件は、動画の読み込みの状態によらない（video-screen.md）。
-  const action = rightAction(kind, known.progress, reachedEnd, nextId !== null);
+  const action = rightAction(
+    kind,
+    known.progress,
+    reachedEnd,
+    following !== null,
+  );
 
   const back = (event: MouseEvent) => {
     event.preventDefault();
@@ -301,10 +306,11 @@ function VideoScreenBody({
           label: "演習へ",
           onSelect: () => navigate({ name: "exercise", lessonId }),
         }
-      : action === "next_lesson" && nextId !== null
+      : action === "next_lesson" && following !== null
         ? {
             label: "次のレッスンへ",
-            onSelect: () => navigate({ name: "video", lessonId: nextId }),
+            // 次のレッスンが章末復習レッスンなら、演習画面を開く。
+            onSelect: () => navigate(lessonRoute(following.id, following.kind)),
           }
         : null;
 

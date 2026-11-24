@@ -6,10 +6,12 @@ import {
   fireEvent,
   render,
   screen,
+  within,
 } from "@testing-library/react";
 import { useEffect, useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Chapter, LessonKind } from "../commands/content";
+import type { SubmitResult } from "../commands/run";
 import type { CodeEditorProps } from "../editor";
 import { NavigationContext } from "../router";
 import type { Route } from "../router";
@@ -98,6 +100,14 @@ type Options = {
   failLesson?: boolean;
   layout?: "single" | "multi";
   readonlyFiles?: string[];
+  // 開いたときに完了済みか。
+  completed?: boolean;
+  // get_passed_code の戻り値。無いときは not_found で拒否する。
+  passedCode?: {
+    session_id: string;
+    submitted_at: string;
+    files: { [path: string]: string };
+  };
 };
 
 function mockCommands(calls: Calls, options: Options = {}) {
@@ -148,7 +158,19 @@ function mockCommands(calls: Calls, options: Options = {}) {
         const files = options.drafts?.[lessonId];
         return {
           session_id: "s1",
-          progress: null,
+          progress:
+            options.completed === true
+              ? {
+                  status: "completed",
+                  first_completed_at: "2026-10-28T14:32:00+09:00",
+                  last_completed_at: "2026-10-28T14:32:00+09:00",
+                  completion_count: 1,
+                  last_opened_at: "2026-11-24T10:00:00+09:00",
+                  last_sentence_id: null,
+                  video_watched: true,
+                  last_passed_session_id: "s0",
+                }
+              : null,
           generated: null,
           draft:
             files === undefined
@@ -172,7 +194,17 @@ function mockCommands(calls: Calls, options: Options = {}) {
           first_launch_completed: true,
         };
       case "save_draft":
+      case "end_session":
         return null;
+      case "get_passed_code":
+        if (options.passedCode === undefined) {
+          throw {
+            code: "not_found",
+            message: "前回の正解コードが見つかりません。",
+            detail: null,
+          };
+        }
+        return options.passedCode;
       case "reset_draft":
         return {
           schema_version: 1,
@@ -645,5 +677,442 @@ describe("実行・提出", () => {
       });
     });
     expect(editorProps.current?.readOnly).toBe(true);
+  });
+});
+
+describe("判定結果と正解", () => {
+  const requestId = (calls: Calls, name: string) =>
+    (commands(calls, name).at(-1) as { request_id: string }).request_id;
+
+  async function press(name: string) {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name }));
+    });
+  }
+
+  // 「提出」を押し、判定結果を run_finished で届ける。
+  async function submit(calls: Calls, result: SubmitResult) {
+    await press("提出");
+    await act(async () => {
+      await emit("run_finished", {
+        request_id: requestId(calls, "submit_code"),
+        kind: "submit",
+        finished_at: "2026-11-24T10:00:00+09:00",
+        error: null,
+        run: null,
+        submit: result,
+        progress: null,
+      });
+    });
+  }
+
+  const WRONG: SubmitResult = {
+    status: "wrong",
+    passed: 1,
+    total: 3,
+    cases: [
+      { name: "基本の名前", status: "pass", detail: null },
+      {
+        name: "前後に空白がある名前",
+        status: "fail",
+        detail: {
+          input: "  ferris  \n",
+          expected: "ferris_the_crab\n",
+          actual: "  ferris_the_crab\n",
+        },
+      },
+      { name: "長い名前", status: "timeout", detail: "時間切れ" },
+    ],
+  };
+  const PASSED: SubmitResult = {
+    status: "passed",
+    passed: 3,
+    total: 3,
+    cases: [],
+  };
+
+  const card = () => screen.queryByRole("region", { name: "判定結果" });
+  const passDialog = () => screen.getByRole("dialog", { name: "正解" });
+  const solvedBar = () => {
+    const bar = document.querySelector<HTMLElement>(".pg-solved");
+    if (bar === null) {
+      throw new Error("帯が無い");
+    }
+    return bar;
+  };
+
+  it("実行した後に提出して不正解になっても、実行の出力はコンソールに残り、問題文の上に不正解のカードを畳んで出す", async () => {
+    const { calls, container } = setup("ch04-02");
+    await editor();
+    await press("実行");
+    const runId = requestId(calls, "run_code");
+    await act(async () => {
+      await emit("run_output", {
+        request_id: runId,
+        chunks: [{ stream: "stdout", text: "実行の出力\n" }],
+      });
+      await emit("run_finished", {
+        request_id: runId,
+        kind: "run",
+        finished_at: "2026-11-24T10:00:00+09:00",
+        error: null,
+        run: { mode: "main", status: "success", exit_code: 0 },
+        submit: null,
+        progress: null,
+      });
+    });
+    expect(card()).toBeNull();
+    await submit(calls, WRONG);
+
+    expect(screen.getByTestId("console-output")).toHaveTextContent(
+      "実行の出力",
+    );
+    const judge = card();
+    expect(judge).not.toBeNull();
+    expect(judge).toHaveTextContent("不正解");
+    expect(judge).toHaveTextContent(
+      /3 件中 2 件のテストが失敗しました ・ \d\d:\d\d に提出/,
+    );
+    // 問題文の上に置く。
+    const side = container.querySelector(".exercise-side");
+    expect(side?.firstElementChild).toBe(judge);
+    // 詳細は畳んである。
+    const toggle = screen.getByRole("button", { name: "詳細を見る" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(judge).not.toHaveTextContent("前後に空白がある名前");
+
+    fireEvent.click(toggle);
+    expect(
+      screen.getByRole("button", { name: "詳細を閉じる" }),
+    ).toHaveAttribute("aria-expanded", "true");
+    const items = screen
+      .getByRole("list", { name: "テストケース" })
+      .querySelectorAll("li");
+    expect([...items].map((li) => [li.textContent, li.className])).toEqual([
+      ["基本の名前", "ok"],
+      ["前後に空白がある名前", "ng"],
+      ["長い名前", "ng"],
+    ]);
+    // 最初に失敗したテストケースの入力・期待する出力・実際の出力。行頭と行末の空白は ␣ で見せる。
+    const detail = judge?.querySelector(".pg-case");
+    expect(detail).toHaveTextContent("前後に空白がある名前");
+    expect(detail).toHaveTextContent("入力␣␣ferris␣␣");
+    expect(detail).toHaveTextContent("期待する出力ferris_the_crab");
+    expect(detail).toHaveTextContent("実際の出力␣␣ferris_the_crab");
+    expect(detail).not.toHaveTextContent("時間切れ");
+  });
+
+  it("test 方式の失敗は、最初に失敗したテストケースの panic メッセージを出す", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await submit(calls, {
+      status: "wrong",
+      passed: 0,
+      total: 2,
+      cases: [
+        {
+          name: "add_suffix_trims",
+          status: "fail",
+          detail: "assertion `left == right` failed\n  left: 1\n right: 2",
+        },
+        { name: "add_suffix_keeps", status: "runtime_error", detail: "panic" },
+      ],
+    });
+    fireEvent.click(screen.getByRole("button", { name: "詳細を見る" }));
+    const detail = card()?.querySelector(".pg-case");
+    expect(detail).toHaveTextContent("add_suffix_trims");
+    expect(detail).toHaveTextContent("assertion `left == right` failed");
+    expect(card()).toHaveTextContent("add_suffix_keeps");
+  });
+
+  it("ビルドに失敗したときは、テストを実行していないことと、エラーがコンソールにあることを示す", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await submit(calls, {
+      status: "compile_error",
+      passed: 0,
+      total: 0,
+      cases: [],
+    });
+    expect(card()).toHaveTextContent("ビルドに失敗しました");
+    expect(card()).toHaveTextContent(
+      "テストは実行していません。エラーはコンソールに表示しています。",
+    );
+    expect(screen.queryByRole("button", { name: "詳細を見る" })).toBeNull();
+  });
+
+  it.each(["crates_unavailable", "stopped"] as const)(
+    "%s で終わった提出では、前のカードをそのまま残す",
+    async (status) => {
+      const { calls } = setup("ch04-02");
+      await editor();
+      await submit(calls, WRONG);
+      await submit(calls, { status, passed: 0, total: 0, cases: [] });
+      expect(card()).toHaveTextContent("3 件中 2 件のテストが失敗しました");
+    },
+  );
+
+  it("前のカードが無いときに crates_unavailable で終わっても、カードを出さない", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await submit(calls, {
+      status: "crates_unavailable",
+      passed: 0,
+      total: 0,
+      cases: [],
+    });
+    expect(card()).toBeNull();
+  });
+
+  it("次に提出すると、最新の結果に置き換え、詳細を畳んだ状態に戻す", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await submit(calls, WRONG);
+    fireEvent.click(screen.getByRole("button", { name: "詳細を見る" }));
+    await submit(calls, { ...WRONG, passed: 2 });
+    expect(card()).toHaveTextContent("3 件中 1 件のテストが失敗しました");
+    expect(screen.getByRole("button", { name: "詳細を見る" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("正解すると、カードを消して正解のモーダルを開き、解説・問題文・提出したコードを切り替えられる", async () => {
+    const { calls } = setup("ch04-02");
+    fireEvent.change(await editor(), {
+      target: { value: "fn main() { /* 正解 */ }" },
+    });
+    await submit(calls, WRONG);
+    await submit(calls, PASSED);
+    expect(card()).toBeNull();
+
+    const dialog = screen.getByRole("dialog", { name: "正解" });
+    expect(dialog).toHaveTextContent(
+      "3 件のテストがすべて通りました。4-2 所有権のムーブ を完了しました。",
+    );
+    expect(dialog).toHaveTextContent("4所有権");
+    // 解説（explanation_md を Markdown で表示）。
+    expect(screen.getByRole("tab", { name: "解説" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(
+      screen.getByRole("heading", { level: 2, name: "考え方" }),
+    ).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "問題文" }));
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      "名前を読み込んでください。",
+    );
+    fireEvent.click(screen.getByRole("tab", { name: "提出したコード" }));
+    expect(screen.getByRole("tabpanel")).toHaveTextContent("src/main.rs");
+    expect(screen.getByRole("tabpanel")).toHaveTextContent(
+      "fn main() { /* 正解 */ }",
+    );
+    // 質疑応答は M4 で作るので、準備中の表示にする。
+    expect(
+      screen.getByRole("complementary", { name: "解説について質問" }),
+    ).toHaveTextContent("準備中");
+    // 次のレッスン（学習順で後の、準備中でないレッスン）の番号と名前を添える。
+    expect(
+      within(dialog).getByRole("button", { name: /次のレッスンへ/ }),
+    ).toHaveTextContent("4-3 第4章の復習");
+    expect(editorProps.current?.readOnly).toBe(true);
+  });
+
+  it("「閉じてコードを見る」で、読み取り専用のエディタと帯を出し、「解説を開く」でモーダルを開き直す", async () => {
+    const { calls } = setup("ch04-02", { layout: "multi" });
+    await editor();
+    await submit(calls, PASSED);
+    // 下の「閉じてコードを見る」と、× の「閉じてコードを見る」がある。
+    const closers = within(passDialog()).getAllByRole("button", {
+      name: "閉じてコードを見る",
+    });
+    expect(closers).toHaveLength(2);
+    fireEvent.click(closers[1]);
+    expect(screen.queryByRole("dialog", { name: "正解" })).toBeNull();
+    expect(solvedBar()).toHaveTextContent("正解しました");
+    expect(screen.getByText("読み取り専用")).toBeVisible();
+    expect(editorProps.current?.readOnly).toBe(true);
+    // 解説表示では、下書きを書き換える操作をできなくする。
+    expect(
+      screen.getByRole("button", { name: "初期コードに戻す" }),
+    ).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "ファイルを追加" })).toBeNull();
+    expect(screen.getByRole("button", { name: "提出" })).toBeDisabled();
+
+    fireEvent.click(
+      within(solvedBar()).getByRole("button", { name: "解説を開く" }),
+    );
+    expect(screen.getByRole("dialog", { name: "正解" })).toBeVisible();
+    // Esc でも閉じる。
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "正解" }), {
+      key: "Escape",
+    });
+    expect(screen.queryByRole("dialog", { name: "正解" })).toBeNull();
+  });
+
+  it("次のレッスンが無いレッスンでは、「次のレッスンへ」を出さない", async () => {
+    const { calls } = setup("ch04-03", { kind: "chapter_review" });
+    await editor();
+    await submit(calls, PASSED);
+    expect(screen.queryByRole("button", { name: /次のレッスンへ/ })).toBeNull();
+    expect(
+      within(passDialog()).getByRole("button", { name: "レッスン一覧へ" }),
+    ).toBeVisible();
+    expect(
+      within(solvedBar()).getByRole("button", { name: "レッスン一覧へ" }),
+    ).toBeVisible();
+  });
+
+  describe("end_session", () => {
+    it.each([
+      ["モーダルの「レッスン一覧へ」", { name: "lessons" }],
+      [
+        "モーダルの「次のレッスンへ」",
+        { name: "exercise", lessonId: "ch04-03" },
+      ],
+      ["帯の「レッスン一覧へ」", { name: "lessons" }],
+      ["帯の「次のレッスンへ」", { name: "exercise", lessonId: "ch04-03" }],
+      ["左上のリンク", { name: "lessons" }],
+      ["「動画を見直す」", { name: "video", lessonId: "ch04-02" }],
+    ] as const)(
+      "解説表示で%sを押すと、end_session で試行セッションを終えてから移る",
+      async (how, route) => {
+        const { calls, navigate, unmount } = setup("ch04-02");
+        await editor();
+        await submit(calls, PASSED);
+        const place = how.startsWith("帯") ? solvedBar() : passDialog();
+        await act(async () => {
+          if (how === "左上のリンク") {
+            fireEvent.click(screen.getByRole("link", { name: "レッスン一覧" }));
+          } else if (how === "「動画を見直す」") {
+            fireEvent.click(
+              screen.getByRole("button", { name: "動画を見直す" }),
+            );
+          } else if (how.includes("次のレッスンへ")) {
+            fireEvent.click(
+              within(place).getByRole("button", { name: /次のレッスンへ/ }),
+            );
+          } else {
+            fireEvent.click(
+              within(place).getByRole("button", { name: "レッスン一覧へ" }),
+            );
+          }
+        });
+        await flush();
+        expect(commands(calls, "end_session")).toEqual([
+          { lesson_id: "ch04-02" },
+        ]);
+        expect(navigate).toHaveBeenCalledTimes(1);
+        expect(navigate).toHaveBeenCalledWith(route);
+        // 移った後に画面が消えても、もう一度は呼ばない。
+        unmount();
+        await flush();
+        expect(commands(calls, "end_session")).toHaveLength(1);
+      },
+    );
+
+    it("ヘッダーのメニューなど、画面の外から移ったとき（アンマウント）も、解説表示なら試行セッションを終える", async () => {
+      const { calls, unmount } = setup("ch04-02");
+      fireEvent.change(await editor(), { target: { value: "fn main() {}" } });
+      // 提出中に編集すると、保存を待つ状態になる。正解したら保存をやめ、終えた後に下書きを作り直さない。
+      await press("提出");
+      fireEvent.change(await editor(), {
+        target: { value: "// 提出中の編集" },
+      });
+      await act(async () => {
+        await emit("run_finished", {
+          request_id: requestId(calls, "submit_code"),
+          kind: "submit",
+          finished_at: "2026-11-24T10:00:00+09:00",
+          error: null,
+          run: null,
+          submit: PASSED,
+          progress: null,
+        });
+      });
+      // 読み取り専用のエディタには、提出したコードを見せる。
+      expect(await editor()).toHaveValue("fn main() {}");
+      expect(editorProps.current?.readOnly).toBe(true);
+      unmount();
+      await flush();
+      expect(commands(calls, "end_session")).toEqual([
+        { lesson_id: "ch04-02" },
+      ]);
+      const names = calls.map((c) => c.command);
+      expect(names.slice(names.indexOf("end_session"))).not.toContain(
+        "save_draft",
+      );
+    });
+
+    it("解答中に画面を離れても、end_session は呼ばない", async () => {
+      const { calls, navigate, unmount } = setup("ch04-02");
+      await editor();
+      await submit(calls, WRONG);
+      fireEvent.click(screen.getByRole("link", { name: "レッスン一覧" }));
+      expect(navigate).toHaveBeenCalledWith({ name: "lessons" });
+      unmount();
+      await flush();
+      expect(commands(calls, "end_session")).toEqual([]);
+    });
+  });
+});
+
+describe("前回の正解コードを見る", () => {
+  it("完了済みのレッスンでは、押すと get_passed_code の結果を読み取り専用のモーダルで見せる", async () => {
+    const submittedAt = "2026-10-28T14:32:00+09:00";
+    const { calls } = setup("ch04-02", {
+      completed: true,
+      passedCode: {
+        session_id: "s0",
+        submitted_at: submittedAt,
+        files: { "src/main.rs": "// 前回の正解\n" },
+      },
+    });
+    expect(await editor()).toHaveValue(STARTER);
+    fireEvent.click(
+      screen.getByRole("button", { name: "前回の正解コードを見る" }),
+    );
+    const dialog = screen.getByRole("dialog", { name: "前回の正解コード" });
+    expect(
+      await screen.findByRole("textbox", {
+        name: "前回の正解コード src/main.rs",
+      }),
+    ).toHaveValue("// 前回の正解\n");
+    expect(editorProps.current?.readOnly).toBe(true);
+    const at = new Date(submittedAt);
+    expect(dialog).toHaveTextContent(
+      `${at.getMonth() + 1} 月 ${at.getDate()} 日 ${String(at.getHours()).padStart(2, "0")}:${String(at.getMinutes()).padStart(2, "0")} に正解 ・ 読み取り専用`,
+    );
+    expect(commands(calls, "get_passed_code")).toEqual([
+      { lesson_id: "ch04-02" },
+    ]);
+    // 足元の「閉じる」で閉じる。編集中のコードには影響しない。
+    fireEvent.click(
+      within(dialog).getAllByRole("button", { name: "閉じる" })[1],
+    );
+    expect(
+      screen.queryByRole("dialog", { name: "前回の正解コード" }),
+    ).toBeNull();
+    expect(await editor()).toHaveValue(STARTER);
+  });
+
+  it("前回の正解コードが見つからないときは、読み込めなかったことを示す", async () => {
+    setup("ch04-02", { completed: true });
+    await editor();
+    fireEvent.click(
+      screen.getByRole("button", { name: "前回の正解コードを見る" }),
+    );
+    expect(
+      await screen.findByText("前回の正解コードを読み込めませんでした。"),
+    ).toBeVisible();
+  });
+
+  it("完了していないレッスンでは出さない", async () => {
+    setup("ch04-02");
+    await editor();
+    expect(
+      screen.queryByRole("button", { name: "前回の正解コードを見る" }),
+    ).toBeNull();
   });
 });
