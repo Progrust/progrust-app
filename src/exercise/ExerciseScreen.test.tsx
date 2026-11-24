@@ -89,6 +89,8 @@ type Options = {
   drafts?: { [lessonId: string]: { [path: string]: string } };
   starter?: { [path: string]: string };
   failLesson?: boolean;
+  layout?: "single" | "multi";
+  readonlyFiles?: string[];
 };
 
 function mockCommands(calls: Calls, options: Options = {}) {
@@ -115,6 +117,17 @@ function mockCommands(calls: Calls, options: Options = {}) {
             title,
             primary_elements: [],
             secondary_elements: [],
+            ...(options.layout === undefined
+              ? {}
+              : {
+                  exercise: {
+                    layout: options.layout,
+                    judge: { mode: "stdout", target: "src/main.rs" },
+                    dependencies: [],
+                    readonly_files: options.readonlyFiles ?? [],
+                    case_labels: {},
+                  },
+                }),
           },
           script: null,
           voice_dir: null,
@@ -405,5 +418,159 @@ describe("初期コードに戻す", () => {
     unmount();
     await flush();
     expect(commands(calls, "save_draft")).toEqual([]);
+  });
+});
+
+describe("multi レイアウトのファイル操作", () => {
+  const MULTI = {
+    "src/main.rs": "fn main() {}\n",
+    "src/geo.rs": "// geo\n",
+    "tests/it.rs": "// it\n",
+  };
+  const multi = (extra: Options = {}) =>
+    setup("ch04-02", {
+      layout: "multi",
+      starter: MULTI,
+      readonlyFiles: ["tests/it.rs"],
+      ...extra,
+    });
+
+  async function addFileNamed(path: string) {
+    fireEvent.click(
+      await screen.findByRole("button", { name: "ファイルを追加" }),
+    );
+    fireEvent.change(
+      screen.getByRole("textbox", { name: "新しいファイルのパス" }),
+      {
+        target: { value: path },
+      },
+    );
+    fireEvent.click(screen.getByRole("button", { name: "追加" }));
+  }
+
+  it("single では、追加の + を出さない", async () => {
+    setup("ch04-02", { layout: "single" });
+    await editor();
+    expect(screen.queryByRole("button", { name: "ファイルを追加" })).toBeNull();
+    expect(screen.getAllByRole("tab")).toHaveLength(1);
+  });
+
+  it("全ファイルのタブを出し、切り替えるとエディタの内容が変わる", async () => {
+    multi();
+    await editor();
+    expect(screen.getAllByRole("tab").map((t) => t.textContent)).toEqual([
+      "src/main.rs",
+      "src/geo.rs",
+      "tests/it.rs",
+    ]);
+    fireEvent.click(screen.getByRole("tab", { name: "src/geo.rs" }));
+    expect(
+      await screen.findByRole("textbox", { name: "エディタ src/geo.rs" }),
+    ).toHaveValue("// geo\n");
+    expect(editorProps.current?.readOnly).toBe(false);
+  });
+
+  it("readonly_files のファイルは読み取り専用で、消す・名前を変えるボタンが無い", async () => {
+    multi();
+    await editor();
+    fireEvent.click(screen.getByRole("tab", { name: "tests/it.rs" }));
+    expect(editorProps.current?.readOnly).toBe(true);
+    expect(screen.queryByRole("button", { name: "ファイルを削除" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "ファイルの名前を変える" }),
+    ).toBeNull();
+  });
+
+  it("src/main.rs は、消せず、名前も変えられない", async () => {
+    multi();
+    await editor();
+    expect(screen.queryByRole("button", { name: "ファイルを削除" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: "ファイルの名前を変える" }),
+    ).toBeNull();
+  });
+
+  it("src/ と tests/ の外や .rs でないパス、同じ名前のファイルは作れない", async () => {
+    const { calls } = multi();
+    await editor();
+    for (const bad of [
+      "main.rs",
+      "src/a.txt",
+      "docs/a.rs",
+      "src/../a.rs",
+      "/src/a.rs",
+      "src/geo.rs",
+    ]) {
+      await addFileNamed(bad);
+      expect(screen.getByRole("alert")).toBeVisible();
+      expect(screen.getAllByRole("tab")).toHaveLength(3);
+      fireEvent.click(screen.getByRole("button", { name: "やめる" }));
+    }
+    expect(commands(calls, "save_draft")).toEqual([]);
+  });
+
+  it("追加したファイルを下書きに保存し、開き直すと戻る", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { calls, unmount } = multi();
+    await editor();
+    await addFileNamed("src/util.rs");
+    expect(
+      await screen.findByRole("textbox", { name: "エディタ src/util.rs" }),
+    ).toHaveValue("");
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    await flush();
+    const saved = commands(calls, "save_draft") as {
+      files: Record<string, string>;
+    }[];
+    expect(saved).toHaveLength(1);
+    expect(Object.keys(saved[0].files)).toEqual([
+      "src/main.rs",
+      "src/geo.rs",
+      "tests/it.rs",
+      "src/util.rs",
+    ]);
+    unmount();
+    clearMocks();
+    setup("ch04-02", {
+      layout: "multi",
+      starter: MULTI,
+      drafts: { "ch04-02": saved[0].files },
+    });
+    await editor();
+    expect(screen.getByRole("tab", { name: "src/util.rs" })).toBeVisible();
+  });
+
+  it("名前を変える・削除すると、タブと下書きに反映する", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const { calls } = multi();
+    await editor();
+    fireEvent.click(screen.getByRole("tab", { name: "src/geo.rs" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "ファイルの名前を変える" }),
+    );
+    fireEvent.change(screen.getByRole("textbox", { name: "新しいパス" }), {
+      target: { value: "src/shape.rs" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "変更" }));
+    expect(screen.getByRole("tab", { name: "src/shape.rs" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.queryByRole("tab", { name: "src/geo.rs" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "ファイルを削除" }));
+    expect(screen.getAllByRole("tab")).toHaveLength(2);
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    await flush();
+    const saved = commands(calls, "save_draft") as {
+      files: Record<string, string>;
+    }[];
+    expect(Object.keys(saved[saved.length - 1].files)).toEqual([
+      "src/main.rs",
+      "tests/it.rs",
+    ]);
   });
 });

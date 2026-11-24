@@ -2,7 +2,7 @@
 // 決まりは documents/spec/screens/exercise-screen.md、documents/spec/lesson-flow/flow.md、drafts.md。
 // 教材と下書きを読み込み、左に問題文、右上にエディタ、右下にコンソールを置く。
 // 下書きは、保存のきっかけ（draftSave.ts）で `save_draft` に保存し、「初期コードに戻す」で `reset_draft` を呼ぶ。
-import { ChevronLeft, RotateCcw } from "lucide-react";
+import { ChevronLeft, Pencil, Plus, RotateCcw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { findLesson, numberChapters } from "../chapterNumbers";
@@ -17,12 +17,22 @@ import { Markdown } from "../markdown/Markdown";
 import { useNavigation } from "../router";
 import { useDraftSaveTrigger } from "./draftSave";
 import { exerciseLinks } from "./exerciseLinks";
+import {
+  MAIN_FILE,
+  addFile,
+  canDelete,
+  canRename,
+  deleteFile,
+  isReadonly,
+  renameFile,
+  tabOrder,
+  validatePath,
+} from "./fileOps";
 import { ResetDraftDialog } from "./ResetDraftDialog";
 import { Splitter } from "./Splitter";
 import "./exerciseScreen.css";
 
-// single レイアウトのエディタに表示するファイル（documents/spec/lesson-flow/drafts.md）。
-export const MAIN_FILE = "src/main.rs";
+export { MAIN_FILE };
 
 // 設定を読み込めなかったときの文字サイズ（settings.json の editor_font_size の既定値）。
 const DEFAULT_FONT_SIZE = 14;
@@ -223,13 +233,58 @@ function ExerciseWorkspace({
     });
   });
 
+  const isMulti = loaded.detail.lesson.exercise?.layout === "multi";
+  const readonlyFiles = loaded.detail.lesson.exercise?.readonly_files ?? [];
+  // 開いているファイル。消えたファイル（初期コードに戻したときなど）を指していたら、src/main.rs に戻す。
+  const [selected, setSelected] = useState(MAIN_FILE);
+  const activeFile = selected in files ? selected : MAIN_FILE;
+  const activeReadonly = isMulti && isReadonly(activeFile, readonlyFiles);
+
   const handleChange = (value: string) => {
-    // エディタの内容を画面から差し替えたとき（初期コードに戻したとき）は、編集として数えない。
-    if (filesRef.current[MAIN_FILE] === value) {
+    // エディタの内容を画面から差し替えたとき（初期コードに戻したとき、タブを切り替えたとき）は、編集として数えない。
+    if (filesRef.current[activeFile] === value) {
       return;
     }
-    replaceFiles({ ...filesRef.current, [MAIN_FILE]: value });
+    replaceFiles({ ...filesRef.current, [activeFile]: value });
     scheduler.edited();
+  };
+
+  // ファイルの追加・名前変更の入力。add は新しいファイル、rename は開いているファイルの名前を入力する。
+  const [nameEdit, setNameEdit] = useState<{
+    kind: "add" | "rename";
+    value: string;
+    error: string | null;
+  } | null>(null);
+  const changeFiles = (next: DraftFiles) => {
+    replaceFiles(next);
+    scheduler.edited();
+  };
+  const submitName = () => {
+    if (nameEdit === null) {
+      return;
+    }
+    const path = nameEdit.value.trim();
+    const others =
+      nameEdit.kind === "rename"
+        ? deleteFile(filesRef.current, activeFile)
+        : filesRef.current;
+    const error = validatePath(path, others);
+    if (error !== null) {
+      setNameEdit({ ...nameEdit, error });
+      return;
+    }
+    if (nameEdit.kind === "add") {
+      changeFiles(addFile(filesRef.current, path));
+    } else if (path !== activeFile) {
+      changeFiles(renameFile(filesRef.current, activeFile, path));
+    }
+    setSelected(path);
+    setNameEdit(null);
+  };
+  const removeActive = () => {
+    changeFiles(deleteFile(filesRef.current, activeFile));
+    setSelected(MAIN_FILE);
+    setNameEdit(null);
   };
 
   const [resetState, setResetState] = useState<"closed" | "open" | "busy">(
@@ -291,15 +346,77 @@ function ExerciseWorkspace({
         <div className="pg-editor">
           <div className="pg-editor-bar">
             <div role="tablist" aria-label="ファイル" className="exercise-tabs">
-              <button
-                type="button"
-                className="pg-filetab"
-                role="tab"
-                aria-selected="true"
-              >
-                {MAIN_FILE}
-              </button>
+              {(isMulti ? tabOrder(files) : [MAIN_FILE]).map((path) => (
+                <button
+                  key={path}
+                  type="button"
+                  className="pg-filetab"
+                  role="tab"
+                  aria-selected={path === activeFile}
+                  onClick={() => {
+                    setSelected(path);
+                    setNameEdit(null);
+                  }}
+                >
+                  {path}
+                </button>
+              ))}
             </div>
+            {isMulti && (
+              <>
+                <button
+                  type="button"
+                  className="pg-icon-btn pg-icon-btn--sm"
+                  aria-label="ファイルを追加"
+                  onClick={() =>
+                    setNameEdit({ kind: "add", value: "src/", error: null })
+                  }
+                >
+                  <Plus
+                    className="pg-icon"
+                    aria-hidden="true"
+                    size={14}
+                    strokeWidth={2.4}
+                  />
+                </button>
+                {canRename(activeFile, readonlyFiles) && (
+                  <button
+                    type="button"
+                    className="pg-icon-btn pg-icon-btn--sm"
+                    aria-label="ファイルの名前を変える"
+                    onClick={() =>
+                      setNameEdit({
+                        kind: "rename",
+                        value: activeFile,
+                        error: null,
+                      })
+                    }
+                  >
+                    <Pencil
+                      className="pg-icon"
+                      aria-hidden="true"
+                      size={14}
+                      strokeWidth={2.4}
+                    />
+                  </button>
+                )}
+                {canDelete(activeFile, readonlyFiles) && (
+                  <button
+                    type="button"
+                    className="pg-icon-btn pg-icon-btn--sm"
+                    aria-label="ファイルを削除"
+                    onClick={removeActive}
+                  >
+                    <Trash2
+                      className="pg-icon"
+                      aria-hidden="true"
+                      size={14}
+                      strokeWidth={2.4}
+                    />
+                  </button>
+                )}
+              </>
+            )}
             <button
               type="button"
               className="pg-btn pg-btn--sm pg-btn--text"
@@ -314,12 +431,61 @@ function ExerciseWorkspace({
               初期コードに戻す
             </button>
           </div>
+          {nameEdit !== null && (
+            <form
+              className="exercise-nameform"
+              onSubmit={(event) => {
+                event.preventDefault();
+                submitName();
+              }}
+            >
+              <input
+                className="pg-input pg-input--mono"
+                aria-label={
+                  nameEdit.kind === "add"
+                    ? "新しいファイルのパス"
+                    : "新しいパス"
+                }
+                aria-invalid={nameEdit.error !== null}
+                value={nameEdit.value}
+                autoFocus
+                onChange={(event) =>
+                  setNameEdit({
+                    ...nameEdit,
+                    value: event.target.value,
+                    error: null,
+                  })
+                }
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") {
+                    setNameEdit(null);
+                  }
+                }}
+              />
+              <button type="submit" className="pg-btn pg-btn--sm">
+                {nameEdit.kind === "add" ? "追加" : "変更"}
+              </button>
+              <button
+                type="button"
+                className="pg-btn pg-btn--sm pg-btn--text"
+                onClick={() => setNameEdit(null)}
+              >
+                やめる
+              </button>
+              {nameEdit.error !== null && (
+                <p role="alert" className="exercise-nameform-error">
+                  {nameEdit.error}
+                </p>
+              )}
+            </form>
+          )}
           <div className="exercise-editor">
             <CodeEditor
-              value={files[MAIN_FILE] ?? ""}
+              value={files[activeFile] ?? ""}
               onChange={handleChange}
+              readOnly={activeReadonly}
               fontSize={loaded.fontSize}
-              ariaLabel={`エディタ ${MAIN_FILE}`}
+              ariaLabel={`エディタ ${activeFile}`}
             />
           </div>
         </div>

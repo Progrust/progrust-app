@@ -90,3 +90,24 @@
   inset: 0;
   z-index: 20;
 }
+
+/* ファイルの追加・名前変更の入力。 */
+.exercise-nameform {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-6);
+  align-items: center;
+  padding: var(--space-6) var(--space-14);
+}
+
+.exercise-nameform > .pg-input {
+  flex: 1;
+  min-width: 160px;
+}
+
+.exercise-nameform-error {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+}
