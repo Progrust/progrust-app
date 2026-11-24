@@ -40,6 +40,9 @@ export default defineConfig({
           include: ["src/**/*.test.{ts,tsx}"],
           environment: "jsdom",
           setupFiles: ["src/test-setup.ts"],
+          // Vitest は CSS を空にして読み込む。エディタの配色のテストが、
+          // デザインシステムのトークンの CSS の中身（?raw）を読めるようにする。
+          css: { include: [/design-system\/progrust\/tokens\.css/] },
         },
       },
       {

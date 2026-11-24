@@ -9,7 +9,7 @@
 * [ADR 0016](0016-do-not-install-rust.md) - Rust ツールチェーンを同梱・自動導入せず、導入手順の案内だけを表示する
 * [ADR 0017](0017-search-default-tool-locations.md) - 外部ツールを PATH 以外の既定のインストール先からも探す
 * [ADR 0084](0084-keep-record-templates-as-assets.md) - 学習記録・分析のテンプレートを、`.md.tmpl` の asset としてバンドルに置く
-* [ADR 0111](0111-bundle-monaco-and-set-csp.md) - Monaco Editor を CDN を使わずに同梱し、アプリに CSP を設定して読み込み先を自身と Tauri の IPC に限り（Monaco のため style-src に 'unsafe-inline' を許す）、演習画面のショートカットを Monaco のコマンドとキャプチャの keydown で受ける
+* [ADR 0111](0111-bundle-monaco-and-set-csp.md) - Monaco Editor を CDN を使わずに同梱し、アプリに CSP を設定して読み込み先を自身と Tauri の IPC に限り（Monaco のため style-src に 'unsafe-inline' を許す）、演習画面のショートカットを Monaco のコマンドとキャプチャの keydown で受ける（ADR 0225 で Monaco に登録する方法を addCommand から addAction に変えた）
 * [ADR 0117](0117-raise-min-rustc-only-when-author-decides.md) - rustc の最低バージョンはアプリのリリースに合わせて上げず、作者が決めたときに上げる。バージョンが足りないときは rustup update stable を案内する
 * [ADR 0128](0128-serve-narration-from-resources-via-asset-protocol.md) - 動画の音声をフロントエンドのビルドに含めず、アプリ同梱データに置いて、Tauri のアセットプロトコル（asset://）で読む
 * [ADR 0147](0147-define-command-and-event-payloads-in-architecture.md) - フロントエンドとバックエンドの間のコマンドとイベントの入力・出力の形を `spec/architecture/commands/` の 1 か所に定め、要求をフロントエンドが作る `request_id` で見分け、エラーを共通の形で返す（ADR 0167 でフロントエンドに許可する権限にイベントの受け取りを加えた）
@@ -24,6 +24,7 @@
 * [ADR 0209](0209-regenerate-runner-lock-with-npm-script.md) - runner/Cargo.lock は、一時ディレクトリに allcrates/ と同じ形のライブラリを作って cargo generate-lockfile で生成する npm のスクリプト（npm run runner:lock）で作り直し、runner/ の 2 つのファイルは、教材と同じ仕組みで src-tauri/gen/bundled/runner/ に写して同梱する
 * [ADR 0210](0210-find-rustc-next-to-cargo-and-use-first-usable-place.md) - cargo と rustc は探索順の場所ごとに同じディレクトリの組で調べ、設定のパスは cargo の実行ファイルの絶対パスとし、使えない場所は飛ばして、rustc --version が成功した最初の場所を、バージョンが足りなくても使う
 * [ADR 0211](0211-draft-commands-reject-lessons-without-exercise.md) - 演習の無いレッスン（動画のみのレッスン）に `save_draft`・`reset_draft` を呼んだときは、下書きを書かずに `invalid_argument` を返す
+* [ADR 0225](0225-lean-monaco-entry-rust-tokens-and-theme-from-css-variables.md) - Monaco Editor を、既定の入口から全言語の定義・言語機能・LSP を除いた自前の入口で読み込み、Rust の字句の定義に関数・マクロ・型の区分を足して自分で登録し、エディタの配色をデザインシステムの CSS 変数の値から実行時に作り、ショートカットを addCommand ではなく addAction で登録する
 
 # 教材データ形式
 

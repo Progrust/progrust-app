@@ -1,5 +1,13 @@
+import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { applyTheme, resetTheme, resolveTheme, startTheme } from "./theme";
+import {
+  applyTheme,
+  currentTheme,
+  resetTheme,
+  resolveTheme,
+  startTheme,
+  useCurrentTheme,
+} from "./theme";
 
 // OS の設定を置き換える。setDark で OS の設定を変え、変更の通知を出す。
 function stubOsTheme(initialDark: boolean) {
@@ -83,4 +91,32 @@ it("startTheme は get_settings に失敗したら OS の設定に合わせる",
   await startTheme(() => Promise.reject(new Error("失敗")));
   expect(themeOf()).toBe("dark");
   expect(error).toHaveBeenCalled();
+});
+
+it("currentTheme は data-theme を返し、付いていなければライト", () => {
+  expect(currentTheme()).toBe("light");
+  document.documentElement.dataset.theme = "dark";
+  expect(currentTheme()).toBe("dark");
+});
+
+it("useCurrentTheme は、テーマが切り替わると新しいテーマを返す", async () => {
+  const os = stubOsTheme(false);
+  applyTheme("system");
+  const { result } = renderHook(() => useCurrentTheme());
+  expect(result.current).toBe("light");
+
+  // data-theme の変化は MutationObserver で非同期に届く。
+  await act(async () => {
+    applyTheme("dark");
+  });
+  expect(result.current).toBe("dark");
+
+  await act(async () => {
+    applyTheme("system");
+  });
+  expect(result.current).toBe("light");
+  await act(async () => {
+    os.setDark(true);
+  });
+  expect(result.current).toBe("dark");
 });

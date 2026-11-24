@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0111"
-description: "Monaco Editor を CDN を使わずに同梱し、アプリに CSP を設定して読み込み先を自身と Tauri の IPC に限り（Monaco のため style-src に 'unsafe-inline' を許す）、演習画面のショートカットを Monaco のコマンドとキャプチャの keydown で受ける"
+description: "Monaco Editor を CDN を使わずに同梱し、アプリに CSP を設定して読み込み先を自身と Tauri の IPC に限り（Monaco のため style-src に 'unsafe-inline' を許す）、演習画面のショートカットを Monaco のコマンドとキャプチャの keydown で受ける（ADR 0225 で Monaco に登録する方法を addCommand から addAction に変えた）"
 ---
 
 - 日付: 2026-11-21
