@@ -98,6 +98,8 @@ function summary(id: string, kind: LessonKind, title: string) {
 type Calls = { command: string; args: unknown }[];
 
 type Options = {
+  // get_environment_status の cargo の状態。無いときは見つかっている。
+  cargo?: "found" | "not_found" | "version_too_old";
   kind?: LessonKind;
   // レッスン ID から下書きのファイルへの対応。無いレッスンは、下書きが無い。
   drafts?: { [lessonId: string]: { [path: string]: string } };
@@ -186,6 +188,25 @@ function mockCommands(calls: Calls, options: Options = {}) {
                   updated_at: "2026-11-01T00:00:00+09:00",
                   files,
                 },
+        };
+      }
+      case "get_environment_status": {
+        const status = options.cargo ?? "found";
+        return {
+          cargo: {
+            status,
+            cargo_path: status === "not_found" ? null : "/c/cargo",
+            rustc_path: status === "not_found" ? null : "/c/rustc",
+            rustc_version:
+              status === "not_found"
+                ? null
+                : status === "found"
+                  ? "1.100.0"
+                  : "1.99.0",
+            required_rustc_version: "1.100.0",
+          },
+          claude: { status: "not_found", path: null, version: null },
+          crates: { status: "ready", error: null },
         };
       }
       case "get_settings":
@@ -682,6 +703,61 @@ describe("実行・提出", () => {
       });
     });
     expect(editorProps.current?.readOnly).toBe(true);
+  });
+});
+
+describe("環境の案内", () => {
+  const buttons = ["実行", "テスト", "提出"];
+
+  it("cargo が見つからないときは、案内を出し、実行・テスト・提出を無効にする（動画の見直しは変わらない）", async () => {
+    setup("ch04-02", { cargo: "not_found" });
+    expect(
+      await screen.findByText("Rust ツールチェーンが見つかりません。"),
+    ).toBeInTheDocument();
+    for (const name of buttons) {
+      expect(screen.getByRole("button", { name })).toBeDisabled();
+    }
+  });
+
+  it("rustc が古いときは、バージョンと更新の手順を案内し、ボタンは無効にしない", async () => {
+    setup("ch04-02", { cargo: "version_too_old" });
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("1.99.0");
+    expect(alert).toHaveTextContent("1.100.0");
+    expect(alert).toHaveTextContent("rustup update stable");
+    for (const name of buttons) {
+      expect(screen.getByRole("button", { name })).toBeEnabled();
+    }
+  });
+
+  it("見つかっているときは、案内を出さず、ボタンを押せる", async () => {
+    setup("ch04-02");
+    await editor();
+    await flush();
+    expect(screen.queryByRole("alert")).toBeNull();
+    for (const name of buttons) {
+      expect(screen.getByRole("button", { name })).toBeEnabled();
+    }
+  });
+
+  it("environment_updated で cargo が見つかったら、案内を消してボタンを有効にする", async () => {
+    setup("ch04-02", { cargo: "not_found" });
+    await screen.findByText("Rust ツールチェーンが見つかりません。");
+    await act(async () => {
+      await emit("environment_updated", {
+        cargo: {
+          status: "found",
+          cargo_path: "/c/cargo",
+          rustc_path: "/c/rustc",
+          rustc_version: "1.100.0",
+          required_rustc_version: "1.100.0",
+        },
+        claude: { status: "not_found", path: null, version: null },
+        crates: { status: "ready", error: null },
+      });
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByRole("button", { name: "実行" })).toBeEnabled();
   });
 });
 

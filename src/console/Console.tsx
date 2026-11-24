@@ -61,12 +61,14 @@ export type ConsoleProps = {
   stdin?: ConsoleStdin | null;
   // 見出しの行の右に置くもの（実行・提出・停止のボタンなど）。
   actions?: ReactNode;
+  // 見出しの行の下に置くもの（環境の案内など）。
+  banner?: ReactNode;
 };
 
 // 一番下から、この距離（px）までにいれば、一番下にいるとみなす。
 const BOTTOM_SLACK = 24;
 
-export function Console({ log, stdin, actions }: ConsoleProps) {
+export function Console({ log, stdin, actions, banner }: ConsoleProps) {
   const outRef = useRef<HTMLPreElement>(null);
   // 一番下を見ているか。上に戻して読んでいる間は、出力が増えても一番下に動かさない。
   const stickRef = useRef(true);
@@ -94,6 +96,7 @@ export function Console({ log, stdin, actions }: ConsoleProps) {
           <div className="pg-console-actions">{actions}</div>
         )}
       </div>
+      {banner}
       <div className="pg-console-body">
         <pre
           ref={outRef}

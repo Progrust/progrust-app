@@ -38,6 +38,7 @@ import {
   exerciseControls,
   exerciseReducer,
 } from "./exerciseState";
+import { CargoBanner, cargoUsable, useEnvironmentStatus } from "../environment";
 import type { ExerciseState } from "./exerciseState";
 import type { SubmitFinished } from "./judgeResult";
 import { shortcutEnabled } from "./shortcuts";
@@ -60,9 +61,6 @@ export type ExerciseConsoleProps = {
   // キーボードショートカットを押したときの関数を、ここに差し込む。ボタンが有効なときだけ、ボタンと同じことをする。
   shortcutRef: { current: ((action: ShortcutAction) => void) | null };
 };
-
-// cargo が見つかっているか。環境の状態はまだ読まないので、見つかっているものとする。
-const CARGO_FOUND = true;
 
 function appendLines(log: ConsoleLog, lines: ConsoleLine[]): ConsoleLog {
   return lines.reduce(
@@ -96,7 +94,8 @@ export function ExerciseConsole({
     null,
   );
 
-  const controls = exerciseControls(state, CARGO_FOUND);
+  const environment = useEnvironmentStatus();
+  const controls = exerciseControls(state, cargoUsable(environment));
   const requestId = activeRequestId(state);
 
   useEffect(() => {
@@ -283,6 +282,12 @@ export function ExerciseConsole({
   return (
     <Console
       log={log}
+      banner={
+        <CargoBanner
+          cargo={environment?.cargo ?? null}
+          className="exercise-banner"
+        />
+      }
       stdin={stdin}
       actions={
         <>

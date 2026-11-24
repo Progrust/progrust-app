@@ -9,6 +9,7 @@ import { listChapters } from "../commands/content";
 import type { ChapterList } from "../commands/content";
 import { getDashboard } from "../commands/learningRecord";
 import type { Dashboard } from "../commands/learningRecord";
+import { CargoBanner, useEnvironmentStatus } from "../environment";
 import { useNavigation } from "../router";
 import "./home.css";
 
@@ -61,6 +62,7 @@ export function Home({
   chapters: ChapterList;
 }) {
   const { navigate } = useNavigation();
+  const environment = useEnvironmentStatus();
   const numbered = useMemo(() => numberChapters(chapters.chapters), [chapters]);
   const next = dashboard.next_lesson;
   const found = next === null ? null : findLesson(numbered, next.lesson_id);
@@ -149,6 +151,11 @@ export function Home({
 
   return (
     <main className="pgx-home">
+      {environment !== null && environment.cargo.status !== "found" && (
+        <div className="pgx-banners">
+          <CargoBanner cargo={environment.cargo} />
+        </div>
+      )}
       <div className="pgx-home-row">
         {hero}
         <section className="pg-panel" aria-label="総評">

@@ -60,3 +60,10 @@
 .pgx-home-note {
   font-size: 12px;
 }
+
+/* 環境の案内（design-system/ui-design/Main.dc.html の pgx-banners）。 */
+.pgx-banners {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
