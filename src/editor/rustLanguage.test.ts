@@ -16,6 +16,7 @@ function tokens(line: string): [string, string][] {
     .filter(([text]) => text.trim() !== "");
 }
 
+// Monaco の読み込みは重く、全体を並行して動かすと既定の 10 秒を超えることがあるので、時間切れを延ばす。
 beforeAll(async () => {
   vi.stubGlobal(
     "matchMedia",
@@ -36,7 +37,7 @@ beforeAll(async () => {
     "rust-test",
     extendRustLanguage(language),
   );
-});
+}, 60_000);
 
 describe("extendRustLanguage", () => {
   it("マクロ・関数・型・キーワードを分ける", () => {
