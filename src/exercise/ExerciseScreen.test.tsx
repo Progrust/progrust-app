@@ -1236,6 +1236,8 @@ describe("キーボードショートカット", () => {
       keyCode?: number;
     },
   ) {
+    // 画面が出た直後は、keydown を受ける effect が、まだ動いていないことがある。先に動かしておく。
+    await flush();
     let notPrevented = true;
     await act(async () => {
       notPrevented = fireEvent.keyDown(target, { metaKey: true, ...init });
