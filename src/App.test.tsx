@@ -4,7 +4,11 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "./App";
 
 // jsdom では Monaco を読み込めないので、演習画面のエディタを置き換える。
-vi.mock("./editor", () => ({ CodeEditor: () => null }));
+vi.mock("./editor", () => ({
+  CodeEditor: () => null,
+  KeyMod: { CtrlCmd: 2048, Shift: 1024 },
+  KeyCode: { Enter: 3, KeyT: 50, Period: 89 },
+}));
 
 beforeEach(() => {
   mockIPC((command) => {

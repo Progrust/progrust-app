@@ -16,6 +16,7 @@ import type {
 import { ExerciseConsole } from "./ExerciseConsole";
 import type { ExerciseState } from "./exerciseState";
 import type { SubmitFinished } from "./judgeResult";
+import type { ShortcutAction } from "./shortcuts";
 
 type Call = { command: string; args: Record<string, unknown> };
 
@@ -50,6 +51,9 @@ function setup(options: Options = {}) {
   const draftSave = { cancel: vi.fn(), edited: vi.fn() };
   const states: ExerciseState[] = [];
   const submits: SubmitFinished[] = [];
+  const shortcutRef: { current: ((action: ShortcutAction) => void) | null } = {
+    current: null,
+  };
   const view = render(
     <ExerciseConsole
       lessonId="ch04-04"
@@ -58,9 +62,10 @@ function setup(options: Options = {}) {
       draftSave={draftSave}
       onStateChange={(state) => states.push(state)}
       onSubmitFinished={(finished) => submits.push(finished)}
+      shortcutRef={shortcutRef}
     />,
   );
-  return { calls, draftSave, states, submits, ...view };
+  return { calls, draftSave, states, submits, shortcutRef, ...view };
 }
 
 const button = (name: string) => screen.getByRole("button", { name });

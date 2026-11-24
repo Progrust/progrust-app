@@ -24,6 +24,9 @@ const editorProps = vi.hoisted(() => ({
   current: null as CodeEditorProps | null,
 }));
 vi.mock("../editor", () => ({
+  // 実物（monaco の KeyMod・KeyCode）と同じ値。
+  KeyMod: { CtrlCmd: 2048, Shift: 1024 },
+  KeyCode: { Enter: 3, KeyT: 50, Period: 89 },
   CodeEditor: function FakeEditor(props: CodeEditorProps) {
     editorProps.current = props;
     const { value, onChange, ariaLabel } = props;
@@ -1120,5 +1123,222 @@ describe("前回の正解コードを見る", () => {
     expect(
       screen.queryByRole("button", { name: "前回の正解コードを見る" }),
     ).toBeNull();
+  });
+});
+
+describe("キーボードショートカット", () => {
+  const requestId = (calls: Calls, name: string) =>
+    (commands(calls, name).at(-1) as { request_id: string }).request_id;
+  const problem = () => screen.getByRole("region", { name: "問題文" });
+  // 実行・テスト実行・提出を始めると、すぐ（コマンドを送る前に）「実行」ボタンが無効になる。
+  const notStarted = () =>
+    expect(screen.getByRole("button", { name: "実行" })).toBeEnabled();
+  // コマンドは、イベントの受け取りを始めてから送るので、送られたのを待つ。
+  const sent = (calls: Calls, name: string, count = 1) =>
+    waitFor(() => expect(commands(calls, name)).toHaveLength(count));
+
+  // 要素でキーを押す。既定の動作が止められなかったら true を返す。
+  async function press(
+    target: Element,
+    init: {
+      key: string;
+      shiftKey?: boolean;
+      isComposing?: boolean;
+      keyCode?: number;
+    },
+  ) {
+    let notPrevented = true;
+    await act(async () => {
+      notPrevented = fireEvent.keyDown(target, { metaKey: true, ...init });
+    });
+    return notPrevented;
+  }
+
+  // Monaco に登録したコマンドを、キーで呼ばれたときと同じく、そのキーの keydown の中で呼ぶ
+  // （偽のエディタは textarea なので、実物の Monaco の代わりに、ここで呼ぶ）。
+  async function pressInEditor(
+    id: string,
+    init: { key: string; shiftKey?: boolean; keyCode?: number },
+  ) {
+    const textarea = await editor();
+    const command = editorProps.current?.commands?.find((c) => c.id === id);
+    expect(command).toBeDefined();
+    await act(async () => {
+      textarea.addEventListener("keydown", () => command?.run(), {
+        once: true,
+      });
+      fireEvent.keyDown(textarea, { metaKey: true, ...init });
+    });
+  }
+
+  it.each([
+    ["Cmd+Enter", { key: "Enter" }, "run_code", { mode: "main" }],
+    ["Cmd+Shift+T", { key: "T", shiftKey: true }, "run_code", { mode: "test" }],
+    ["Cmd+Shift+Enter", { key: "Enter", shiftKey: true }, "submit_code", {}],
+  ])(
+    "エディタの外で %s を押すと、ボタンと同じコマンドを呼ぶ",
+    async (_, init, command, args) => {
+      const { calls } = setup("ch04-02");
+      await editor();
+      expect(await press(problem(), init)).toBe(false);
+      await sent(calls, command);
+      expect(commands(calls, command)).toEqual([
+        expect.objectContaining({
+          lesson_id: "ch04-02",
+          files: { "src/main.rs": STARTER },
+          ...args,
+        }),
+      ]);
+    },
+  );
+
+  it("実行中に、エディタの外で Cmd+. を押すと止める", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await press(problem(), { key: "Enter" });
+    await sent(calls, "run_code");
+    await press(document.body, { key: "." });
+    expect(commands(calls, "stop_run")).toEqual([
+      { request_id: requestId(calls, "run_code") },
+    ]);
+  });
+
+  it("無効なときは何もしない（提出中の実行・停止）", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await press(problem(), { key: "Enter", shiftKey: true });
+    await sent(calls, "submit_code");
+    // 提出中は、実行も停止もできない。キーの既定の動作は止める。
+    expect(await press(problem(), { key: "Enter" })).toBe(false);
+    expect(await press(problem(), { key: "." })).toBe(false);
+    await pressInEditor("progrust.exercise.stop", { key: "." });
+    expect(commands(calls, "submit_code")).toHaveLength(1);
+    expect(commands(calls, "run_code")).toEqual([]);
+    expect(commands(calls, "stop_run")).toEqual([]);
+  });
+
+  it("正解した後（解説表示）は、実行・提出しない", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await press(problem(), { key: "Enter", shiftKey: true });
+    await sent(calls, "submit_code");
+    await act(async () => {
+      await emit("run_finished", {
+        request_id: requestId(calls, "submit_code"),
+        kind: "submit",
+        finished_at: "2026-11-24T10:00:00+09:00",
+        error: null,
+        run: null,
+        submit: { status: "passed", passed: 1, total: 1, cases: [] },
+        progress: null,
+      });
+    });
+    expect(editorProps.current?.readOnly).toBe(true);
+    await press(document.body, { key: "Enter" });
+    await press(document.body, { key: "Enter", shiftKey: true });
+    await pressInEditor("progrust.exercise.run", { key: "Enter" });
+    await pressInEditor("progrust.exercise.submit", {
+      key: "Enter",
+      shiftKey: true,
+    });
+    expect(commands(calls, "run_code")).toEqual([]);
+    expect(commands(calls, "submit_code")).toHaveLength(1);
+  });
+
+  it.each([
+    ["isComposing が true", { isComposing: true }],
+    ["keyCode が 229", { keyCode: 229 }],
+  ])(
+    "日本語の変換中（%s）は、ショートカットとして扱わない",
+    async (_, composing) => {
+      const { calls } = setup("ch04-02");
+      await editor();
+      expect(await press(problem(), { key: "Enter", ...composing })).toBe(true);
+      notStarted();
+      expect(commands(calls, "run_code")).toEqual([]);
+    },
+  );
+
+  it("4 つのキーを、エディタのコマンドとして登録する", async () => {
+    setup("ch04-02");
+    await editor();
+    expect(
+      editorProps.current?.commands?.map(({ id, label, keybinding }) => ({
+        id,
+        label,
+        keybinding,
+      })),
+    ).toEqual([
+      // KeyMod.CtrlCmd（2048）・KeyMod.Shift（1024）と、KeyCode の Enter（3）・KeyT（50）・Period（89）。
+      { id: "progrust.exercise.run", label: "実行", keybinding: 2048 | 3 },
+      {
+        id: "progrust.exercise.test",
+        label: "テスト実行",
+        keybinding: 2048 | 1024 | 50,
+      },
+      {
+        id: "progrust.exercise.submit",
+        label: "提出",
+        keybinding: 2048 | 1024 | 3,
+      },
+      { id: "progrust.exercise.stop", label: "停止", keybinding: 2048 | 89 },
+    ]);
+  });
+
+  it("エディタの中のキーは、エディタのコマンドだけが受ける", async () => {
+    const { calls } = setup("ch04-02");
+    const textarea = await editor();
+    // エディタの中のキーを、window のキャプチャでは扱わない（Monaco に渡す）。
+    expect(await press(textarea, { key: "Enter" })).toBe(true);
+    notStarted();
+
+    await pressInEditor("progrust.exercise.run", { key: "Enter" });
+    await sent(calls, "run_code");
+    expect(commands(calls, "run_code")).toEqual([
+      expect.objectContaining({ mode: "main" }),
+    ]);
+    await pressInEditor("progrust.exercise.stop", { key: "." });
+    expect(commands(calls, "stop_run")).toEqual([
+      { request_id: requestId(calls, "run_code") },
+    ]);
+  });
+
+  it("エディタで日本語を変換している途中は、エディタのコマンドが呼ばれても動かさない", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await pressInEditor("progrust.exercise.run", {
+      key: "Enter",
+      keyCode: 229,
+    });
+    notStarted();
+    // 変換を終えた後のキーでは動かす。
+    await pressInEditor("progrust.exercise.run", { key: "Enter" });
+    await sent(calls, "run_code");
+  });
+
+  it("テスト実行・提出も、エディタのコマンドから呼べる", async () => {
+    const { calls } = setup("ch04-02");
+    await editor();
+    await pressInEditor("progrust.exercise.test", { key: "T", shiftKey: true });
+    await sent(calls, "run_code");
+    expect(commands(calls, "run_code")).toEqual([
+      expect.objectContaining({ mode: "test" }),
+    ]);
+    await act(async () => {
+      await emit("run_finished", {
+        request_id: requestId(calls, "run_code"),
+        kind: "run",
+        finished_at: "2026-11-24T10:00:00+09:00",
+        error: null,
+        run: { mode: "test", status: "success", exit_code: 0 },
+        submit: null,
+        progress: null,
+      });
+    });
+    await pressInEditor("progrust.exercise.submit", {
+      key: "Enter",
+      shiftKey: true,
+    });
+    await sent(calls, "submit_code");
   });
 });
