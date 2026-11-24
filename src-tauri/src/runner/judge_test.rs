@@ -43,6 +43,7 @@ use super::judge::{CaseDetail, CaseResult, CaseStatus, JudgeProgress, JudgeResul
 use super::process::{
     CollectedOutput, Limits, OutputLimit, ProcessSpec, Stopper, Termination, TimeoutOutput,
 };
+use super::run::size_text;
 
 /// 隠しテストを置くファイルの名前。`project/` の直下に置く。
 pub const HIDDEN_TESTS_FILE: &str = "progrust_judge_tests.rs";
@@ -60,6 +61,9 @@ pub const HIDDEN_TEST_ERROR_HINT: &str =
 pub const TESTS_TIME_LIMIT: Duration = Duration::from_secs(10);
 /// 学習者のテスト全体の実行時間の制限（spec/exercise-runner/limits.md）。
 pub const LEARNER_TESTS_TIME_LIMIT: Duration = Duration::from_secs(10);
+/// 1 テストケースの出力量の上限（バイト。標準出力だけで数える。spec/exercise-runner/limits.md、ADR 0223）。
+/// 隠しテストではテストケースごとのプロセスで、学習者のテストの判定では `cargo test` のプロセスで数える。
+pub const TESTS_OUTPUT_LIMIT: usize = 1024 * 1024;
 
 /// `project_dir`（組み立てた `project/`）に、隠しテスト `judge_tests`（`judge_tests.rs` の内容）を
 /// `progrust_judge_tests.rs` として置き、`target`（`judge.target`。`src/main.rs` など）のファイルの末尾に
@@ -121,17 +125,20 @@ pub struct TestLimits {
     pub parallelism: NonZeroUsize,
     /// 学習者のテスト全体の実行時間の制限。学習者のテストを実行する cargo を起動したときから数える。
     pub learner_time: Duration,
+    /// 1 テストケースの標準出力の量の上限（バイト）。
+    pub stdout: usize,
 }
 
 impl Default for TestLimits {
     /// 制限時間は [`TESTS_TIME_LIMIT`]、同時に起動する数は CPU の論理コア数（spec/exercise-runner/submit.md
     /// 「test 方式」の 5）。コア数が分からないときは 1 にする。学習者のテストの制限時間は
-    /// [`LEARNER_TESTS_TIME_LIMIT`]。
+    /// [`LEARNER_TESTS_TIME_LIMIT`]。標準出力の量の上限は [`TESTS_OUTPUT_LIMIT`]。
     fn default() -> Self {
         Self {
             time: TESTS_TIME_LIMIT,
             parallelism: thread::available_parallelism().unwrap_or(NonZeroUsize::MIN),
             learner_time: LEARNER_TESTS_TIME_LIMIT,
+            stdout: TESTS_OUTPUT_LIMIT,
         }
     }
 }
@@ -340,7 +347,7 @@ fn run_test(
         &["--exact", &test.name, "--test-threads=1"],
         remaining,
     ))?;
-    Ok(case_result(test, &collected))
+    Ok(case_result(test, &collected, spec.limits.stdout))
 }
 
 /// テスト実行ファイルを起動するプロセス。`--nocapture` は付けない（ADR 0101）。
@@ -350,9 +357,10 @@ fn test_process(spec: &TestJudgeSpec, args: &[&str], time: Duration) -> ProcessS
         &spec.project_dir,
         Limits {
             time,
-            // 制限値（spec/exercise-runner/limits.md）にある test 方式の制限は時間だけなので、標準出力の量は数えない。
-            // 標準エラー出力は、`detail` に使う先頭だけを受け取る。
-            output: OutputLimit::Stdout(usize::MAX),
+            // 標準出力の量は、上限（spec/exercise-runner/limits.md、ADR 0223）まで数える。標準エラー出力は数えず、
+            // `detail` に使う先頭だけを受け取る。`--list` にも同じ上限を使う（超えたら、終了コード 0 で終わらないので、
+            // アプリの側の失敗になる）。
+            output: OutputLimit::Stdout(spec.limits.stdout),
         },
     );
     process.args = args.iter().map(OsString::from).collect();
@@ -363,12 +371,20 @@ fn test_process(spec: &TestJudgeSpec, args: &[&str], time: Duration) -> ProcessS
 }
 
 /// テストケースの結果を、spec/exercise-runner/submit.md「test 方式」の 6 の表のとおりに決める（ADR 0101）。
-/// 止める操作で止めたときは `None`。
-fn case_result(test: &HiddenTest, collected: &CollectedOutput) -> Option<CaseResult> {
+/// 止める操作で止めたときは `None`。`stdout_limit` は、標準出力の量の上限（出力過多の `detail` に書く）。
+fn case_result(
+    test: &HiddenTest,
+    collected: &CollectedOutput,
+    stdout_limit: usize,
+) -> Option<CaseResult> {
     let stderr_detail = || Some(CaseDetail::Stderr(collected.stderr.clone()));
     let (status, detail) = match collected.termination {
         Termination::Stopped => return None,
         Termination::TimedOut => (CaseStatus::Timeout, stderr_detail()),
+        // 上限で切れた標準出力からは、結果の行を読まない（ADR 0223）。
+        Termination::OutputLimitExceeded => {
+            (CaseStatus::Fail, Some(output_limit_detail(stdout_limit)))
+        }
         termination => {
             if termination == Termination::Exited(0)
                 && has_result_line(&collected.stdout, &test.name, "ok")
@@ -392,6 +408,14 @@ fn case_result(test: &HiddenTest, collected: &CollectedOutput) -> Option<CaseRes
         status,
         detail,
     })
+}
+
+/// 標準出力の量が上限を超えて止めた `fail`（出力過多）の `detail`（spec/exercise-runner/submit.md「判定結果」）。
+fn output_limit_detail(stdout_limit: usize) -> CaseDetail {
+    CaseDetail::OutputLimit(format!(
+        "標準出力の量が上限（{}）を超えたため停止しました。",
+        size_text(stdout_limit)
+    ))
 }
 
 /// `stdout` に、`name` の結果の行があるか（spec/exercise-runner/submit.md「test 方式」の 6、ADR 0218）。結果の行は、
@@ -501,9 +525,9 @@ fn judge_learner_tests(
         &spec.project_dir,
         Limits {
             time: spec.limits.learner_time,
-            // 制限値（spec/exercise-runner/limits.md）にある学習者のテストの制限は時間だけなので、標準出力の量は
-            // 数えない。標準エラー出力は、`detail` に使う先頭だけを受け取る。
-            output: OutputLimit::Stdout(usize::MAX),
+            // 標準出力の量は、上限（spec/exercise-runner/limits.md、ADR 0223）まで数える。標準エラー出力は数えず、
+            // `detail` に使う先頭だけを受け取る。
+            output: OutputLimit::Stdout(spec.limits.stdout),
         },
     );
     process.args = learner_tests_args();
@@ -515,7 +539,11 @@ fn judge_learner_tests(
     // 時間切れの `detail` に、止めるまでに受け取った標準エラー出力を使う。
     process.on_timeout = TimeoutOutput::Deliver;
     let collected = stop.collect_output(process)?;
-    Ok(learner_case_result(learner.min_tests, &collected))
+    Ok(learner_case_result(
+        learner.min_tests,
+        &collected,
+        spec.limits.stdout,
+    ))
 }
 
 /// 学習者のテストの結果の行を読んだもの。
@@ -545,12 +573,20 @@ fn read_learner_test_lines(stdout: &str) -> LearnerTestLines {
 }
 
 /// 学習者のテストのテストケースの結果を、spec/exercise-runner/submit.md「学習者のテストの判定」の 3 の表のとおりに
-/// 決める。止める操作で止めたときは `None`。
-fn learner_case_result(min_tests: NonZeroU32, collected: &CollectedOutput) -> Option<CaseResult> {
+/// 決める。止める操作で止めたときは `None`。`stdout_limit` は、標準出力の量の上限（出力過多の `detail` に書く）。
+fn learner_case_result(
+    min_tests: NonZeroU32,
+    collected: &CollectedOutput,
+    stdout_limit: usize,
+) -> Option<CaseResult> {
     let stderr_detail = || Some(CaseDetail::Stderr(collected.stderr.clone()));
     let (status, detail) = match collected.termination {
         Termination::Stopped => return None,
         Termination::TimedOut => (CaseStatus::Timeout, stderr_detail()),
+        // 上限で切れた標準出力からは、結果の行を読まない（ADR 0223）。
+        Termination::OutputLimitExceeded => {
+            (CaseStatus::Fail, Some(output_limit_detail(stdout_limit)))
+        }
         termination => {
             let lines = read_learner_test_lines(&collected.stdout);
             let enough = u32::try_from(lines.passed).unwrap_or(u32::MAX) >= min_tests.get();

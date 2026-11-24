@@ -125,6 +125,8 @@
 * [ADR 0219](0219-learner-tests-fail-on-any-failed-line.md) - `test` 方式の学習者のテストの判定で、` ... FAILED` の行が 1 つでもあれば cargo の終了コードが 0 でも `pass` にせず、cargo を `CARGO_TERM_COLOR=never` を付けて起動する
 * [ADR 0220](0220-compile-error-submit-has-no-cases.md) - `compile_error` の提出の判定結果は、`passed` と `total` を 0、`cases[]` を空にする
 * [ADR 0221](0221-submit-stderr-from-failed-case-details.md) - 試行ログの `submit` イベントの `stderr` に入れるプログラムの標準エラー出力を、`timeout`・`runtime_error` のテストケースの `detail` を `cases[]` の順に連結したものにする
+* [ADR 0223](0223-test-mode-stdout-limit.md) - `test` 方式の判定に、1 テストケースの標準出力の量の上限 1 MB を設け、超えたら止めてそのテストケースを `fail`（出力過多）にする
+* [ADR 0224](0224-console-output-colors-by-stream.md) - 演習画面のコンソールの文字の色を出力の種類で分け、標準エラー出力を一段淡い `ink-3`、アプリの知らせを `muted`、学習者の入力を `link` にする
 
 # レッスン進行・進捗管理
 

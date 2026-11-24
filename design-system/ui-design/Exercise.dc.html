@@ -198,7 +198,7 @@
               </sc-if>
               <sc-if value="{{showSubmitLog}}" hint-placeholder-val="{{false}}">
 <pre class="pg-console-out"><span class="pgx-muted">── 実行  14:30 ──</span>
-<span class="ansi-cyan">  ferris  </span>
+<span class="pg-out-input">  ferris  </span>
   ferris_the_crab
 <span class="pgx-muted">終了しました（終了コード 0）</span>
 
@@ -215,7 +215,7 @@
               </sc-if>
               <sc-if value="{{isGen}}" hint-placeholder-val="{{false}}">
 <pre class="pg-console-out"><span class="pgx-muted">── 実行  15:04 ──</span>
-<span class="ansi-red ansi-bold">error[E0382]</span><span class="ansi-bold">: borrow of moved value: `items`</span>
+<span class="pg-out-stderr"><span class="ansi-red ansi-bold">error[E0382]</span><span class="ansi-bold">: borrow of moved value: `items`</span>
   <span class="ansi-blue ansi-bold">--&gt;</span> src/main.rs:14:17
    <span class="ansi-blue ansi-bold">|</span>
 <span class="ansi-blue ansi-bold">11</span> <span class="ansi-blue ansi-bold">|</span>     let items = parse(&amp;input);
@@ -229,7 +229,7 @@
 <span class="ansi-cyan ansi-bold">help</span><span class="ansi-bold">: consider borrowing `items`</span>
    <span class="ansi-blue ansi-bold">|</span>
 <span class="ansi-blue ansi-bold">12</span> <span class="ansi-blue ansi-bold">|</span>     let total = sum(<span class="ansi-green">&amp;</span>items);
-   <span class="ansi-blue ansi-bold">|</span>                     <span class="ansi-green">+</span>
+   <span class="ansi-blue ansi-bold">|</span>                     <span class="ansi-green">+</span></span>
 
 <span class="pgx-muted">ビルドに失敗したため、実行していません。</span></pre>
               </sc-if>

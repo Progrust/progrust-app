@@ -146,7 +146,7 @@ pub fn output_limit_message(limits: &RunLimits) -> String {
 }
 
 /// バイト数を、MB・KB・バイトで表す（1 MB = 1024 KB）。
-fn size_text(bytes: usize) -> String {
+pub(super) fn size_text(bytes: usize) -> String {
     const KB: usize = 1024;
     const MB: usize = 1024 * KB;
     if bytes >= MB && bytes.is_multiple_of(MB) {

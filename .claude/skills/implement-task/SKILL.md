@@ -75,6 +75,7 @@ git diff
 運用ルールの「結果の報告」の項目を返す。
 
 - ループでは、求められた形（`status`・`pr_title`・`summary`・`fixed_problems`・`human_checks`・`blocked_reason`・`blocking_issues`）で返す。
+  - 文で書く項目（`pr_title`・`summary`・`fixed_problems`・`human_checks`・`blocked_reason`）は、日本語で書く（運用ルールの「結果の報告」）。
   - 済んだときは `status` を `done` にする。
   - ユーザーの判断が無いと進められないときは、`status` を `blocked` にし、`blocked_reason` に理由を、`blocking_issues` に、判断を求めて起票した Issue の番号を入れる。自分の変更は、そのままにしてよい（ループが捨てる）。
   - `pr_title` は、いまのリポジトリのコミットの書き方に合わせる（`feat: …`、`fix: …`、`docs: …` で始め、変更の内容を日本語の 1 文で続ける）。

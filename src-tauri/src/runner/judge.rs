@@ -115,6 +115,9 @@ pub enum CaseDetail {
     /// `test` 方式の学習者のテストの判定の `fail` の、通ったテストの件数と必要な件数、失敗したテストの名前。
     /// 文字列にする（[`super::judge_test`]）。
     LearnerTests(String),
+    /// `test` 方式の、標準出力の量が上限を超えて止めた `fail`（出力過多）の知らせ。文字列にする
+    /// （[`super::judge_test`]、ADR 0223）。
+    OutputLimit(String),
 }
 
 /// テストケース 1 件の結果。

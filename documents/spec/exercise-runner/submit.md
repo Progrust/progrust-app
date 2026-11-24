@@ -49,6 +49,7 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
    | `fail` | ` ... FAILED` の結果の行がある |
    | `runtime_error` | 上のどちらでもなく終わった（結果の行がないまま終了コード 0 で終わった、シグナルで終わったなど） |
    | `timeout` | テスト全体の制限時間（[実行・判定の制限値](limits.md)）で止めた、または起動する前に制限時間に達した |
+   | `fail`（出力過多） | 標準出力が出力量の上限（[実行・判定の制限値](limits.md)）を超えて止めた。上限までの標準出力に結果の行があっても、この結果にする |
 
 7. `fail` の panic メッセージは、`failures:` の行より後で最後の `thread '{名前}' ... panicked at` の行の、次の行から、次の節の見出し（`failures:` など）の前までを取り出し、`note: run with` で始まる行を除く。`#[should_panic(expected = ...)]` のテストで、panic の内容が `expected` と違ったときの libtest の説明（`note: panic did not contain expected string` から続く行）も、これに含まれる。`panicked at` の行が無いとき（`#[should_panic]` のテストが panic しなかったとき）は、`failures:` の行より後の、`note: test did not panic as expected` から行末までとする。
 8. `exercise.judge.min_learner_tests`（[レッスン定義の形式（lesson.json）](../content-format/lesson-json.md)）がある演習では、続けて「学習者のテストの判定」を行う。無い演習では、学習者が書いたテストを判定に含めない。
@@ -67,6 +68,7 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
    | `fail` | ` ... FAILED` の行がある、または ` ... ok` の行が `min_learner_tests` 件より少ない |
    | `runtime_error` | 上のどちらでもなく、cargo が終了コード 0 以外で終わった |
    | `timeout` | 学習者のテスト全体の制限時間（[実行・判定の制限値](limits.md)）で止めた |
+   | `fail`（出力過多） | 標準出力が出力量の上限（[実行・判定の制限値](limits.md)）を超えて止めた。上限までの標準出力の行は数えない |
 
 - このテストケースの表示名は「自分で書いたテスト（{min_learner_tests} 件以上）」とし、`cases[]` の最後に置く。
 - `fail` の `detail` には、通ったテストの件数と必要な件数、失敗したテストの名前（` ... FAILED` の行の `test ` と ` ... FAILED` の間）を入れる。失敗の詳しい内容は、テスト実行（[コードの実行（run）](run.md)「テスト実行」）で確かめる。
@@ -85,6 +87,7 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
 
 - stdout 方式の `fail`: 入力・期待する出力・実際の出力
 - test 方式の `fail`: panic メッセージ（`assert_eq!` の左辺・右辺を含む）。学習者のテストの判定の `fail` は「学習者のテストの判定」に従う
+- test 方式の `fail`（出力過多。隠しテストと学習者のテストの判定の両方）: 標準出力の量が上限を超えたため停止した旨と、上限の値
 - `timeout` / `runtime_error`: 標準エラー出力の先頭
 
 `detail` の形:
