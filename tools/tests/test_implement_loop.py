@@ -790,6 +790,19 @@ class FlowTest(LoopTestCase):
         self.assertEqual(self.run_loop(), 2)
         self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
 
+    def test_failure_reason_only_in_errors_is_shown(self) -> None:
+        self.task(1)
+        failed = {
+            "type": "result",
+            "subtype": "error_max_structured_output_retries",
+            "is_error": True,
+            "errors": ["Failed to provide valid structured output after 5 attempts"],
+        }
+        self.script["implement"] = [{"raw_stdout": json.dumps(failed), "exit": 1}]
+        self.assertEqual(self.run_loop(), 2)
+        self.assertIn("Failed to provide valid structured output after 5 attempts", self.output)
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+
     def test_unreadable_output_stops(self) -> None:
         self.task(1)
         self.script["implement"] = [{"raw_stdout": "これは JSON ではない"}]
