@@ -1,0 +1,6 @@
+/* コンソールの見出し（design-system/ui-design/Exercise.dc.html のコンソールの見出しと同じ）。 */
+.console-title {
+  padding-left: var(--space-10);
+  font-size: 14px;
+  font-weight: 800;
+}
