@@ -33,6 +33,7 @@
     "monaco-editor": "~0.57.0",
     "react": "~19.3.1",
     "react-dom": "~19.3.1",
+    "react-markdown": "^10.1.0",
     "remotion": "4.0.545"
   },
   "devDependencies": {

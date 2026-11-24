@@ -1,0 +1,92 @@
+/* 演習画面の配置（design-system/ui-design/styles/app.css の .pgx-ex と、Exercise.dc.html の配置と同じ）。
+   ヘッダーの下の残りいっぱいに広がり、上に文脈の行、残りに問題文・エディタ・コンソールを置く。 */
+.exercise-screen {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.exercise-context {
+  height: 56px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  padding: 0 var(--space-28);
+}
+
+.exercise-body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  padding: 0 var(--space-20) var(--space-14);
+}
+
+/* 左の列。幅は境界のドラッグで変わる。窓を狭めても、エディタの幅（ExerciseScreen.tsx の EDITOR_MIN_WIDTH）と
+   境界の取っ手の幅を残す。 */
+.exercise-side {
+  width: var(--exercise-side-width);
+  max-width: calc(100% - 374px);
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.exercise-work {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.exercise-work > .pg-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.exercise-tabs {
+  display: flex;
+  gap: var(--space-6);
+  align-items: center;
+}
+
+/* Monaco Editor を入れる領域。 */
+.exercise-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+/* 下の段。高さは境界のドラッグで変わる。窓を低くしても、エディタの高さ（EDITOR_MIN_HEIGHT）と取っ手の高さを残す。 */
+.exercise-bottom {
+  height: var(--exercise-console-height);
+  max-height: calc(100% - 172px);
+  flex-shrink: 0;
+  display: flex;
+  min-height: 0;
+}
+
+.exercise-bottom > .pg-console {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 読み込めなかったときの文と「もう一度読み込む」。 */
+.exercise-message {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-12);
+  color: var(--muted);
+  font-size: 14px;
+}
+
+/* 確認のダイアログの幕。画面全体を覆う。 */
+.exercise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+}

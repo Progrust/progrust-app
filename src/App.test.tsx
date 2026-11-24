@@ -1,7 +1,10 @@
 import { clearMocks, mockIPC } from "@tauri-apps/api/mocks";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { afterEach, beforeEach, expect, it } from "vitest";
+import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { App } from "./App";
+
+// jsdom では Monaco を読み込めないので、演習画面のエディタを置き換える。
+vi.mock("./editor", () => ({ CodeEditor: () => null }));
 
 beforeEach(() => {
   mockIPC((command) => {

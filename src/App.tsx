@@ -2,6 +2,7 @@ import { Hourglass } from "lucide-react";
 import { useMemo, useState } from "react";
 import "./App.css";
 import { AppHeader } from "./AppHeader";
+import { ExerciseScreen } from "./exercise/ExerciseScreen";
 import { HomeScreen } from "./home/HomeScreen";
 import { LessonsScreen } from "./lessons/LessonsScreen";
 import { NavigationContext } from "./router";
@@ -42,7 +43,8 @@ function Screen({ route }: { route: Route }) {
       // レッスンが変わったら（「次のレッスンへ」）、状態を作り直す。
       return <VideoScreen key={route.lessonId} lessonId={route.lessonId} />;
     case "exercise":
-      return <Placeholder title="演習画面" detail={route.lessonId} preparing />;
+      // レッスンが変わったら、前のレッスンのコードと表示を残さないよう、状態を作り直す。
+      return <ExerciseScreen key={route.lessonId} lessonId={route.lessonId} />;
     case "generated":
       return <Placeholder title="生成問題一覧" preparing />;
     case "settings":
@@ -52,11 +54,9 @@ function Screen({ route }: { route: Route }) {
 
 function Placeholder({
   title,
-  detail,
   preparing = false,
 }: {
   title: string;
-  detail?: string;
   preparing?: boolean;
 }) {
   return (
@@ -64,9 +64,6 @@ function Placeholder({
       <div className="app-placeholder">
         <Hourglass aria-hidden="true" size={18} strokeWidth={2.2} />
         <h1 className="app-placeholder-title">{title}</h1>
-        {detail !== undefined && (
-          <p className="app-placeholder-note">{detail}</p>
-        )}
         <p className="app-placeholder-note">
           {preparing ? "準備中" : "仮の画面"}
         </p>

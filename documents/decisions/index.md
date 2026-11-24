@@ -25,6 +25,7 @@
 * [ADR 0210](0210-find-rustc-next-to-cargo-and-use-first-usable-place.md) - cargo と rustc は探索順の場所ごとに同じディレクトリの組で調べ、設定のパスは cargo の実行ファイルの絶対パスとし、使えない場所は飛ばして、rustc --version が成功した最初の場所を、バージョンが足りなくても使う
 * [ADR 0211](0211-draft-commands-reject-lessons-without-exercise.md) - 演習の無いレッスン（動画のみのレッスン）に `save_draft`・`reset_draft` を呼んだときは、下書きを書かずに `invalid_argument` を返す
 * [ADR 0225](0225-lean-monaco-entry-rust-tokens-and-theme-from-css-variables.md) - Monaco Editor を、既定の入口から全言語の定義・言語機能・LSP を除いた自前の入口で読み込み、Rust の字句の定義に関数・マクロ・型の区分を足して自分で登録し、エディタの配色をデザインシステムの CSS 変数の値から実行時に作り、ショートカットを addCommand ではなく addAction で登録する
+* [ADR 0228](0228-render-content-markdown-with-react-markdown.md) - 教材の Markdown（問題文など）を、react-markdown で HTML の文字列を経ずに React の要素にして表示し、生の HTML は捨て、リンクは文字だけを表示する
 
 # 教材データ形式
 
