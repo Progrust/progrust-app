@@ -27,6 +27,8 @@ vi.mock("../editor", () => ({
   CodeEditor: function FakeEditor(props: CodeEditorProps) {
     editorProps.current = props;
     const { value, onChange, ariaLabel } = props;
+    // 画面から渡された内容を、effect が最後に見たもの。利用者の入力では変えない。
+    // （入力で変えると、描画の後に遅れて動く effect が、古い内容で onChange を呼び、入力を打ち消す。）
     const shown = useRef(value);
     useEffect(() => {
       if (shown.current !== value) {
@@ -39,7 +41,6 @@ vi.mock("../editor", () => ({
         aria-label={ariaLabel}
         value={value}
         onChange={(event) => {
-          shown.current = event.target.value;
           onChange?.(event.target.value);
         }}
       />
