@@ -4,6 +4,8 @@
 // 下書きは、保存のきっかけ（draftSave.ts）で `save_draft` に保存し、「初期コードに戻す」で `reset_draft` を呼ぶ。
 // 実行・テスト・提出・停止と出力の表示は、コンソールの部品（ExerciseConsole.tsx）が行う。
 // 提出の結果は、問題文の上の判定結果のカード（JudgeCard.tsx）に出し、正解したら正解のモーダル（PassModal.tsx）を開く。
+// 実行・テスト実行・提出・停止のキーボードショートカット（shortcuts.ts）は、エディタにフォーカスがあるときは Monaco の
+// コマンドで、エディタの外にあるときは window の keydown のキャプチャで受ける（ADR 0111、ADR 0225）。
 // 解説表示の状態で画面を離れるときは、`end_session` で試行セッションを終える
 // （documents/spec/learning-record-and-analysis/attempt-log.md「試行セッションのライフサイクル」）。
 import {
@@ -28,7 +30,8 @@ import {
 import type { DraftFiles } from "../commands/progress";
 import type { SubmitResult } from "../commands/run";
 import { getSettings } from "../commands/settings";
-import { CodeEditor } from "../editor";
+import { CodeEditor, KeyCode, KeyMod } from "../editor";
+import type { EditorCommand } from "../editor";
 import { lessonRoute, nextLesson } from "../lessons/nextLesson";
 import { Markdown } from "../markdown/Markdown";
 import { useNavigation } from "../router";
@@ -55,10 +58,26 @@ import {
   validatePath,
 } from "./fileOps";
 import { ResetDraftDialog } from "./ResetDraftDialog";
+import {
+  SHORTCUT_ACTIONS,
+  SHORTCUT_LABELS,
+  isComposingKey,
+  shortcutForKey,
+} from "./shortcuts";
+import type { ShortcutAction } from "./shortcuts";
 import { Splitter } from "./Splitter";
 import "./exerciseScreen.css";
 
 export { MAIN_FILE };
+
+// ショートカットのキー（Monaco の KeyMod と KeyCode の組み合わせ）。mac では CtrlCmd が Cmd になる。
+// 判定（shortcuts.ts の shortcutForKey）と同じキーにする。
+const SHORTCUT_KEYBINDINGS: { [action in ShortcutAction]: number } = {
+  run: KeyMod.CtrlCmd | KeyCode.Enter,
+  test: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.KeyT,
+  submit: KeyMod.CtrlCmd | KeyMod.Shift | KeyCode.Enter,
+  stop: KeyMod.CtrlCmd | KeyCode.Period,
+};
 
 // 設定を読み込めなかったときの文字サイズ（settings.json の editor_font_size の既定値）。
 const DEFAULT_FONT_SIZE = 14;
@@ -477,6 +496,50 @@ function ExerciseWorkspace({
   const bodyRef = useRef<HTMLDivElement>(null);
   const workRef = useRef<HTMLDivElement>(null);
 
+  // キーボードショートカット。押したときの処理は、コンソールの部品（ExerciseConsole）が差し込む。
+  const shortcutRef = useRef<((action: ShortcutAction) => void) | null>(null);
+  // エディタの領域。ここにフォーカスがあるときのキーは、Monaco のコマンドが受ける。
+  const editorAreaRef = useRef<HTMLDivElement>(null);
+  // いま押されているキーが、日本語の変換中のものか。Monaco のコマンドからも見る。
+  const composingRef = useRef(false);
+  useEffect(() => {
+    // キャプチャで受けて、エディタの外のどこにフォーカスがあっても、ほかの処理より先に取る。
+    const handleKeyDown = (event: KeyboardEvent) => {
+      composingRef.current = isComposingKey(event);
+      if (
+        event.target instanceof Node &&
+        editorAreaRef.current?.contains(event.target) === true
+      ) {
+        return;
+      }
+      const action = shortcutForKey(event);
+      if (action === null) {
+        return;
+      }
+      // 無効なときも、ボタンの押下やフォームの送信など、キーの既定の動作をさせない。
+      event.preventDefault();
+      event.stopPropagation();
+      shortcutRef.current?.(action);
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, []);
+  // エディタの中のキーは、Monaco のコマンドとして登録し、Monaco の既定の割り当て（行の挿入など）より優先する。
+  const editorCommands = useMemo(
+    (): EditorCommand[] =>
+      SHORTCUT_ACTIONS.map((action) => ({
+        id: `progrust.exercise.${action}`,
+        label: SHORTCUT_LABELS[action],
+        keybinding: SHORTCUT_KEYBINDINGS[action],
+        run: () => {
+          if (!composingRef.current) {
+            shortcutRef.current?.(action);
+          }
+        },
+      })),
+    [],
+  );
+
   const goLessons = () => leave({ name: "lessons" });
   const goNext = () => {
     if (next !== null) {
@@ -687,13 +750,14 @@ function ExerciseWorkspace({
                 )}
               </form>
             )}
-            <div className="exercise-editor">
+            <div className="exercise-editor" ref={editorAreaRef}>
               <CodeEditor
                 value={files[activeFile] ?? ""}
                 onChange={handleChange}
                 readOnly={activeReadonly}
                 fontSize={loaded.fontSize}
                 ariaLabel={`エディタ ${activeFile}`}
+                commands={editorCommands}
               />
             </div>
           </div>
@@ -720,6 +784,7 @@ function ExerciseWorkspace({
               draftSave={scheduler}
               onStateChange={handleStateChange}
               onSubmitFinished={handleSubmitFinished}
+              shortcutRef={shortcutRef}
             />
           </div>
         </div>

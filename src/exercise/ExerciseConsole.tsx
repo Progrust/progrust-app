@@ -40,6 +40,8 @@ import {
 } from "./exerciseState";
 import type { ExerciseState } from "./exerciseState";
 import type { SubmitFinished } from "./judgeResult";
+import { shortcutEnabled } from "./shortcuts";
+import type { ShortcutAction } from "./shortcuts";
 import { useStopOnLeave } from "./useStopOnLeave";
 
 export type ExerciseConsoleProps = {
@@ -55,6 +57,8 @@ export type ExerciseConsoleProps = {
   onStateChange: (state: ExerciseState) => void;
   // 提出の run_finished が届いたとき（判定結果のカードと正解のモーダルのため）。押した時刻と、送ったファイルを添える。
   onSubmitFinished: (finished: SubmitFinished) => void;
+  // キーボードショートカットを押したときの関数を、ここに差し込む。ボタンが有効なときだけ、ボタンと同じことをする。
+  shortcutRef: { current: ((action: ShortcutAction) => void) | null };
 };
 
 // cargo が見つかっているか。環境の状態はまだ読まないので、見つかっているものとする。
@@ -75,6 +79,7 @@ export function ExerciseConsole({
   draftSave,
   onStateChange,
   onSubmitFinished,
+  shortcutRef,
 }: ExerciseConsoleProps) {
   const [state, dispatch] = useReducer(exerciseReducer, INITIAL_EXERCISE_STATE);
   const [log, setLog] = useState(EMPTY_CONSOLE_LOG);
@@ -223,6 +228,29 @@ export function ExerciseConsole({
       stopRun(requestId).catch(showError);
     }
   };
+
+  // ショートカットは、ボタンと同じく、有効なときだけ動かす（無効なときは何もしない）。
+  const shortcut = (action: ShortcutAction) => {
+    if (!shortcutEnabled(action, controls)) {
+      return;
+    }
+    if (action === "stop") {
+      stop();
+    } else if (action === "submit") {
+      void start({ kind: "submit" });
+    } else {
+      void start({ kind: "run", mode: action === "run" ? "main" : "test" });
+    }
+  };
+  useEffect(() => {
+    shortcutRef.current = shortcut;
+  });
+  useEffect(
+    () => () => {
+      shortcutRef.current = null;
+    },
+    [shortcutRef],
+  );
 
   const running = state.kind === "running" ? state : null;
   const stdin = controls.stdinVisible
