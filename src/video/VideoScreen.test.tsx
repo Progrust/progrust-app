@@ -280,7 +280,7 @@ describe("右端の行動", () => {
       progress: { video_watched: true },
     });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "演習へ" }));
+    fireEvent.click(await screen.findByRole("button", { name: "演習へ" }));
     expect(navigate).toHaveBeenCalledWith({
       name: "exercise",
       lessonId: "ch04-02",
@@ -295,7 +295,9 @@ describe("右端の行動", () => {
     expect(
       screen.queryByRole("button", { name: "演習へ" }),
     ).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "次のレッスンへ" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "次のレッスンへ" }),
+    );
     expect(navigate).toHaveBeenCalledWith({
       name: "video",
       lessonId: "ch04-02",
@@ -307,7 +309,9 @@ describe("右端の行動", () => {
       progress: { video_watched: true },
     });
     await ready();
-    fireEvent.click(screen.getByRole("button", { name: "次のレッスンへ" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "次のレッスンへ" }),
+    );
     expect(navigate).toHaveBeenCalledWith({
       name: "exercise",
       lessonId: "ch05-02",
