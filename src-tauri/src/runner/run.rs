@@ -1,10 +1,11 @@
 //! 実行・テスト実行のタスク（spec/exercise-runner/run.md「手順」「テスト実行」「ビルドの出力の表示」「出力の送り方」
-//! 「停止」、spec/exercise-runner/attempt-log.md）と、イベント `run_output`・`run_finished` の内容
+//! 「停止」、spec/exercise-runner/attempt-log.md）と、イベント `run_started`・`run_output`・`run_finished` の内容
 //! （spec/architecture/commands/run.md「イベント」）。
 //!
 //! - [`execute`] は、`run_code` が受け付けた後に、別のスレッドで呼ぶ。`project/` を組み立て、ビルドし、
 //!   学習者のプログラム（テスト実行では `cargo test`）を動かし、試行ログに `run` イベントを追記してから、
-//!   要求を外して `run_finished` を送る。
+//!   要求を外して `run_finished` を送る。実行（`main`）では、プログラムを起動して標準入力を受け付けるようにしてから、
+//!   `run_started` を送る。
 //! - イベントの送り先と試行ログ・進捗の書き込み先は [`RunEvents`] で受け取る。アプリでは Tauri の `emit` で送り、
 //!   学習者データのディレクトリに書く。提出のタスク（[`super::submit`]）も、同じものを使う。
 //! - アプリの終了で止めたときは、試行ログに追記せず、`run_finished` も送らない。
@@ -35,10 +36,18 @@ use crate::progress::{LessonProgress, now_string};
 use crate::storage::AppDataDir;
 use crate::storage::StorageError;
 
+/// 実行（`main`）で学習者のプログラムを起動したことを送るイベントの名前。
+pub const RUN_STARTED: &str = "run_started";
 /// 出力を送るイベントの名前。
 pub const RUN_OUTPUT: &str = "run_output";
 /// 実行・提出が終わったことを送るイベントの名前。
 pub const RUN_FINISHED: &str = "run_finished";
+
+/// `run_started` の内容。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct RunStarted {
+    pub request_id: String,
+}
 
 /// `run_output` の断片の種類。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -99,6 +108,8 @@ pub struct RunFinished {
 
 /// イベントの送り先と、試行ログ・進捗の書き込み先。
 pub trait RunEvents: Send + Sync + 'static {
+    /// `run_started` を送る。
+    fn started(&self, started: RunStarted);
     /// `run_output` を送る。
     fn output(&self, output: RunOutput);
     /// `submit_progress` を送る。
@@ -375,6 +386,13 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
             RunMode::Test => StdinState::Closed,
         },
     );
+    // 標準入力を受け付けるようにした（set_running）後に送る。受け取ってすぐの send_stdin が invalid_state に
+    // ならないように。テスト実行は標準入力を使わないので送らない（spec/architecture/commands/run.md「イベント」）。
+    if job.mode == RunMode::Main {
+        events.started(RunStarted {
+            request_id: job.active.request_id().to_string(),
+        });
+    }
     let termination = process.wait();
     job.active.set_finished();
     let termination = termination
@@ -514,6 +532,14 @@ mod tests {
 
     #[test]
     fn events_serialize_in_the_spec_shape() {
+        assert_eq!(
+            serde_json::to_value(RunStarted {
+                request_id: "r".into()
+            })
+            .unwrap(),
+            serde_json::json!({ "request_id": "r" })
+        );
+
         let output = RunOutput {
             request_id: "r".into(),
             chunks: vec![

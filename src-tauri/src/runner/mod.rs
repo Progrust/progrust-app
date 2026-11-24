@@ -10,7 +10,7 @@
 //! - ビルド済みの実行ファイルを `stdout` 方式で判定する部品は [`judge`]、`test` 方式の隠しテストを組み込んで
 //!   判定し、`min_learner_tests` のある演習では学習者が書いたテストも判定する部品は [`judge_test`]。
 //! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
-//!   イベント `run_output`・`run_finished` の内容は [`run`]、提出のタスクとイベント `submit_progress` と
+//!   イベント `run_started`・`run_output`・`run_finished` の内容は [`run`]、提出のタスクとイベント `submit_progress` と
 //!   `run_finished` の `submit` の内容は [`submit`]。
 //! - 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム（`src/bin/progrust-judge.rs`）の中身は
 //!   [`lesson_judge`]（ADR 0208）。

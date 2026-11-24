@@ -21,7 +21,7 @@ use progrust_lib::content::ContentDir;
 use progrust_lib::environment::{Environment, RustTools};
 use progrust_lib::progress::LessonStatus;
 use progrust_lib::runner::RunnerDir;
-use progrust_lib::runner::run::{RUN_FINISHED, RUN_OUTPUT};
+use progrust_lib::runner::run::{RUN_FINISHED, RUN_OUTPUT, RUN_STARTED};
 use progrust_lib::runner::runs::{RunLimits, Runs};
 use progrust_lib::runner::submit::SUBMIT_PROGRESS;
 use progrust_lib::storage::AppDataDir;
@@ -202,6 +202,7 @@ fn real_cargo() -> RustTools {
 
 /// 受け取ったイベント。
 enum Received {
+    Started(Value),
     Output(Value),
     Progress(Value),
     /// `run_finished` と、それを受け取った時点の、そのレッスンの未完了のセッション。
@@ -235,6 +236,13 @@ impl Fixture {
         app.manage(Runs::new(RunLimits::default()));
 
         let (sender, received) = mpsc::channel();
+        {
+            let sender = sender.clone();
+            app.listen(RUN_STARTED, move |event| {
+                let payload = serde_json::from_str(event.payload()).unwrap();
+                let _ = sender.send(Received::Started(payload));
+            });
+        }
         {
             let sender = sender.clone();
             app.listen(RUN_OUTPUT, move |event| {
@@ -305,6 +313,8 @@ impl Fixture {
                 .expect("run_finished が届かない");
             let stop = stop_when(&received);
             match received {
+                // 提出は標準入力を受け付けないので、run_started は送らない。
+                Received::Started(payload) => panic!("提出で run_started が届いた: {payload}"),
                 Received::Output(output) => {
                     assert_eq!(output["request_id"], request_id);
                     finished.outputs.push(output);
@@ -343,6 +353,7 @@ impl Fixture {
             let left = deadline.saturating_duration_since(Instant::now());
             match self.received.recv_timeout(left) {
                 Ok(Received::Finished(payload, _)) => panic!("run_finished が届いた: {payload}"),
+                Ok(Received::Started(payload)) => panic!("提出で run_started が届いた: {payload}"),
                 Ok(_) => {}
                 Err(_) => return,
             }

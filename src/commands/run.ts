@@ -34,9 +34,17 @@ export type CommandError = {
 };
 
 // イベントの名前。受け取り（listen）を始めてから、run_code・submit_code を呼ぶ。
+export const RUN_STARTED = "run_started";
 export const RUN_OUTPUT = "run_output";
 export const SUBMIT_PROGRESS = "submit_progress";
 export const RUN_FINISHED = "run_finished";
+
+// イベント run_started の内容。実行（mode が main）で学習者のプログラムを起動したときに 1 回届く。
+// 届いた後は、プログラムが終わるか標準入力を閉じるまで、sendStdin で書ける。テスト実行と提出と、
+// プログラムを起動しなかったとき（ビルドの失敗など）は届かない。プログラムの出力の run_output より後に届くことがある。
+export type RunStarted = {
+  request_id: string;
+};
 
 // run_output の断片。stdout・stderr は学習者のプログラム（テスト実行では cargo test）とビルドの出力、
 // system はアプリが出す知らせ（日本語）。ANSI エスケープを含むことがある。
@@ -128,7 +136,8 @@ export type RunFinished = {
 };
 
 // 「実行」（mode が main）と「テスト」（test）。files を下書きに保存してから実行を始め、始めたら null で解決する。
-// 出力は run_output、結果は run_finished で届く。ほかの実行・提出が動いているときは busy で拒否される。
+// main では、プログラムを起動したことが run_started で届く。出力は run_output、結果は run_finished で届く。
+// ほかの実行・提出が動いているときは busy で拒否される。
 export function runCode(
   requestId: string,
   lessonId: string,
@@ -159,7 +168,7 @@ export function submitCode(
 }
 
 // 入力欄の 1 行に改行（\n）を付けて、実行中のプログラムの標準入力に書く。
-// ビルド中・終わった後・標準入力を閉じた後は invalid_state で拒否される。
+// ビルド中（run_started が届く前）・終わった後・標準入力を閉じた後は invalid_state で拒否される。
 export function sendStdin(requestId: string, text: string): Promise<null> {
   return invoke<null>("send_stdin", { request_id: requestId, text });
 }
