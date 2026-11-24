@@ -198,3 +198,74 @@ fn a_submit_does_not_take_stdin() {
     assert_eq!(code(submit.write_stdin("x\n")), ErrorCode::InvalidState);
     assert_eq!(code(submit.close_stdin()), ErrorCode::InvalidState);
 }
+
+/// 別のスレッドで [`Runs::stop_lesson_run_and_wait`] を呼び、返ったら知らせる通り道を返す。
+fn stop_and_wait_in_thread(runs: &Runs, lesson_id: &str) -> mpsc::Receiver<()> {
+    let (sender, receiver) = mpsc::channel();
+    let runs = runs.clone();
+    let lesson_id = lesson_id.to_string();
+    std::thread::spawn(move || {
+        runs.stop_lesson_run_and_wait(&lesson_id);
+        let _ = sender.send(());
+    });
+    receiver
+}
+
+#[test]
+fn stop_lesson_run_and_wait_stops_the_run_and_returns_after_it_is_released() {
+    let runs = Runs::default();
+    let run = runs.begin("a", "l", RunKind::Run).unwrap();
+    let returned = stop_and_wait_in_thread(&runs, "l");
+
+    // 止める指示を出し、要求が外れるまで返らない。
+    let deadline = std::time::Instant::now() + Duration::from_secs(10);
+    while run.stop_cause().is_none() {
+        assert!(std::time::Instant::now() < deadline, "止める指示が来ない");
+        std::thread::sleep(Duration::from_millis(10));
+    }
+    assert_eq!(run.stop_cause(), Some(StopCause::User));
+    assert!(
+        returned.recv_timeout(Duration::from_millis(300)).is_err(),
+        "要求が外れる前に返った"
+    );
+
+    runs.release(&run);
+    returned
+        .recv_timeout(Duration::from_secs(10))
+        .expect("要求が外れても返らない");
+}
+
+#[test]
+fn stop_lesson_run_and_wait_after_stop_run_still_waits_for_the_release() {
+    let runs = Runs::default();
+    let run = runs.begin("a", "l", RunKind::Run).unwrap();
+    runs.stop("a");
+    let returned = stop_and_wait_in_thread(&runs, "l");
+    assert!(
+        returned.recv_timeout(Duration::from_millis(300)).is_err(),
+        "要求が外れる前に返った"
+    );
+    runs.release(&run);
+    returned
+        .recv_timeout(Duration::from_secs(10))
+        .expect("要求が外れても返らない");
+}
+
+#[test]
+fn stop_lesson_run_and_wait_ignores_other_lessons_submits_and_no_run() {
+    let runs = Runs::default();
+    // 動いていないときは、すぐ返る。
+    runs.stop_lesson_run_and_wait("l");
+
+    // ほかのレッスンの実行は止めない。
+    let other = runs.begin("a", "other", RunKind::Run).unwrap();
+    runs.stop_lesson_run_and_wait("l");
+    assert_eq!(other.stop_cause(), None);
+    runs.release(&other);
+
+    // 提出は止めない（止めた提出は試行ログに追記しない）。
+    let submit = runs.begin("s", "l", RunKind::Submit).unwrap();
+    runs.stop_lesson_run_and_wait("l");
+    assert_eq!(submit.stop_cause(), None);
+    assert!(runs.find("s").is_some());
+}

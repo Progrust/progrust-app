@@ -75,7 +75,8 @@ export function resetDraft(lessonId: string): Promise<Draft> {
 }
 
 // 画面の操作（「レッスン一覧へ」「次のレッスンへ」、解説表示中の演習画面から別の画面へ移った）で、試行セッションを終える。
-// 正解済みのセッションだけを終え（下書きを消す）、それ以外のときは何もしない。画面を離れるときの下書きの保存は、
+// そのレッスンの実行・テスト実行が動いていれば、止めて試行ログに記録し終えるまで待ってから、正解済みのセッションだけを
+// 終え（下書きを消す）、それ以外のときは何もしない。画面を離れるときの下書きの保存は、
 // 終えた後に下書きを作り直さないように、この呼び出しより先に済ませる。
 export function endSession(lessonId: string): Promise<null> {
   return invoke<null>("end_session", { lesson_id: lessonId });

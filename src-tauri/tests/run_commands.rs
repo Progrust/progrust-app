@@ -15,7 +15,7 @@ use std::{
 };
 
 use common::{LOCAL_URL, app, invoke};
-use progrust_lib::attempts::{AttemptLog, Event, RunEvent};
+use progrust_lib::attempts::{AttemptLog, Event, RunEvent, RunStatus, SessionKind};
 use progrust_lib::commands::run::stop_runs_on_exit;
 use progrust_lib::content::ContentDir;
 use progrust_lib::environment::{Environment, RustTools};
@@ -696,6 +696,146 @@ fn quitting_the_app_stops_the_run_without_run_finished_or_a_record() {
     fx.assert_no_finished_within(Duration::from_secs(2));
     assert!(fx.runs().current().is_none());
     assert!(fx.run_events().is_empty());
+}
+
+// ---- 画面を離れたとき（end_session） ----
+
+impl Fixture {
+    /// レッスン [`LESSON`] の試行セッションを始め、正解済みにして、その ID を返す（解説を閉じた後の演習画面）。
+    fn start_passed_session(&self) -> String {
+        let data_dir = AppDataDir::new(self.data.path());
+        let session_id = data_dir
+            .start_or_continue_session(LESSON, SessionKind::Lesson)
+            .unwrap()
+            .session_id;
+        data_dir
+            .mark_session_passed(&session_id, "2026-11-24T10:00:00+09:00")
+            .unwrap()
+            .unwrap();
+        session_id
+    }
+
+    fn attempt_log(&self, session_id: &str) -> AttemptLog {
+        AppDataDir::new(self.data.path())
+            .read_attempt_log(session_id)
+            .unwrap()
+            .unwrap()
+    }
+
+    fn end_session(&self, lesson_id: &str) -> Result<Value, Value> {
+        self.invoke("end_session", json!({ "lesson_id": lesson_id }))
+    }
+
+    /// 動き続けるプログラムを実行し、起動するまで待つ。
+    fn start_endless_run(&self, request_id: &str) {
+        self.run_code(request_id, "main", &[("src/main.rs", SPAWNS_A_CHILD)])
+            .unwrap();
+        let mut outputs = Vec::new();
+        self.wait_stdout(&mut outputs, "started\n");
+    }
+}
+
+/// `end_session` が返った時点で、止めた実行が `stopped` として終える前のセッションに追記され、そのセッションが終わっている。
+fn assert_stopped_run_recorded_before_ending(fx: &Fixture, session_id: &str) {
+    let log = fx.attempt_log(session_id);
+    assert!(log.ended_at.is_some(), "セッションが終わっていない");
+    let events = run_events(Some(log));
+    assert_eq!(events.len(), 1, "{events:?}");
+    assert_eq!(events[0].result.status, RunStatus::Stopped);
+    // 終えた後のセッションに追記したり、新しいセッションを始めたりしていない。
+    assert!(
+        AppDataDir::new(fx.data.path())
+            .unfinished_session(LESSON)
+            .unwrap()
+            .is_none()
+    );
+}
+
+#[test]
+fn end_session_stops_a_running_program_and_records_it_before_ending_the_session() {
+    let fx = Fixture::new();
+    let session_id = fx.start_passed_session();
+    fx.start_endless_run("r1");
+
+    assert_eq!(fx.end_session(LESSON), Ok(Value::Null));
+    // run_finished を待たずに、end_session が返った時点で確かめる。
+    assert_stopped_run_recorded_before_ending(&fx, &session_id);
+    assert!(fx.runs().current().is_none());
+
+    assert_eq!(fx.wait_finished("r1").status(), "stopped");
+    wait_until("学習者のプログラムが止まらない", || {
+        fx.process_count() == 0
+    });
+}
+
+#[test]
+fn end_session_after_stop_run_also_records_the_stopped_run_before_ending() {
+    let fx = Fixture::new();
+    let session_id = fx.start_passed_session();
+    fx.start_endless_run("r1");
+
+    // フロントエンドが stop_run を先に呼び、止めた結果を待たずに end_session を呼ぶ。
+    assert_eq!(
+        fx.invoke("stop_run", json!({ "request_id": "r1" })),
+        Ok(Value::Null)
+    );
+    assert_eq!(fx.end_session(LESSON), Ok(Value::Null));
+    assert_stopped_run_recorded_before_ending(&fx, &session_id);
+
+    assert_eq!(fx.wait_finished("r1").status(), "stopped");
+    wait_until("学習者のプログラムが止まらない", || {
+        fx.process_count() == 0
+    });
+}
+
+#[test]
+fn end_session_stops_a_build_in_progress_and_records_it_before_ending() {
+    let fx = Fixture::new();
+    let session_id = fx.start_passed_session();
+    fx.run_code("r1", "main", &[("src/main.rs", ENDLESS_COMPILE)])
+        .unwrap();
+    wait_until("ビルドの rustc が起動しない", || {
+        fx.process_count() > 0
+    });
+
+    assert_eq!(fx.end_session(LESSON), Ok(Value::Null));
+    assert_stopped_run_recorded_before_ending(&fx, &session_id);
+    assert_eq!(fx.wait_finished("r1").status(), "stopped");
+    wait_until("ビルドの rustc が止まらない", || {
+        fx.process_count() == 0
+    });
+}
+
+#[test]
+fn end_session_without_a_pass_stops_and_records_the_run_but_keeps_the_session() {
+    let fx = Fixture::new();
+    fx.start_endless_run("r1");
+
+    assert_eq!(fx.end_session(LESSON), Ok(Value::Null));
+    // 正解していないので、セッションは終えない。止めた実行は、そのセッションに追記されている。
+    let log = AppDataDir::new(fx.data.path())
+        .unfinished_session(LESSON)
+        .unwrap()
+        .expect("未完了のセッションが無い");
+    let events = run_events(Some(log));
+    assert_eq!(events.len(), 1, "{events:?}");
+    assert_eq!(events[0].result.status, RunStatus::Stopped);
+    assert_eq!(fx.wait_finished("r1").status(), "stopped");
+}
+
+#[test]
+fn end_session_of_another_lesson_does_not_stop_the_run() {
+    let fx = Fixture::new();
+    fx.start_endless_run("r1");
+
+    assert_eq!(fx.end_session(CRATES_LESSON), Ok(Value::Null));
+    let run = fx.runs().find("r1").expect("実行が止まった");
+    assert_eq!(run.stop_cause(), None);
+    fx.assert_no_finished_within(Duration::from_millis(500));
+
+    fx.invoke("stop_run", json!({ "request_id": "r1" }))
+        .unwrap();
+    assert_eq!(fx.wait_finished("r1").status(), "stopped");
 }
 
 // ---- 標準入力 ----
