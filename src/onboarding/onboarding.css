@@ -1,0 +1,145 @@
+/* 初回起動画面の配置（design-system/ui-design/styles/app.css の配置に合わせる）。 */
+.pgx-onb {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px var(--space-28) 64px;
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
+  box-sizing: border-box;
+}
+
+.pgx-onb-lead-kicker {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+.pgx-onb-lead h1 {
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.pgx-onb-lead p {
+  margin: var(--space-10) 0 0;
+  font-size: 14px;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+
+.pgx-onb-sec {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-12);
+}
+
+.pgx-onb-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-10);
+}
+
+.pgx-onb-h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.pgx-onb-redetect {
+  margin-left: auto;
+}
+
+.pgx-flow {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-10);
+}
+
+.pgx-flow-step {
+  padding: var(--space-16) var(--space-18);
+  border-radius: var(--radius-tile);
+  background: var(--panel);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+.pgx-flow-step .pgx-onb-row {
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.pgx-flow-step p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+.pgx-flow-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-badge);
+  background: var(--raised);
+  display: grid;
+  place-items: center;
+  color: var(--ink);
+  flex-shrink: 0;
+}
+
+.pgx-notice {
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  padding: var(--space-18) var(--space-22);
+  display: flex;
+  gap: var(--space-14);
+}
+
+.pgx-notice > .pg-icon {
+  color: var(--ink-3);
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.pgx-notice p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+
+.pgx-notice b {
+  color: var(--ink);
+}
+
+.pgx-onb-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-16);
+}
+
+.pgx-onb-foot p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--muted);
+}
+
+.pgx-onb-foot .pg-btn {
+  margin-left: auto;
+}
+
+.pgx-onb-error {
+  margin: 0;
+  font-size: 13px;
+  color: var(--danger-ink);
+}
+
+.pgx-notice p + p {
+  margin-top: var(--space-6);
+}

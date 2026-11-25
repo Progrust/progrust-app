@@ -11,6 +11,15 @@ const MENU: { item: MenuItem; label: string; route: Route }[] = [
   { item: "settings", label: "設定", route: { name: "settings" } },
 ];
 
+// ロゴだけのヘッダー。初回起動画面で使う（メインメニュー・レッスン検索・ジョブの表示は出さない）。
+export function BareHeader() {
+  return (
+    <header className="pg-header">
+      <div className="pg-logo">Progrust</div>
+    </header>
+  );
+}
+
 export function AppHeader() {
   const { route, navigate } = useNavigation();
   const current = menuItemOf(route);

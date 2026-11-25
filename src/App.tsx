@@ -1,10 +1,13 @@
 import { Hourglass } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import "./App.css";
-import { AppHeader } from "./AppHeader";
+import { AppHeader, BareHeader } from "./AppHeader";
+import { getSettings, updateSettings } from "./commands/settings";
+import type { Settings } from "./commands/settings";
 import { ExerciseScreen } from "./exercise/ExerciseScreen";
 import { HomeScreen } from "./home/HomeScreen";
 import { LessonsScreen } from "./lessons/LessonsScreen";
+import { OnboardingScreen } from "./onboarding/OnboardingScreen";
 import { NavigationContext } from "./router";
 import type { Route } from "./router";
 import { SettingsScreen } from "./settings/SettingsScreen";
@@ -17,7 +20,56 @@ function isFixedHeight(route: Route): boolean {
   );
 }
 
+// 起動時の画面の選び方（documents/spec/screens/first-launch.md）。
+// 設定の first_launch_completed が false（settings.json が無いときを含む）なら初回起動画面、true ならトップページ。
+// 設定を読めなかったときは、アプリを使えなくならないよう、トップページを表示する。
 export function App() {
+  const [settings, setSettings] = useState<Settings | "loading" | "failed">(
+    "loading",
+  );
+  useEffect(() => {
+    let cancelled = false;
+    getSettings().then(
+      (loaded) => {
+        if (!cancelled) {
+          setSettings(loaded);
+        }
+      },
+      (error: unknown) => {
+        console.error("get_settings に失敗した", error);
+        if (!cancelled) {
+          setSettings("failed");
+        }
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+  if (settings === "loading") {
+    return <div className="app app-page" />;
+  }
+  if (settings !== "failed" && !settings.first_launch_completed) {
+    const current = settings;
+    return (
+      <div className="app app-page">
+        <BareHeader />
+        <OnboardingScreen
+          onStart={async () => {
+            const saved = await updateSettings({
+              ...current,
+              first_launch_completed: true,
+            });
+            setSettings(saved);
+          }}
+        />
+      </div>
+    );
+  }
+  return <MainApp />;
+}
+
+function MainApp() {
   const [route, setRoute] = useState<Route>({ name: "home" });
   const navigation = useMemo(() => ({ route, navigate: setRoute }), [route]);
   return (
