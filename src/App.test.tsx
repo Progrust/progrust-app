@@ -63,6 +63,9 @@ function menu() {
 
 it("ヘッダーにロゴとメインメニューを表示し、最初はホームを選ぶ", async () => {
   render(<App />);
+  expect(await screen.findByRole("heading", { level: 1 })).toHaveTextContent(
+    "すべてのレッスンを完了しました",
+  );
   const header = screen.getByRole("banner");
   expect(within(header).getByText("Progrust")).toBeInTheDocument();
   expect(
@@ -81,6 +84,7 @@ it("ヘッダーにロゴとメインメニューを表示し、最初はホー�
 
 it("メニューで各画面に移り、選んでいる項目だけに aria-current を付ける", async () => {
   render(<App />);
+  await screen.findByRole("heading", { level: 1 });
   const cases = [
     ["レッスン", "レッスン"],
     ["問題生成", "生成問題一覧"],
@@ -101,8 +105,9 @@ it("メニューで各画面に移り、選んでいる項目だけに aria-curr
   }
 });
 
-it("生成問題一覧は準備中と表示する", () => {
+it("生成問題一覧は準備中と表示する", async () => {
   render(<App />);
+  await screen.findByRole("heading", { level: 1 });
   fireEvent.click(menu().getByRole("link", { name: "問題生成" }));
   expect(screen.getByText("準備中")).toBeInTheDocument();
 });
