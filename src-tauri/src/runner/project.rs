@@ -572,7 +572,7 @@ mod tests {
         .unwrap();
         let project = workspace.project();
         let manifest = fs::read_to_string(project.join("Cargo.toml")).unwrap();
-        assert!(manifest.contains("\nrand = \"=0.9.1\"\n"), "{manifest}");
+        assert!(manifest.contains("\nrand = \"=0.9.5\"\n"), "{manifest}");
         assert_eq!(
             fs::read(project.join("Cargo.lock")).unwrap(),
             fs::read(runner.cargo_lock()).unwrap()

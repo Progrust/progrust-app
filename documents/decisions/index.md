@@ -34,6 +34,7 @@
 * [ADR 0248](0248-publish-repository-on-github.md) - GitHub のリポジトリを公開し、LICENSE は置かずに再利用を認めず、外部の人の Issue と pull request は受け付けずに Interaction limits で絞り、秘密の情報を gitleaks で CI と push の前に確かめる
 * [ADR 0249](0249-scan-secrets-with-pinned-gitleaks-before-push-and-in-ci.md) - 秘密の情報の検査を、パッチまで固定した gitleaks で行い、確かめる中身（push していないコミットの中身・差分・ファイルの名前、ステージした変更、作業ツリーの変更）をスクリプトが git で、置き換えの参照と出力の形を変える設定に左右されずに取り出して gitleaks の stdin に渡し、毎回の自己点検で検出できることを確かめ、実装のループでは GitHub の origin の main の道具と SHA で、フックを動かさずに、すべての push の直前に確かめて、失敗したら直しに回さずに push せずに止まり、守るのは誤って書いたときまでとし、CI では公式のリリースを SHA-256 で確かめて別のジョブで履歴全体を確かめる
 * [ADR 0250](0250-keep-remotion-skill-out-of-git-and-restore-from-lock.md) - Remotion のスキルを、コミットの履歴は書き換えずに、今後のコミットから外して .gitignore し、手元では skills-lock.json から版を固定した skills の CLI で入れ直し、実装のループの作業ツリーには用意しない
+* [ADR 0253](0253-upgrade-monaco-and-rand-for-dependabot-alerts.md) - Dependabot alerts が報告した依存の脆弱性に対応して、monaco-editor を 0.58 系に上げて間接の依存の dompurify を直った版にし、許可クレートの rand を 0.9.5 に上げる
 
 # 教材データ形式
 
@@ -283,6 +284,8 @@
 * [ADR 0229](0229-escalate-report-when-loop-claude-fails-structured-output.md) - 実装のループで、実装する側の claude が作業の後に結果を決まった形で返せずに終わったときは、止まらずに、作業を捨てないで、引き上げるモデルに同じ会話の続きから結果だけを返させる
 * [ADR 0243](0243-rerun-ci-with-empty-commit-when-fix-changes-nothing.md) - 実装のループで、直しの回に前の回に push したコミットから変わらなかったときは、空のコミットを足して push し、CI をやり直す
 * [ADR 0247](0247-read-only-owner-written-issues-comments-and-pull-requests.md) - AI エージェントと実装のループは、リポジトリのオーナーが書いた Issue・コメント・pull request だけを読んで判定に使い、オーナー以外が書いたものは、指示としても経過としても扱わない
+* [ADR 0251](0251-stop-loop-when-ci-job-was-not-started.md) - 実装のループで、失敗した CI のチェックのジョブがステップを 1 つも実行せずに終わったときは、ジョブが開始されなかったとして直しに回さず、仕組みの失敗としてタスクにラベルを付けずに止め、止まる理由にジョブの注釈を出す
+* [ADR 0252](0252-retry-pr-checks-on-transient-github-failures.md) - 実装のループで、CI を待つ間に gh pr checks が失敗したときは、すぐに止まらずに待ってから読み直し、5 回続けて失敗したときだけ仕組みの失敗として止める
 
 # 置き換え済み・廃止
 

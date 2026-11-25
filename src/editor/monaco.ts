@@ -96,6 +96,7 @@ import "monaco-editor/editor/contrib/find/browser/findController";
 import "monaco-editor/editor/contrib/gotoSymbol/browser/goToCommands";
 import "monaco-editor/editor/contrib/gotoError/browser/markerSelectionStatus";
 import "monaco-editor/editor/contrib/semanticTokens/browser/documentSemanticTokens";
+import "monaco-editor/editor/contrib/structuralDiff/common/structuralDiff.contribution";
 import "monaco-editor/editor/contrib/suggest/browser/suggestController";
 import "monaco-editor/editor/common/standaloneStrings";
 import "../../node_modules/monaco-editor/esm/vs/base/browser/ui/codicons/codicon/codicon-modifiers.css";
