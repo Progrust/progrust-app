@@ -4,6 +4,8 @@
 //! - `prepared.json` の形は [`PreparedRecord`]。作業領域（[`WorkspaceDir`]）の `prepared.json` を
 //!   [`read_prepared`] で読み、[`write_prepared`] で書く。読み込めないファイルは、退避も通知もせずに、
 //!   無いものとして扱う。書き込みは、プロセスの中でロックで直列化する。
+//! - 演習のビルドで許可クレートが失われていると分かったときに、`status` を `failed` にするのは
+//!   [`mark_prepared_failed`]。
 //! - 同梱の `allowed-crates.toml` と `Cargo.lock` のハッシュ値は [`crates_hash`]、今の `rustc -vV` の出力は
 //!   [`rustc_verbose_version`] で得る。
 //! - 初回準備を実行するかは [`needs_preparation`] で、読んだ記録と、今のハッシュ値と `rustc -vV` の出力から
@@ -114,6 +116,27 @@ pub fn write_prepared(
     // ロックが守るのはファイルへの操作の順番だけなので、ほかのスレッドがパニックしていても使う。
     let _guard = WRITE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
     write_json_file(&workspace.prepared_json(), record)
+}
+
+/// 演習のビルドで許可クレートが失われていると分かったときに、`prepared.json` に書くエラーの内容。
+pub const LOST_CRATES_ERROR: &str =
+    "演習のビルドで、外部クレートのソースかビルド済みの依存が失われていたため、準備し直します。";
+
+/// 作業領域の `prepared.json` の `status` を `failed` にし、`error` を `error` にする（spec/exercise-runner/
+/// crates-and-workspace.md「初回準備のやり直しが要る失敗」）。ほかの項目は変えない。書いたら `true`。
+///
+/// `prepared.json` が無いとき（読み込めないときを含む）は、書かずに `false` を返す。無いことが、すでに
+/// 「実行する条件」に当てはまるからである。読み込みと書き込みの間に、ほかの書き込みが入らないよう、
+/// [`write_prepared`] と同じロックを持つ。
+pub fn mark_prepared_failed(workspace: &WorkspaceDir, error: &str) -> Result<bool, StorageError> {
+    let _guard = WRITE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+    let Some(mut record) = read_prepared(workspace)? else {
+        return Ok(false);
+    };
+    record.status = PreparedStatus::Failed;
+    record.error = Some(error.to_string());
+    write_json_file(&workspace.prepared_json(), &record)?;
+    Ok(true)
 }
 
 /// 同梱の `allowed-crates.toml` と `Cargo.lock` のハッシュ値（[`crates_hash_of`]）。
@@ -252,6 +275,36 @@ mod tests {
                 "error": null,
             })
         );
+    }
+
+    #[test]
+    fn marking_failed_changes_only_the_status_and_the_error() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = WorkspaceDir::new(temp.path());
+        write_prepared(&workspace, &ready()).unwrap();
+        assert!(mark_prepared_failed(&workspace, LOST_CRATES_ERROR).unwrap());
+        assert_eq!(
+            read_prepared(&workspace).unwrap(),
+            Some(PreparedRecord::failed(
+                HASH,
+                RUSTC,
+                "2026-11-24T19:02:00+09:00",
+                LOST_CRATES_ERROR
+            ))
+        );
+        assert!(needs_preparation(
+            read_prepared(&workspace).unwrap().as_ref(),
+            HASH,
+            RUSTC
+        ));
+    }
+
+    #[test]
+    fn marking_failed_without_a_record_writes_nothing() {
+        let temp = tempfile::tempdir().unwrap();
+        let workspace = WorkspaceDir::new(temp.path().join("workspace"));
+        assert!(!mark_prepared_failed(&workspace, LOST_CRATES_ERROR).unwrap());
+        assert!(!workspace.prepared_json().exists());
     }
 
     #[test]

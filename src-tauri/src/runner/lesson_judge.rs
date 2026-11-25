@@ -163,6 +163,12 @@ pub fn judge_lesson(options: &LessonJudgeOptions) -> Result<LessonJudgement, Les
             SubmitJudgement::without_cases(SubmitResultStatus::CompileError),
             built,
         ),
+        // 初回準備は始めない（このプログラムは、許可クレートを使う演習を判定しない）。原因を教材の作者が
+        // 確かめられるよう、ビルドの出力は書く。
+        Judged::CratesUnavailable(built) => (
+            SubmitJudgement::without_cases(SubmitResultStatus::CratesUnavailable),
+            built,
+        ),
         // 止める操作が無いので、ここには来ない。
         Judged::Stopped => {
             return Err(LessonJudgeError::Judge(CommandError {

@@ -7,6 +7,9 @@ mod common;
 mod fake_cargo;
 #[path = "fake_tools/rust.rs"]
 mod fake_rust;
+#[cfg(target_os = "macos")]
+#[path = "fake_tools/offline_cargo.rs"]
+mod offline_cargo;
 
 use std::{
     collections::BTreeMap,
@@ -1155,6 +1158,123 @@ fn exercises_without_crates_run_while_the_preparation_is_running() {
     assert_eq!(cargo_calls(fake.cargo()), ["build --quiet"]);
     stop_crate_preparation_on_exit(fx.app.handle());
     assert!(environment.wait_preparation_finished(Duration::ZERO));
+}
+
+/// 初回準備のやり直しが要る失敗。初回準備を `ready` まで進めるので（手順の 4 の `cp -c`）、macOS のときだけ実行する。
+#[cfg(target_os = "macos")]
+mod lost_crates {
+    use super::*;
+    use crate::offline_cargo::OfflineCargo;
+    use progrust_lib::runner::prepared::{LOST_CRATES_ERROR, PreparedStatus, read_prepared};
+    use progrust_lib::runner::workspace::WorkspaceDir;
+
+    /// 初回準備の後に、許可クレートのソースとレジストリの索引が失われた（空の `CARGO_HOME`）ときは、許可クレートを使う
+    /// 演習の実行を `crates_unavailable` にし、ビルドの出力をコンパイルエラーとして見せず、試行ログに記録せず、
+    /// `prepared.json` を `failed` にして初回準備を始める。初回準備が終わるまで、その演習は受け付けない。
+    #[test]
+    fn a_build_with_lost_crates_is_crates_unavailable_and_starts_the_preparation_again() {
+        // 演習のビルドは、実物の cargo を空の CARGO_HOME で動かす。初回準備は、偽の cargo で動かす。
+        let offline = OfflineCargo::new();
+        let fake = offline.fake.cargo();
+        let fx = Fixture::with(RunLimits::default(), Some(offline.tools()));
+        let _stop = StopPreparationOnDrop(&fx);
+        let environment = fx.app.state::<Environment>().inner().clone();
+
+        // 初回準備を済ませる（ready）。
+        set_behavior(fake, "succeed", "succeed");
+        assert!(start_crate_preparation(fx.app.handle(), &offline.tools()));
+        assert!(environment.wait_preparation_finished(WAIT));
+        assert_eq!(environment.crates_status().status, CratesState::Ready);
+        let workspace = WorkspaceDir::in_app_data(&AppDataDir::new(fx.data.path()));
+        assert_eq!(
+            read_prepared(&workspace).unwrap().unwrap().status,
+            PreparedStatus::Ready
+        );
+        let calls_before = cargo_calls(fake).len();
+        // やり直しの初回準備は、止めるまで終わらないようにして、準備中の状態を確かめる。
+        set_behavior(fake, "hang", "hang");
+
+        let code = "use rand::Rng;\n\nfn main() {\n    println!(\"{}\", rand::rng().random_range(1..=6));\n}\n";
+        assert_eq!(
+            fx.run_lesson("r1", CRATES_LESSON, "main", &[("src/main.rs", code)]),
+            Ok(Value::Null)
+        );
+        let finished = fx.wait_finished("r1");
+        assert_eq!(
+            finished.payload["run"],
+            json!({ "mode": "main", "status": "crates_unavailable", "exit_code": null })
+        );
+        // ビルドの出力は送らず、知らせだけを system で送る。
+        assert_eq!(
+            finished.chunks(),
+            [json!({ "stream": "system", "text": "外部クレートを準備し直しています" })]
+        );
+        assert_eq!(finished.started, 0);
+        // run_finished を送る前に、初回準備を始めている。
+        assert_eq!(environment.crates_status().status, CratesState::Preparing);
+
+        // prepared.json を failed にした（初回準備は終わっていないので、書いたのは実行の側）。
+        let recorded = read_prepared(&workspace).unwrap().unwrap();
+        assert_eq!(recorded.status, PreparedStatus::Failed);
+        assert_eq!(recorded.error.as_deref(), Some(LOST_CRATES_ERROR));
+        // 初回準備の cargo が、build から動き出した。
+        wait_until("初回準備の cargo が動き出さない", || {
+            hanging_pid(fake).is_some()
+        });
+        let calls = cargo_calls(fake);
+        assert_eq!(calls[calls_before..], ["build --quiet"]);
+        // 試行ログに記録しない。
+        assert_eq!(
+            AppDataDir::new(fx.data.path())
+                .unfinished_session(CRATES_LESSON)
+                .unwrap()
+                .map(|log| log.events.len())
+                .unwrap_or(0),
+            0
+        );
+        // 初回準備が終わるまで、許可クレートを使う演習は受け付けない。
+        assert_eq!(
+            error_code(fx.run_lesson("r2", CRATES_LESSON, "main", &[("src/main.rs", code)])),
+            "crates_not_ready"
+        );
+        // 自動ではやり直さない。
+        fx.assert_no_finished_within(Duration::from_millis(200));
+    }
+
+    /// テスト実行のビルドも、初回準備のやり直しが要る失敗を見分ける。
+    #[test]
+    fn a_test_build_with_lost_crates_is_crates_unavailable_too() {
+        let offline = OfflineCargo::new();
+        let fake = offline.fake.cargo();
+        let fx = Fixture::with(RunLimits::default(), Some(offline.tools()));
+        let _stop = StopPreparationOnDrop(&fx);
+        let environment = fx.app.state::<Environment>().inner().clone();
+        set_behavior(fake, "succeed", "succeed");
+        assert!(start_crate_preparation(fx.app.handle(), &offline.tools()));
+        assert!(environment.wait_preparation_finished(WAIT));
+        set_behavior(fake, "hang", "hang");
+
+        assert_eq!(
+            fx.run_lesson("r1", CRATES_LESSON, "test", &[("src/main.rs", HELLO)]),
+            Ok(Value::Null)
+        );
+        let finished = fx.wait_finished("r1");
+        assert_eq!(
+            finished.payload["run"],
+            json!({ "mode": "test", "status": "crates_unavailable", "exit_code": null })
+        );
+        assert_eq!(
+            finished.chunks(),
+            [json!({ "stream": "system", "text": "外部クレートを準備し直しています" })]
+        );
+        assert_eq!(environment.crates_status().status, CratesState::Preparing);
+        assert!(
+            AppDataDir::new(fx.data.path())
+                .unfinished_session(CRATES_LESSON)
+                .unwrap()
+                .is_none_or(|log| log.events.is_empty())
+        );
+    }
 }
 
 /// 落としたときに、動いている初回準備を止める。

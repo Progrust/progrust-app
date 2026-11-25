@@ -15,6 +15,7 @@ use super::error::{CommandError, ErrorCode};
 use crate::attempts::{RunMode, RunRecord, SessionKind, SubmitRecord};
 use crate::content::{ContentDir, has_exercise};
 use crate::environment::Environment;
+use crate::environment::preparation::restart_crate_preparation;
 use crate::progress::LessonProgress;
 use crate::runner::RunnerDir;
 use crate::runner::run::{
@@ -233,6 +234,7 @@ pub fn stop_runs_on_exit<R: Runtime>(app: &AppHandle<R>) {
 }
 
 /// イベントを、アプリのウィンドウに `emit` で送る。試行ログと進捗は、アプリの状態の [`AppDataDir`] に書く。
+/// ビルドの失敗が初回準備のやり直しが要る失敗に当てはまったときは、`prepared.json` を `failed` にして初回準備を始める。
 struct AppEvents<R: Runtime>(AppHandle<R>);
 
 impl<R: Runtime> RunEvents for AppEvents<R> {
@@ -285,5 +287,9 @@ impl<R: Runtime> RunEvents for AppEvents<R> {
         self.0
             .state::<AppDataDir>()
             .record_pass(lesson_id, session_id, at)
+    }
+
+    fn crates_lost(&self) {
+        restart_crate_preparation(&self.0);
     }
 }

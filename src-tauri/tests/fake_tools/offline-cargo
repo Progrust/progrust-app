@@ -1,0 +1,32 @@
+#!/bin/sh
+# テスト用の cargo の振り分け（spec/non-functional/testing.md「偽の claude と偽の cargo」）。
+#
+# 演習のビルドは実物の cargo で、初回準備は偽の cargo で動かすテストに使う。テストでは、この原本を
+# 指すシンボリックリンクを、テストごとの一時ディレクトリに置いて使う（tests/fake_tools/offline_cargo.rs）。
+# 動きは、実行ファイル（リンク）と同じディレクトリのファイルで決める（環境変数では決めない）。
+#
+# - 引数に `--offline` がある呼び出し（演習のビルドと、テスト実行・判定の cargo test）は、real-cargo に
+#   書いたパスの実物の cargo を、cargo-home に書いたディレクトリを CARGO_HOME にして動かす。ネットワークは
+#   使わない（CARGO_NET_OFFLINE）。rustc は、実物の cargo と同じディレクトリのものを使う。
+# - ほかの呼び出し（初回準備の cargo build・cargo test --no-run、--version）は、other-cargo に書いた
+#   パスの cargo（ふつうは偽の cargo）に、そのまま渡す。
+
+dir=${0%/*}
+
+read_path() {
+  IFS= read -r value < "$dir/$1" || [ -n "$value" ] || {
+    echo "offline cargo: $dir/$1 を読めない" >&2
+    exit 1
+  }
+  printf '%s' "$value"
+}
+
+case " $* " in
+  *" --offline "*)
+    real=$(read_path real-cargo) || exit 1
+    home=$(read_path cargo-home) || exit 1
+    CARGO_HOME=$home RUSTC=${real%/*}/rustc CARGO_NET_OFFLINE=true exec "$real" "$@"
+    ;;
+esac
+other=$(read_path other-cargo) || exit 1
+exec "$other" "$@"
