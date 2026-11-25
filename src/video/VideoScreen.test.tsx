@@ -137,7 +137,8 @@ function setup(
         return {
           lesson: {
             id: lessonId,
-            chapter: "ch04",
+            // 章は、レッスンの ID の頭（ch05-01 なら ch05）。違う章を返すと、動画の表示が失敗する。
+            chapter: lessonId.split("-")[0],
             kind,
             title: "所有権のムーブ",
             primary_elements: [],
@@ -196,8 +197,12 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// 読み込みが済むまで待つ。「再生」ボタンは、読み込み中も押せない状態で出ているので、
+// 出たことではなく、押せるようになったことを待つ。
 async function ready() {
-  await screen.findByRole("button", { name: "再生" });
+  await waitFor(() =>
+    expect(screen.getByRole("button", { name: "再生" })).toBeEnabled(),
+  );
 }
 
 describe("開いたとき", () => {
@@ -328,7 +333,7 @@ describe("読み込みに失敗したときの右端の行動", () => {
       progress: { video_watched: true },
     });
     await screen.findByText("動画を読み込めませんでした");
-    fireEvent.click(screen.getByRole("button", { name: "演習へ" }));
+    fireEvent.click(await screen.findByRole("button", { name: "演習へ" }));
     expect(navigate).toHaveBeenCalledWith({
       name: "exercise",
       lessonId: "ch04-02",
@@ -341,7 +346,9 @@ describe("読み込みに失敗したときの右端の行動", () => {
       progress: { video_watched: true },
     });
     await screen.findByText("動画を読み込めませんでした");
-    fireEvent.click(screen.getByRole("button", { name: "次のレッスンへ" }));
+    fireEvent.click(
+      await screen.findByRole("button", { name: "次のレッスンへ" }),
+    );
     expect(navigate).toHaveBeenCalledWith({
       name: "video",
       lessonId: "ch04-02",
