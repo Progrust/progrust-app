@@ -7,7 +7,9 @@
 //   初期コード（starter/）を、この順に 1 つずつ判定する。作業領域が 1 つなので、同時には判定しない。
 // - 模範解答の判定結果が passed でなければ「模範解答」、初期コードの判定結果が passed なら「初期コード」のエラーにする。
 // - 判定できなかったとき（プログラムが 0 以外で終わった、JSON を読めないなど）も、その検査のエラーにする。
-// - 許可クレートを使う演習（dependencies が空でない演習）は、作業領域の初回準備が要るので、まだ判定しない（ADR 0222）。
+// - 許可クレートを使う演習（dependencies が空でない演習）も、ほかの演習と同じく判定する。判定の前に、判定だけを行う
+//   プログラムが、判定の作業領域で初回準備をする（ADR 0242）。初回準備にはネットワークが要る。初回準備に失敗したときは、
+//   プログラムが 0 以外で終わるので、その検査のエラーになる。
 // - lesson.json が読めないレッスン、exercise が無いレッスン、solution/・starter/ が無いレッスンは判定しない
 //   （「構成」「定義」が報告する）。
 import { spawnSync } from "node:child_process";
@@ -55,8 +57,6 @@ function exerciseDir(entry: LessonEntry): string | null {
   if (lesson.value.kind === "video_only") return null;
   const exercise = lesson.value.exercise;
   if (typeof exercise !== "object" || exercise === null) return null;
-  const dependencies = (exercise as { dependencies?: unknown }).dependencies;
-  if (Array.isArray(dependencies) && dependencies.length > 0) return null;
   return join(entry.dir, "exercise");
 }
 
