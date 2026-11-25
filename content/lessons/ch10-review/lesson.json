@@ -1,0 +1,38 @@
+{
+  "id": "ch10-review",
+  "chapter": "ch10",
+  "kind": "chapter_review",
+  "title": "章末復習",
+  "summary": "サイコロを振るモジュールを作り、rand クレートと pub・use を組み合わせて使う",
+  "primary_elements": [
+    "module.basic",
+    "module.visibility",
+    "module.use_path",
+    "crate.external"
+  ],
+  "secondary_elements": [
+    "program.main",
+    "var.mutability",
+    "fmt.debug",
+    "fmt.format_spec",
+    "scalar.integer",
+    "fn.basic",
+    "control.for_range",
+    "vec.basic"
+  ],
+  "estimated_minutes": 25,
+  "exercise": {
+    "layout": "single",
+    "judge": { "mode": "test", "target": "src/main.rs" },
+    "dependencies": ["rand"],
+    "readonly_files": [],
+    "case_labels": {
+      "roll_stays_in_range": "dice::roll: 1 以上 sides 以下に収まる",
+      "roll_one_sided_die": "dice::roll: 1 面のサイコロは必ず 1",
+      "roll_all_returns_count_values": "game::roll_all: count 個の値を返す",
+      "roll_all_zero_count": "game::roll_all: 0 個のとき",
+      "roll_all_values_stay_in_range": "game::roll_all: すべての値が範囲に収まる",
+      "roll_all_one_sided_die": "game::roll_all: 1 面のサイコロはすべて 1"
+    }
+  }
+}
