@@ -62,7 +62,7 @@ rand = "=0.9.1"
 1. `allcrates/` を作る（上の「作業領域」）。
 2. `warmup/` に、パッケージ名 `progrust_warmup`、edition 2024 で、`[dependencies]` が `allcrates/` への path 依存 1 行だけの `Cargo.toml`、同梱の `Cargo.lock`、`fn main() {}` だけを書いた `src/main.rs` を作る。
 3. `cargo build` と `cargo test --no-run` を実行する（ネットワークが必要）。ビルド先は `target/`。
-4. `target-validate/` を消し、`target/` を `target-validate/` に複製する。複製は APFS のクローン（`cp -c`）で行う。複製した後、`target-validate/` から、学習者の `project/` のビルド結果（パッケージ `progrust_exercise` の実行ファイル、`deps/` の `progrust_exercise-*`、`.fingerprint/` の `progrust_exercise-*`）を消す。
+4. `target-validate/` を消し、`target/` を `target-validate/` に複製する。複製は APFS のクローン（`cp -c`）で行う。複製した後、`target-validate/` から、学習者の `project/` のビルド結果（パッケージ `progrust_exercise` の実行ファイルと、そのビルドの途中の成果物と fingerprint）を消す。途中の成果物と fingerprint の置き場所は cargo の版で変わり、cargo 1.100.0 では `build/progrust_exercise/`、cargo 1.99.1 では `deps/` と `.fingerprint/` の `progrust_exercise-*` である。どちらの置き場所のものも消す。
 5. 成功したら `prepared.json` に `status: ready` と `crates_hash`・`rustc_version`・`prepared_at` を書く。失敗したら `status: failed` と エラー内容を書き、次回起動時に再度実行する。
 
 - アプリを終了するときに初回準備が動いていたら、初回準備の `cargo` を止め、`prepared.json` は書かない。次回起動時には「実行する条件」に当てはまり、初回準備をやり直す（初回準備を始めるときの `prepared.json` は、無いか、`status` が `failed` か、`crates_hash`・`rustc_version` が今のものと異なる）。
