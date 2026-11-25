@@ -1241,6 +1241,47 @@ mod lost_crates {
         fx.assert_no_finished_within(Duration::from_millis(200));
     }
 
+    /// 初回準備の後に、作業領域の `allcrates/` だけが失われたときも、`crates_unavailable` にして初回準備を始める。
+    /// 初回準備の手順 1 が `allcrates/` を作り直すので、やり直せば直る。
+    #[test]
+    fn a_missing_allcrates_dir_is_crates_unavailable_and_the_preparation_again_restores_it() {
+        let offline = OfflineCargo::new();
+        let fake = offline.fake.cargo();
+        let fx = Fixture::with(RunLimits::default(), Some(offline.tools()));
+        let _stop = StopPreparationOnDrop(&fx);
+        let environment = fx.app.state::<Environment>().inner().clone();
+        set_behavior(fake, "succeed", "succeed");
+        assert!(start_crate_preparation(fx.app.handle(), &offline.tools()));
+        assert!(environment.wait_preparation_finished(WAIT));
+        let workspace = WorkspaceDir::in_app_data(&AppDataDir::new(fx.data.path()));
+        assert!(workspace.allcrates().is_dir());
+        std::fs::remove_dir_all(workspace.allcrates()).unwrap();
+        // やり直しの初回準備は、`allcrates/` を作ってから、止めるまで終わらないようにする。
+        set_behavior(fake, "hang", "hang");
+
+        assert_eq!(
+            fx.run_lesson("r1", CRATES_LESSON, "main", &[("src/main.rs", HELLO)]),
+            Ok(Value::Null)
+        );
+        let finished = fx.wait_finished("r1");
+        assert_eq!(
+            finished.payload["run"],
+            json!({ "mode": "main", "status": "crates_unavailable", "exit_code": null })
+        );
+        assert_eq!(
+            finished.chunks(),
+            [json!({ "stream": "system", "text": "外部クレートを準備し直しています" })]
+        );
+        assert_eq!(environment.crates_status().status, CratesState::Preparing);
+        let recorded = read_prepared(&workspace).unwrap().unwrap();
+        assert_eq!(recorded.status, PreparedStatus::Failed);
+        assert_eq!(recorded.error.as_deref(), Some(LOST_CRATES_ERROR));
+        wait_until("初回準備の cargo が動き出さない", || {
+            hanging_pid(fake).is_some()
+        });
+        assert!(workspace.allcrates().is_dir());
+    }
+
     /// テスト実行のビルドも、初回準備のやり直しが要る失敗を見分ける。
     #[test]
     fn a_test_build_with_lost_crates_is_crates_unavailable_too() {

@@ -5,6 +5,7 @@
 //! - 終了コード 101 で失敗したときだけ当てはめる。
 //! - `.crate` の欠落とレジストリの索引の欠落は、cargo 自身の標準エラー出力から探す。ビルド済みの依存の破損（E0786）は、
 //!   コンパイラの診断から探す。探す出力を広げない（学習者のプログラムの文字列と取り違えないため。ADR 0137）。
+//! - `allcrates/` の欠落も、cargo 自身の標準エラー出力から探す。
 //! - 文言は cargo の版で変わりうるので、どの状態も 2 つ以上の語の組で判定する。
 //! - E0786 は、学習者のコードのコンパイルエラーと同じ形で出るので、`note:` の文がビルド先の中のファイルを指すときだけ
 //!   当てはめる。ビルド先の中のどこを指すかは見ない。
@@ -30,6 +31,13 @@ const CARGO_STDERR_PATTERNS: &[&[&str]] = &[
     ],
 ];
 
+/// `allcrates/` が無いときの、`no matching package named` の文に入る語（パッケージ名つき）。
+const MISSING_ALLCRATES_PACKAGE: &str = "no matching package named `progrust_allowed_crates`";
+/// `allcrates/` が無いときの、探した場所の行の頭。この後に `allcrates` のパスが続く。
+const LOCATION_SEARCHED: &str = "location searched:";
+/// 探した場所のパスに入る、許可クレートのパッケージのディレクトリ名。
+const ALLCRATES_DIR: &str = "allcrates";
+
 /// ビルド済みの依存の破損の診断の `code`。
 const INVALID_METADATA_CODE: &str = "E0786";
 /// ビルド済みの依存の破損の診断の `message` に入る語。
@@ -52,11 +60,22 @@ pub fn needs_crate_preparation(
     }
     let lost_sources = CARGO_STDERR_PATTERNS
         .iter()
-        .any(|words| words.iter().all(|word| cargo_stderr.contains(word)));
+        .any(|words| words.iter().all(|word| cargo_stderr.contains(word)))
+        || is_missing_allcrates(cargo_stderr);
     lost_sources
         || diagnostics
             .iter()
             .any(|diagnostic| is_broken_dependency(diagnostic, target_dir))
+}
+
+/// 作業領域の `allcrates/` が無いことを示す、cargo 自身の標準エラー出力か。`location searched:` の行に、`allcrates`
+/// のパスが続くときだけ当てはまる（レジストリの索引が無いときは、`crates.io index` が続く）。
+fn is_missing_allcrates(cargo_stderr: &str) -> bool {
+    cargo_stderr.contains(MISSING_ALLCRATES_PACKAGE)
+        && cargo_stderr.lines().any(|line| {
+            line.strip_prefix(LOCATION_SEARCHED)
+                .is_some_and(|searched| searched.contains(ALLCRATES_DIR))
+        })
 }
 
 /// ビルド先の中のファイルが壊れていることを示す E0786 の診断か。
@@ -105,6 +124,12 @@ mod tests {
          required by package `progrust_exercise v0.1.0 (/w/project)`\n\
          note: offline mode (via `--offline`) can sometimes cause surprising resolution failures\n";
 
+    /// 作業領域の `allcrates/` が無いときの、cargo の出力。
+    const MISSING_ALLCRATES: &str = "error: no matching package named `progrust_allowed_crates` found\n\
+         location searched: /w/workspace/allcrates\n\
+         required by package `progrust_exercise v0.1.0 (/w/workspace/project)`\n\
+         note: offline mode (via `--offline`) can sometimes cause surprising resolution failures\n";
+
     /// 学習者のコードのコンパイルエラーのときの、cargo 自身の標準エラー出力。
     const COULD_NOT_COMPILE: &str = "error: could not compile `progrust_exercise` (bin \"progrust_exercise\") due to 1 previous error\n";
 
@@ -131,9 +156,10 @@ mod tests {
     }
 
     #[test]
-    fn the_three_states_of_the_table_need_the_preparation() {
+    fn the_four_states_of_the_table_need_the_preparation() {
         assert!(judge(Some(101), MISSING_CRATE, &[]));
         assert!(judge(Some(101), MISSING_INDEX, &[]));
+        assert!(judge(Some(101), MISSING_ALLCRATES, &[]));
         assert!(judge(
             Some(101),
             COULD_NOT_COMPILE,
@@ -146,6 +172,7 @@ mod tests {
         for exit_code in [None, Some(1), Some(0)] {
             assert!(!judge(exit_code, MISSING_CRATE, &[]), "{exit_code:?}");
             assert!(!judge(exit_code, MISSING_INDEX, &[]), "{exit_code:?}");
+            assert!(!judge(exit_code, MISSING_ALLCRATES, &[]), "{exit_code:?}");
             assert!(
                 !judge(exit_code, "", &[invalid_metadata(&mmap_note(TARGET))]),
                 "{exit_code:?}"
@@ -160,6 +187,12 @@ mod tests {
             "Caused by:\n  attempting to make an HTTP request, but --offline was specified\n",
             "error: no matching package named `rand` found\n",
             "location searched: crates.io index\n",
+            "error: no matching package named `progrust_allowed_crates` found\n",
+            "location searched: /w/workspace/allcrates\n",
+            // 別のパッケージの索引が無いとき。
+            "error: no matching package named `rand` found\nlocation searched: /w/workspace/allcrates\n",
+            // `allcrates` のパスが、探した場所の行に無いとき。
+            "error: no matching package named `progrust_allowed_crates` found\nlocation searched: /w/workspace/other\nnote: allcrates\n",
             // 2 つの状態の語が 1 つずつ。
             "error: failed to download `cfg-if v1.0.5`\nlocation searched: crates.io index\n",
         ] {
@@ -198,7 +231,7 @@ mod tests {
         let in_diagnostic = ErrorDiagnostic {
             code: None,
             message: MISSING_CRATE.into(),
-            notes: vec![MISSING_INDEX.into()],
+            notes: vec![MISSING_INDEX.into(), MISSING_ALLCRATES.into()],
         };
         assert!(!judge(Some(101), COULD_NOT_COMPILE, &[in_diagnostic]));
         // E0786 の文が、cargo 自身の標準エラー出力にあっても当てはまらない。

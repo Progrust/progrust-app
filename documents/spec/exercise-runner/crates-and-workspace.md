@@ -116,12 +116,13 @@ rand = "=0.9.1"
 
 ## 初回準備のやり直しが要る失敗
 
-`--offline` での演習のビルド（`project/`・`validate/`）が終了コード 101 で失敗し、ビルドの出力が次のどれかに当てはまるときは、許可クレートのソースか、ビルド済みの依存が失われている。ビルドの出力は、cargo 自身の標準エラー出力と、コンパイラの診断（cargo の標準出力の JSON のうち `compiler-message` の診断）に分かれて出る（[コードの実行（run）](run.md)「ビルドの出力の表示」）。判定に使う文は、表の「探す出力」の列の出力から探す。
+`--offline` での演習のビルド（`project/`・`validate/`）が終了コード 101 で失敗し、ビルドの出力が次のどれかに当てはまるときは、許可クレートのソースか、作業領域の `allcrates/` か、ビルド済みの依存が失われている。ビルドの出力は、cargo 自身の標準エラー出力と、コンパイラの診断（cargo の標準出力の JSON のうち `compiler-message` の診断）に分かれて出る（[コードの実行（run）](run.md)「ビルドの出力の表示」）。判定に使う文は、表の「探す出力」の列の出力から探す。
 
 | 状態 | 探す出力 | 判定に使う文 |
 |---|---|---|
 | ダウンロード済みの `.crate` が無い | cargo 自身の標準エラー出力 | `failed to download` と、`--offline` に触れる文（`attempting to make an HTTP request, but --offline was specified`） |
 | レジストリの索引が無い | cargo 自身の標準エラー出力 | `no matching package named` と `location searched: crates.io index` |
+| 作業領域の `allcrates/` が無い | cargo 自身の標準エラー出力 | ``no matching package named `progrust_allowed_crates` `` と、`location searched:` の後に `allcrates` のパスが続く行 |
 | ビルド済みの依存が壊れている | コンパイラの診断 | `found invalid metadata files for crate`（E0786）の診断で、その `note:` が示すファイルが `target/` などのビルド先の中にある |
 
 - 文言は cargo の版で変わりうるので、1 つの語だけで判定せず、表の 2 つ以上の語の組で判定する。

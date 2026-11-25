@@ -120,6 +120,7 @@
 * [ADR 0134](0134-allow-unused-dependencies-cargo-lint.md) - 許可クレートを使う演習のプロジェクトの Cargo.toml で、cargo の「使っていない依存」の警告（cargo::unused_dependencies）を止める
 * [ADR 0135](0135-show-cargo-stderr-with-quiet-build.md) - 実行・テスト実行・提出のビルドの cargo に --quiet を付け、cargo 自身の標準エラー出力を、コンパイラの診断と合わせてそのまま表示する
 * [ADR 0137](0137-find-e0786-in-compiler-diagnostics.md) - 初回準備のやり直しの判定で、ビルド済みの依存の破損（E0786）を、cargo 自身の標準エラー出力ではなく、コンパイラの診断から探す
+* [ADR 0246](0246-detect-missing-allcrates-as-lost-crates.md) - 作業領域の allcrates/ が無いときの --offline のビルドの失敗（no matching package named の progrust_allowed_crates と、allcrates のパスの location searched）も、初回準備のやり直しが要る失敗として扱う
 * [ADR 0138](0138-keep-cargo-stderr-in-attempt-log.md) - 試行ログの `stderr` に、ビルドの cargo 自身の標準エラー出力を、コンパイラの診断とプログラムの標準エラー出力の間に入れて保存する
 * [ADR 0139](0139-send-build-output-after-build-ends.md) - ビルドの出力を、ビルド中には送らず、ビルドが終わって結果が決まってから送る
 * [ADR 0201](0201-no-stop-button-for-submit.md) - 提出は学習者が途中で止められないままにし、提出中は「停止」ボタンを無効にする
