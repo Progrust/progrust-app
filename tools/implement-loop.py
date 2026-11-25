@@ -115,17 +115,31 @@ PROTECTED_PATHS = (
     "CLAUDE.md",
     ".claude/",
     ".github/",
+    ".gitleaks.toml",
+    ".gitleaksignore",
     "documents/conventions/",
     "tools/check-documents.py",
+    "tools/check-secrets.py",
     "tools/design-system.py",
     "tools/implement-loop.py",
     "tools/okf/",
+    "tools/tests/test_check_secrets.py",
     "tools/tests/test_implement_loop.py",
 )
 
 # 機械のチェック（requires のファイルがあるときだけ実行する。requires_script があるときは、
-# package.json の scripts にそのスクリプトがあるときだけ実行する）
+# package.json の scripts にそのスクリプトがあるときだけ実行する）。
+# stop_on_failure のチェック（秘密の情報の検査）は、タスクのブランチのものではなく、origin の main の道具
+# （requires と with_files を main から取り出したもの）で実行する。失敗したら直しに回さず、push せずに止まる。
+# push はすべて push_branch を通り、その直前にも実行する（ADR 0249）。
 CHECKS: Tuple[Dict[str, Any], ...] = (
+    {
+        "name": "秘密の情報の検査",
+        "argv": ["python3", "-I", "tools/check-secrets.py"],
+        "requires": "tools/check-secrets.py",
+        "with_files": [".gitleaks.toml"],
+        "stop_on_failure": True,
+    },
     {"name": "documents の検査", "argv": ["python3", "tools/check-documents.py"], "requires": "tools/check-documents.py"},
     {"name": "デザインシステムの検査", "argv": ["python3", "tools/design-system.py", "check"], "requires": "tools/design-system.py"},
     {"name": "npm run check", "argv": ["npm", "run", "check"], "requires": "package.json"},
@@ -403,6 +417,8 @@ class Loop:
         self.call_index = 0
         self.lock_handle: Any = None
         self.owner: Optional[str] = None
+        # 始めるときに origin の main にあった、失敗したら止まるチェックの道具（途中で無くなったら止まる）
+        self.required_tools: set = set()
         self.attempted: Set[int] = set()
         self.triaged: Set[int] = set()
         # 仕分けの会話で権限に拒否された操作があったので、もう一度仕分けることにした Issue（ADR 0194）
@@ -444,6 +460,7 @@ class Loop:
         cwd: str,
         timeout: int,
         stdin: Optional[str] = None,
+        env: Optional[Dict[str, str]] = None,
     ) -> subprocess.CompletedProcess:
         # 標準入力を渡さないときは、端末や親の標準入力を待たないように閉じておく
         source: Dict[str, Any] = {"input": stdin} if stdin is not None else {"stdin": subprocess.DEVNULL}
@@ -451,6 +468,7 @@ class Loop:
             return subprocess.run(
                 argv,
                 cwd=cwd,
+                env=env,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
                 text=True,
@@ -480,7 +498,11 @@ class Loop:
             raise InfraError(f"`gh {' '.join(args[:3])}` の出力を JSON として読めません。")
 
     def git(self, args: List[str], cwd: Optional[str] = None, check: bool = True) -> subprocess.CompletedProcess:
-        result = self.run(["git"] + args, cwd or self.worktree, GIT_TIMEOUT)
+        # ループ自身の git は、フックを動かさず、置き換えの参照（refs/replace）と grafts を使わない（ADR 0249）。
+        # ループの claude が作業ツリーと共有する .git にフックや置き換えを置いても、ループのコミット・マージ・push と、
+        # 検査の道具の取り出しが、それに左右されないようにする。
+        env = dict(os.environ, GIT_NO_REPLACE_OBJECTS="1", GIT_GRAFT_FILE=os.devnull)
+        result = self.run(["git", "-c", f"core.hooksPath={os.devnull}"] + args, cwd or self.worktree, GIT_TIMEOUT, env=env)
         if check and result.returncode != 0:
             raise InfraError(f"`git {' '.join(args[:3])}` が失敗しました: {tail(result.stderr).strip()}")
         return result
@@ -701,6 +723,84 @@ class Loop:
                     f"先に見つかる端末から、始め直してください。"
                 )
 
+    def check_secret_scanner(self) -> None:
+        """秘密の情報の検査に使う gitleaks が、固定した版で入っているかを確かめる（ADR 0249）。
+
+        入っていないと、どのタスクも機械のチェックで止まるので、始める前に確かめる。
+        """
+        for check in CHECKS:
+            if not check.get("stop_on_failure"):
+                continue
+            prepared = self.main_tool_argv(check)
+            if prepared is None:
+                continue
+            argv, _ = prepared
+            self.required_tools.add(check["requires"])
+            result = self.run(argv + ["--check-version"], self.worktree, GIT_TIMEOUT)
+            if result.returncode != 0:
+                raise InfraError(
+                    f"`{' '.join(check['argv'] + ['--check-version'])}`（`{MAIN_REF}` のもの）が失敗したので、始めません:\n"
+                    f"{tail(result.stdout + result.stderr).strip()}"
+                )
+
+    def remote_sha(self, ref: str) -> Optional[str]:
+        """origin（GitHub）にある ref の先頭のコミットを、手元の追跡ブランチを使わずに `git ls-remote` で得て、
+        手元に無ければ取ってくる。ref が無ければ None。"""
+        result = self.git(["ls-remote", REMOTE, ref])
+        sha = None
+        for line in result.stdout.splitlines():
+            fields = line.split()
+            if len(fields) == 2 and fields[1] == ref:
+                sha = fields[0]
+        if sha is None:
+            return None
+        if not re.fullmatch(r"[0-9a-f]{40}", sha):
+            raise InfraError(f"`git ls-remote` の {ref} の値が、コミットの SHA ではありません: {sha}")
+        if self.git(["cat-file", "-e", f"{sha}^{{commit}}"], check=False).returncode != 0:
+            self.git(["fetch", "--quiet", REMOTE, sha])
+        return sha
+
+    def main_tool_argv(self, check: Dict[str, Any], branch: Optional[str] = None) -> Optional[Tuple[List[str], str]]:
+        """失敗したら止まるチェックの道具を、origin の main から取り出し、実行する引数と、main の SHA を返す。
+
+        タスクのブランチの道具と設定は、タスクの作業で書き換えられているかもしれないので使わない。手元の追跡ブランチ
+        （origin/main）も、作業ツリーと共有する .git で動かせるので使わず、`git ls-remote` で得た main の SHA から
+        取り出す。検査の範囲も、その SHA（と、origin に branch があれば、その SHA）を基点にする（`--base`）。
+        main に道具が無ければ None（このチェックは無い）。ただし、始めるときに道具があったのに無くなったときと、
+        main にあるのに取り出せないときは止まる。
+        """
+        requires = check["requires"]
+        main_sha = self.remote_sha(f"refs/heads/{MAIN_BRANCH}")
+        if main_sha is None:
+            raise InfraError(f"origin に {MAIN_BRANCH} のブランチが見つからないので、{check['name']}を実行できません。止めます。")
+        if self.git(["cat-file", "-e", f"{main_sha}:{requires}"], check=False).returncode != 0:
+            if requires in self.required_tools:
+                raise InfraError(
+                    f"始めるときには origin の {MAIN_BRANCH} にあった `{requires}` が、見つからなくなりました。"
+                    f"{check['name']}を飛ばさずに止めます。"
+                )
+            return None
+        assert self.run_dir is not None
+        base = os.path.join(self.run_dir, "main-tools")
+        shutil.rmtree(base, ignore_errors=True)
+        for path in [requires] + list(check.get("with_files", [])):
+            result = self.git(["show", f"{main_sha}:{path}"], check=False)
+            if result.returncode != 0:
+                raise InfraError(f"origin の {MAIN_BRANCH}（{main_sha[:12]}）から `{path}` を取り出せないので、{check['name']}を実行できません。止めます。")
+            target = os.path.join(base, path)
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            with open(target, "w", encoding="utf-8") as handle:
+                handle.write(result.stdout)
+        script_index = check["argv"].index(requires)
+        argv = list(check["argv"])
+        argv[script_index] = os.path.join(base, requires)
+        argv += ["--repo", self.worktree, "--base", main_sha]
+        if branch is not None:
+            branch_sha = self.remote_sha(f"refs/heads/{branch}")
+            if branch_sha is not None:
+                argv += ["--base", branch_sha]
+        return argv, main_sha
+
     def settings_copy(self, path: str) -> str:
         """権限の設定を main から取り出して、作業ツリーの外に置く。"""
         assert self.run_dir is not None
@@ -916,6 +1016,9 @@ class Loop:
         if failure:
             return [f"## 機械のチェックの失敗: npm ci\n\n```\n{failure}\n```"]
         for check in CHECKS:
+            if check.get("stop_on_failure"):
+                self.guard_before_push(task, f"task/{task.number}", f"check{step}")
+                continue
             if not self.check_applies(check):
                 continue
             self.say(f"機械のチェック: {check['name']}")
@@ -930,6 +1033,31 @@ class Loop:
                 )
         self.discard_if_dirty("機械のチェックの後")
         return findings
+
+    def guard_before_push(self, task: Task, branch: str, when: str) -> None:
+        """失敗したら止まるチェック（秘密の情報の検査）を、origin の main の道具で実行する。失敗したら、push せずに止まる。
+
+        コミットした秘密の情報は、後のコミットで消しても、push すればコミットの履歴に残る。ループはコミットを
+        書き換えないので、直しに回さずに止まり、ユーザーに任せる（ADR 0249）。出力は、値を伏せたもので、
+        記録のディレクトリにだけ残し、GitHub には書かない。
+        """
+        for check in CHECKS:
+            if not check.get("stop_on_failure"):
+                continue
+            prepared = self.main_tool_argv(check, branch)
+            if prepared is None:
+                continue
+            argv, main_sha = prepared
+            self.say(f"機械のチェック: {check['name']}（origin の {MAIN_BRANCH} {main_sha[:12]} の道具で）")
+            result = self.run(argv, self.worktree, CHECK_TIMEOUT)
+            output = result.stdout + result.stderr
+            name = f"task{task.number}-{when}-{os.path.basename(check['argv'][-1]).replace('.', '_')}.txt"
+            self.save(name, output)
+            if result.returncode != 0:
+                raise InfraError(
+                    f"{check['name']}（`{' '.join(check['argv'])}`）が、#{task.number} の作業で終了コード {result.returncode} で終わったので、"
+                    f"push せずに止めます。記録のディレクトリの {name} を見てください。出力の末尾:\n{tail(output)}"
+                )
 
     def review(self, task: Task, model: str, step: int) -> Tuple[List[Dict[str, str]], List[Dict[str, str]]]:
         """レビューを呼び、must の指摘と note の指摘を返す。"""
@@ -972,11 +1100,19 @@ class Loop:
         out = self.git(["ls-remote", REMOTE, f"refs/heads/{branch}"]).stdout.split()
         return out[0] if out else None
 
-    def publish(self, branch: str, title: str, body: str) -> int:
-        """push して、PR を作る（既にあれば本文を直す）。PR の番号を返す。"""
+    def push_branch(self, task: Task, branch: str, when: str) -> None:
+        """タスクのブランチを push する。ループの push は、すべてここを通る。
+
+        push の直前に、origin の main の道具で秘密の情報の検査を実行し、通ったときだけ push する（ADR 0249）。
+        """
+        self.guard_before_push(task, branch, when)
         push = self.git(["push", "--force", REMOTE, f"{branch}:{branch}"], check=False)
         if push.returncode != 0:
             raise InfraError(f"`git push` が失敗しました: {tail(push.stderr).strip()}")
+
+    def publish(self, task: Task, branch: str, title: str, body: str) -> int:
+        """push して、PR を作る（既にあれば本文を直す）。PR の番号を返す。"""
+        self.push_branch(task, branch, "push")
         number = self.find_pr(branch)
         if number is not None:
             self.gh(["pr", "edit", str(number), "--title", title, "--body-file", "-"], stdin=body)
@@ -1213,7 +1349,7 @@ class Loop:
             self.say("  前の回から変わらなかったので、空のコミットで CI をやり直す")
 
         body = self.pr_body(task, summary, fixed, human, notes, history + [f"{label}: 機械のチェックとレビューを通った"])
-        pr = self.publish(branch, title, body)
+        pr = self.publish(task, branch, title, body)
         ci_findings = self.wait_for_ci(pr)
         if ci_findings:
             return outcome("fix", "CI で失敗した", ci_findings, notes, pr)
@@ -1273,9 +1409,8 @@ class Loop:
         ahead = self.git(["rev-list", "--count", f"{MAIN_REF}..HEAD"]).stdout.strip()
         pushed = False
         if ahead not in ("", "0"):
-            push = self.git(["push", "--force", REMOTE, f"{branch}:{branch}"], check=False)
-            if push.returncode != 0:
-                raise InfraError(f"`git push` が失敗しました: {tail(push.stderr).strip()}")
+            # 行き詰まりの作業は、機械のチェックを通っていないことがある（衝突したとき、進められないと答えたときなど）
+            self.push_branch(task, branch, "stuck")
             pushed = True
         pr = self.find_pr(branch)
         last = "\n\n".join(findings)[:COMMENT_CHARS] or "（指摘なし）"
@@ -1394,6 +1529,7 @@ class Loop:
         self.ensure_worktree()
         self.preflight_files()
         self.check_engines()
+        self.check_secret_scanner()
         self.triage()
         handled = 0
         while True:
@@ -1496,6 +1632,8 @@ class Loop:
                 condition = f"`{check['requires']}` があるとき"
                 if "requires_script" in check:
                     condition = f"`{check['requires']}` の scripts に `{check['requires_script']}` があるとき"
+                if check.get("stop_on_failure"):
+                    condition = f"`{MAIN_REF}` に `{check['requires']}` があるとき。`{MAIN_REF}` の道具で実行し、失敗したら push せずに止まる。push の直前にも実行する"
                 print("  機械のチェック: " + " ".join(check["argv"]) + f"（{condition}）")
             argv = self.claude_argv(
                 PROMPT_REVIEW.format(number=task.number), str(models["review"]),

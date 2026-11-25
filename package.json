@@ -21,6 +21,7 @@
     "format:check": "prettier --check \"{src,tools}/**/*.{ts,tsx,css}\" \"*.config.ts\" && cargo fmt --manifest-path src-tauri/Cargo.toml --check",
     "test": "vitest run && cargo test --manifest-path src-tauri/Cargo.toml --locked --features content-check",
     "check": "npm run lint && npm run format:check && npm test",
+    "secrets:check": "python3 -I tools/check-secrets.py",
     "content:check": "node tools/content-check/main.ts",
     "content:voice": "node tools/content-voice/main.ts",
     "runner:lock": "node tools/runner-lock/main.ts"

@@ -1,4 +1,4 @@
-# push と pull request のたびに、コミット前の確認、教材チェックツール、デザインシステムの検査を実行する
+# push と pull request のたびに、秘密の情報の検査、コミット前の確認、教材チェックツール、デザインシステムの検査を実行する
 # （documents/spec/non-functional/testing.md「CI」）。
 # 実行環境は ubuntu-latest で、対応環境（作者の Mac）ではない。本番ビルドは作らない。
 name: CI
@@ -17,6 +17,38 @@ env:
   CARGO_PROFILE_DEV_DEBUG: "0"
 
 jobs:
+  # 秘密の情報の検査（gitleaks）。Tauri のビルドで長い check のジョブを待たずに、すぐ結果が出るように分ける。
+  secrets:
+    name: secrets
+    runs-on: ubuntu-latest
+    env:
+      # 固定した gitleaks の版と、公式のリリースの gitleaks_8.30.1_checksums.txt にある
+      # gitleaks_8.30.1_linux_x64.tar.gz の SHA-256。版を変えるときは、tools/check-secrets.py の
+      # GITLEAKS_VERSION と development-environment.md の表を、同じ変更で直す。
+      GITLEAKS_VERSION: "8.30.1"
+      GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+    steps:
+      # 履歴の全部を取る。取らないと、最後の 1 コミットしか確かめられない。
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: gitleaks を入れる
+        run: |
+          archive="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -sSfL -o "$RUNNER_TEMP/$archive" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/$archive"
+          echo "${GITLEAKS_SHA256}  $RUNNER_TEMP/$archive" | sha256sum --check --strict
+          mkdir -p "$RUNNER_TEMP/gitleaks"
+          tar -xzf "$RUNNER_TEMP/$archive" -C "$RUNNER_TEMP/gitleaks" gitleaks
+          echo "$RUNNER_TEMP/gitleaks" >> "$GITHUB_PATH"
+
+      # 検査のスクリプトのテスト（本物の git と gitleaks を使う）。
+      - run: python3 -I tools/tests/test_check_secrets.py
+
+      # 取ってきたすべての参照から届くコミットの履歴全体と、作業ツリーを確かめる。gitleaks の版も確かめる。
+      - run: python3 -I tools/check-secrets.py --all
+
   check:
     name: check
     runs-on: ubuntu-latest

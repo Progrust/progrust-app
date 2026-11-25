@@ -31,6 +31,9 @@
 * [ADR 0233](0233-claude-detection-locations.md) - claude の検出で、npm のグローバルインストール先を npm を起動せずに /opt/homebrew/bin と /usr/local/bin とし、場所ごとの調べ方と使えない場所の飛ばし方を cargo と同じ形にする
 * [ADR 0237](0237-show-prepared-at.md) - 環境の状態の初回準備に、準備が終わった日時 prepared_at を足し、設定画面に「準備できています」と日時を表示する
 * [ADR 0240](0240-install-guide-urls-and-opener-scope.md) - 導入手順の URL を rustup（https://rustup.rs）と Claude Code（https://code.claude.com/docs/ja/setup）の 2 つに決め、フロントエンドが OS の既定ブラウザで開ける URL をこの 2 つだけに絞る
+* [ADR 0248](0248-publish-repository-on-github.md) - GitHub のリポジトリを公開し、LICENSE は置かずに再利用を認めず、外部の人の Issue と pull request は受け付けずに Interaction limits で絞り、秘密の情報を gitleaks で CI と push の前に確かめる
+* [ADR 0249](0249-scan-secrets-with-pinned-gitleaks-before-push-and-in-ci.md) - 秘密の情報の検査を、パッチまで固定した gitleaks で行い、確かめる中身（push していないコミットの中身・差分・ファイルの名前、ステージした変更、作業ツリーの変更）をスクリプトが git で、置き換えの参照と出力の形を変える設定に左右されずに取り出して gitleaks の stdin に渡し、毎回の自己点検で検出できることを確かめ、実装のループでは GitHub の origin の main の道具と SHA で、フックを動かさずに、すべての push の直前に確かめて、失敗したら直しに回さずに push せずに止まり、守るのは誤って書いたときまでとし、CI では公式のリリースを SHA-256 で確かめて別のジョブで履歴全体を確かめる
+* [ADR 0250](0250-keep-remotion-skill-out-of-git-and-restore-from-lock.md) - Remotion のスキルを、コミットの履歴は書き換えずに、今後のコミットから外して .gitignore し、手元では skills-lock.json から版を固定した skills の CLI で入れ直し、実装のループの作業ツリーには用意しない
 
 # 教材データ形式
 

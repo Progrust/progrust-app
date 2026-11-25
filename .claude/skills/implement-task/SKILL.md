@@ -3,7 +3,7 @@ name: implement-task
 description: 実装計画のタスクの Issue（または、ループが直すと決めた「AI起票」の Issue）を 1 件、仕様どおりに実装し、テストを書いて、機械のチェックを通す。実装のループが呼ぶほか、ユーザーが Issue の番号を指定して呼ぶ。
 argument-hint: "<Issue の番号> [--loop] [fix]"
 disable-model-invocation: true
-allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue create *) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git rev-parse*) Bash(git clean -f -- *) Bash(python3 tools/check-documents.py*) Bash(python3 tools/design-system.py check*) Bash(npm run *) Bash(npm test*) Bash(cargo *)
+allowed-tools: Bash(gh issue list *) Bash(gh issue view *) Bash(gh issue create *) Bash(git status*) Bash(git diff*) Bash(git log*) Bash(git show*) Bash(git rev-parse*) Bash(git clean -f -- *) Bash(python3 tools/check-documents.py*) Bash(python3 tools/design-system.py check*) Bash(python3 -I tools/check-secrets.py*) Bash(npm run *) Bash(npm test*) Bash(cargo *)
 ---
 
 # タスクの実装

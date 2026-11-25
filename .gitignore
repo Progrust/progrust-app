@@ -12,3 +12,9 @@ node_modules/
 dist/
 src-tauri/target/
 src-tauri/gen/
+
+# 配布元のライセンスがはっきりしないので、git に入れないエージェントのスキル。
+# skills-lock.json から入れ直す（documents/spec/architecture/development-environment.md「エージェントのスキル」）。
+# 入れ直すと、本体は .agents/skills/ に、.claude/skills/ にはそこへのシンボリックリンクが置かれる。
+/.agents/
+/.claude/skills/remotion-best-practices

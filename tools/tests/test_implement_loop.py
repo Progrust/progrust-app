@@ -295,11 +295,17 @@ def main():
         with tempfile.TemporaryDirectory() as tmp:
             subprocess.run(["git", "clone", "--quiet", script["origin"], tmp], check=True)
             for path, content in entry["push_main"].items():
+                if content is None:
+                    os.remove(os.path.join(tmp, path))
+                    continue
                 with open(os.path.join(tmp, path), "w", encoding="utf-8") as handle:
                     handle.write(content)
             subprocess.run(["git", "-C", tmp, "add", "-A"], check=True)
             subprocess.run(["git", "-C", tmp, "commit", "--quiet", "-m", "ほかの作業"], check=True)
             subprocess.run(["git", "-C", tmp, "push", "--quiet", "origin", "HEAD:main"], check=True)
+    for command in entry.get("shell") or []:
+        # 作業ツリーと共有する .git を書き換えるなど、禁止をすり抜ける操作をしたことにする
+        subprocess.run(["sh", "-c", command], check=True)
 
     if "raw_stdout" in entry:
         sys.stdout.write(entry["raw_stdout"])
@@ -328,6 +334,36 @@ import os, sys
 if os.path.exists("FAIL_DOCS"):
     print("documents/x.md:1: link-target: FAIL_DOCS がある")
     sys.exit(1)
+'''
+
+SECRETS_STUB = '''#!/usr/bin/env python3
+# 偽の tools/check-secrets.py。--repo のリポジトリの、push していないコミットか作業ツリーに LEAK があると失敗する。
+# 呼び出しを、リポジトリの外のファイル（環境変数 SECRETS_CALLS）に、どこから実行されたかと一緒に残す。
+import os, re, subprocess, sys
+args = sys.argv[1:]
+repo = args[args.index("--repo") + 1]
+bases = [args[i + 1] for i, a in enumerate(args) if a == "--base"]
+here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+where = "main-tools" if os.path.basename(here) == "main-tools" else here
+with open(os.environ["SECRETS_CALLS"], "a", encoding="utf-8") as handle:
+    handle.write(" ".join("REPO" if a == repo else "SHA" if re.fullmatch("[0-9a-f]{40}", a) else a for a in args) + f" @{where}\\n")
+if not os.path.isfile(os.path.join(here, ".gitleaks.toml")):
+    print("設定が無い", file=sys.stderr)
+    sys.exit(2)
+os.chdir(repo)
+if "--check-version" in args:
+    version = os.environ.get("FAKE_GITLEAKS_VERSION", "8.30.1")
+    if version != "8.30.1":
+        print(f"check-secrets: gitleaks の版が {version} で、固定した版 8.30.1 と違います", file=sys.stderr)
+        sys.exit(2)
+    sys.exit(0)
+log = subprocess.run(["git", "log", "-p", "HEAD", "--not"] + (bases or ["--remotes"]), stdout=subprocess.PIPE, text=True).stdout
+tree = subprocess.run(["git", "diff", "HEAD"], stdout=subprocess.PIPE, text=True).stdout
+added = [l for l in (log + tree).splitlines() if l.startswith("+") and not l.startswith("+++")]
+if any("LEAK" in l for l in added):
+    print("Finding:     REDACTED\\nFile:        a.txt\\nleaks found: 1")
+    sys.exit(1)
+print("no leaks found")
 '''
 
 
@@ -525,9 +561,10 @@ class PureFunctionTest(unittest.TestCase):
     def test_is_protected(self) -> None:
         protected = self.mod.is_protected
         for path in ("CLAUDE.md", ".claude/skills/x/SKILL.md", ".github/workflows/ci.yml", "documents/conventions/issues.md",
-                     "tools/implement-loop.py", "tools/okf/validate.py", "tools/tests/test_implement_loop.py"):
+                     "tools/implement-loop.py", "tools/okf/validate.py", "tools/tests/test_implement_loop.py",
+                     ".gitleaks.toml", ".gitleaksignore", "tools/check-secrets.py", "tools/tests/test_check_secrets.py"):
             self.assertTrue(protected(path), path)
-        for path in ("src/main.ts", "documents/spec/overview.md", "tools/check-content.ts", "docs/CLAUDE.md"):
+        for path in ("src/main.ts", "documents/spec/overview.md", "tools/check-content.ts", "docs/CLAUDE.md", "src/.gitleaks.toml"):
             self.assertFalse(protected(path), path)
 
     def test_merge_unique(self) -> None:
@@ -1169,8 +1206,8 @@ class FlowTest(LoopTestCase):
         heads: List[str] = []
         publish = self.mod.Loop.publish
 
-        def record_head(loop: Any, branch: str, title: str, body: str) -> int:
-            number = publish(loop, branch, title, body)
+        def record_head(loop: Any, task: Any, branch: str, title: str, body: str) -> int:
+            number = publish(loop, task, branch, title, body)
             heads.append(loop.remote_head(branch))
             return number
 
@@ -1478,6 +1515,178 @@ class FlowTest(LoopTestCase):
         self.assertEqual(self.run_loop(), 2)
         self.assertIn("CI の定義がありません", self.output)
         self.assertEqual(self.claude_calls(), [])
+
+    # ---- 秘密の情報の検査（ADR 0249） ----
+
+    def write_secrets_stub(self) -> str:
+        """偽の tools/check-secrets.py と .gitleaks.toml を main に入れる。呼び出しの記録のファイルを返す。"""
+        path = os.path.join(self.repo, "tools", "check-secrets.py")
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(SECRETS_STUB)
+        with open(os.path.join(self.repo, ".gitleaks.toml"), "w", encoding="utf-8") as handle:
+            handle.write("[extend]\nuseDefault = true\n")
+        self.sh(["git", "add", "-A"])
+        self.sh(["git", "commit", "--quiet", "-m", "check-secrets"])
+        self.sh(["git", "push", "--quiet", "origin", "main"])
+        calls = os.path.join(self.tmp, "secrets-calls.txt")
+        os.environ["SECRETS_CALLS"] = calls
+        return calls
+
+    def read_lines(self, path: str) -> List[str]:
+        if not os.path.exists(path):
+            return []
+        with open(path, encoding="utf-8") as handle:
+            return handle.read().splitlines()
+
+    def test_secret_check_runs_before_push_and_passes(self) -> None:
+        calls = self.write_secrets_stub()
+        self.task(1)
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "A\\n"}}]
+        self.script["review"] = [review_pass()]
+        self.assertEqual(self.run_loop(), 0, self.output)
+        # 始めるとき、機械のチェック、push の直前。どれも main から取り出した道具で実行する
+        self.assertEqual(self.read_lines(calls), ["--repo REPO --base SHA --check-version @main-tools", "--repo REPO --base SHA @main-tools", "--repo REPO --base SHA @main-tools"])
+        self.assertEqual(self.main_file("a.txt"), "A\\n")
+
+    def test_secret_found_stops_without_push_or_fix_round(self) -> None:
+        self.write_secrets_stub()
+        self.task(1)
+        self.task(2)
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "LEAK\\n"}}]
+        self.script["review"] = [review_pass()]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("仕組みの失敗: 秘密の情報の検査", self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(len(self.claude_calls("implement")), 1)  # 直しに回さない
+        self.assertEqual(self.claude_calls("review"), [])
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertEqual(self.state["prs"], {})
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+        self.assertEqual(self.issue(1)["comments"], [])
+        self.assertEqual(self.sh(["git", "status", "--porcelain"], cwd=self.worktree), "")
+
+    def test_secret_in_stuck_work_is_not_pushed(self) -> None:
+        # 衝突した作業は、機械のチェックを通らずに行き詰まりになる。push の前に確かめる
+        self.write_secrets_stub()
+        self.task(1)
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"shared.txt": "LEAK\\n"}, "push_main": {"shared.txt": "ほかの変更 1\\n"}},
+            {"structured_output": done(), "files": {"shared.txt": "LEAK\\n"}, "push_main": {"shared.txt": "ほかの変更 2\\n"}},
+        ]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertNotIn("行き詰まり", self.issue(1)["labels"])
+        self.assertEqual(self.issue(1)["comments"], [])
+
+    def test_gitleaks_version_mismatch_stops_before_any_call(self) -> None:
+        calls = self.write_secrets_stub()
+        os.environ["FAKE_GITLEAKS_VERSION"] = "8.29.0"
+        self.task(1)
+        self.add_issue(5, ["AI起票", "未判断"])
+        self.assertEqual(self.run_loop(), 2)
+        self.assertIn("tools/check-secrets.py --check-version`（`origin/main` のもの）が失敗したので、始めません", self.output)
+        self.assertIn("固定した版 8.30.1 と違います", self.output)
+        self.assertEqual(self.claude_calls(), [])
+        self.assertEqual(self.read_lines(calls), ["--repo REPO --base SHA --check-version @main-tools"])
+
+    def test_stuck_push_uses_main_tool_even_if_task_rewrote_it(self) -> None:
+        # (A) 2 回衝突した作業が、検査の道具と設定を、何もせずに通るものに書き換えていた
+        self.write_secrets_stub()
+        self.task(1)
+        files = {"shared.txt": "LEAK\n", "tools/check-secrets.py": "import sys\nsys.exit(0)\n", ".gitleaks.toml": ""}
+        self.script["implement"] = [
+            {"structured_output": done(), "files": files, "push_main": {"shared.txt": "ほかの変更 1\n"}},
+            {"structured_output": done(), "files": files, "push_main": {"shared.txt": "ほかの変更 2\n"}},
+        ]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertNotIn("行き詰まり", self.issue(1)["labels"])
+
+    def test_blocked_push_uses_main_tool_even_if_task_deleted_it(self) -> None:
+        # (B) 進められないと答えた作業が、検査の道具と設定を消していた
+        self.write_secrets_stub()
+        self.task(1, difficulty="大")
+        self.script["implement"] = [
+            {"structured_output": done(status="blocked", blocked_reason="分からない。"),
+             "files": {"a.txt": "LEAK\n"}, "delete": ["tools/check-secrets.py", ".gitleaks.toml"]},
+        ]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertEqual(self.state["prs"], {})
+
+    def test_blocked_work_without_secret_is_pushed_after_check(self) -> None:
+        calls = self.write_secrets_stub()
+        self.task(1, difficulty="大")
+        self.script["implement"] = [
+            {"structured_output": done(status="blocked", blocked_reason="分からない。"),
+             "files": {"a.txt": "A\n"}, "delete": ["tools/check-secrets.py"]},
+        ]
+        self.assertEqual(self.run_loop(), 0, self.output)
+        self.assertIn("task/1", self.origin_branches())
+        self.assertEqual(self.read_lines(calls)[-1], "--repo REPO --base SHA @main-tools")
+
+    def test_replaced_main_tool_is_not_used(self) -> None:
+        # (R1) claude が、origin/main の検査の道具の blob を、何もせず 0 で終わるものに置き換えた（refs/replace）
+        self.write_secrets_stub()
+        self.task(1)
+        fake = os.path.join(self.tmp, "fake-tool.py")
+        with open(fake, "w", encoding="utf-8") as handle:
+            handle.write("import sys\nsys.exit(0)\n")
+        replace = f'git replace "$(git rev-parse origin/main:tools/check-secrets.py)" "$(git hash-object -w {fake})"'
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "LEAK\n"}, "shell": [replace]}]
+        self.script["review"] = [review_pass()]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertEqual(self.state["prs"], {})
+
+    def test_moved_remote_tracking_main_is_not_used(self) -> None:
+        # (T1) claude が、手元の origin/main を、検査の道具がまだ無いコミットに向けた（進められないと答えた作業）
+        self.write_secrets_stub()
+        self.task(1, difficulty="大")
+        move = "git fetch --quiet . +$(git rev-list --max-parents=0 HEAD):refs/remotes/origin/main"
+        self.script["implement"] = [
+            {"structured_output": done(status="blocked", blocked_reason="分からない。"), "files": {"a.txt": "LEAK\n"}, "shell": [move]},
+        ]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
+
+    def test_hooks_do_not_run_and_cannot_hide_commits(self) -> None:
+        # (H1) claude が、post-commit・post-merge のフックで、追跡ブランチを HEAD に向けるようにした
+        self.write_secrets_stub()
+        self.task(1)
+        marker = os.path.join(self.tmp, "hook-ran")
+        hook = f'#!/bin/sh\ntouch {marker}\ngit update-ref refs/remotes/origin/zz HEAD\n'
+        hooks = os.path.join(self.tmp, "hook-body")
+        with open(hooks, "w", encoding="utf-8") as handle:
+            handle.write(hook)
+        install = (
+            'd="$(git rev-parse --git-common-dir)/hooks"; mkdir -p "$d"; '
+            f'for h in post-commit post-merge pre-push; do cp {hooks} "$d/$h"; chmod +x "$d/$h"; done'
+        )
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "LEAK\n"}, "shell": [install]}]
+        self.script["review"] = [review_pass()]
+        self.assertEqual(self.run_loop(), 2, self.output)
+        self.assertIn("push せずに止めます", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
+        self.assertFalse(os.path.exists(marker))  # ループのコミット・マージで、フックが動いていない
+
+    def test_tool_removed_from_main_during_run_stops(self) -> None:
+        # 始めるときに main にあった道具が、途中で無くなったら、飛ばさずに止まる
+        self.write_secrets_stub()
+        self.task(1)
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A\n"}, "push_main": {"tools/check-secrets.py": None}},
+        ]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 2, self.output)
+        self.assertIn("見つからなくなりました", self.output)
+        self.assertEqual(self.origin_branches(), ["main"])
 
     def test_worktree_is_reused_and_cleaned(self) -> None:
         self.task(1)

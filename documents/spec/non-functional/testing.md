@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "テストの方針"
-description: "テストの種類と道具（`cargo test`、Vitest、教材チェックツール、人が操作して確かめること）、自動テストで確かめるもの、決まった出力を返す偽の `claude`・`cargo` の作り方と使い方、受け入れ条件の確かめ方の区分、AI の出力に左右される条件の扱い、画面を自動で操作するテスト（E2E）を行わないこと、テストを実行するとき（コミット前、教材やデザインシステムを変えたとき、仕様の文書を移したり名前や小見出しを変えたとき、本番ビルド）、CI で実行するもの（`npm run check`、教材チェックツール、デザインシステムの検査）と CI の実行環境を定める。"
+description: "テストの種類と道具（`cargo test`、Vitest、秘密の情報の検査のテスト、教材チェックツール、人が操作して確かめること）、自動テストで確かめるもの、決まった出力を返す偽の `claude`・`cargo` の作り方と使い方、受け入れ条件の確かめ方の区分、AI の出力に左右される条件の扱い、画面を自動で操作するテスト（E2E）を行わないこと、テストを実行するとき（コミット前、push の前の秘密の情報の検査、教材やデザインシステムを変えたとき、仕様の文書を移したり名前や小見出しを変えたとき、本番ビルド）、CI で実行するもの（秘密の情報の検査とそのテスト、`npm run check`、教材チェックツール、デザインシステムの検査）と、CI の秘密の情報の検査の限界と、CI の実行環境を定める。"
 ---
 
 ## テストの種類と道具
@@ -11,6 +11,7 @@ description: "テストの種類と道具（`cargo test`、Vitest、教材チェ
 | バックエンドの自動テスト | `src-tauri/` | `cargo test` |
 | フロントエンドの自動テスト | `src/` の関数・フック・部品 | Vitest。React の部品は React Testing Library と jsdom で描画する |
 | 開発用ツールの自動テスト | `tools/` の Node.js で動くツール（教材チェックツール、音声を作るツール） | Vitest |
+| 秘密の情報の検査のテスト | `tools/check-secrets.py`（[開発環境と依存の版](../architecture/development-environment.md)「秘密の情報の検査」） | Python の `unittest`（`tools/tests/test_check_secrets.py`）。一時ディレクトリに作った git のリポジトリで、本物の git と gitleaks を使う。gitleaks が無いときと版が違うときは、飛ばさずに失敗する |
 | 教材のチェック | `content/` | 教材チェックツール（[教材チェックツール](../content-guidelines/check-tool.md)） |
 | 人が操作して確かめること | アプリの画面 | 開発時の起動か本番ビルドのアプリ（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」） |
 
@@ -77,6 +78,8 @@ description: "テストの種類と道具（`cargo test`、Vitest、教材チェ
 ## 実行するとき
 
 - コミットする前に、`npm run check`（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」）を実行し、通ることを確かめる。AI エージェントがコミットするときも同じにする。
+- push する前に、`npm run secrets:check`（[開発環境と依存の版](../architecture/development-environment.md)「秘密の情報の検査」）を実行し、通ることを確かめる。AI エージェントが push するときも同じにする。実装のループは、機械のチェックと push の直前に実行する（[実装のループ](../../conventions/implementation-loop.md)「機械のチェック」）。
+- `tools/check-secrets.py`・`.gitleaks.toml`・gitleaks の版を変えたときは、`python3 -I tools/tests/test_check_secrets.py` を実行する。
 - 教材を追加・変更したときは、教材チェックツールを実行する（[教材チェックツール](../content-guidelines/check-tool.md)）。
 - デザインシステムか画面デザインを変えたときは、`python3 tools/design-system.py check` を実行する（[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)「検査」、[画面デザインのファイルと変更の手順](../screens/ui-design-files.md)「検査」）。仕様の文書（`documents/spec/`）を移したり、名前や小見出しを変えたりしたときも実行する。デザインシステムの README などからの、仕様への参照を確かめるためである。
 - 本番ビルドを人が操作して確かめることは、次のときに行う。
@@ -88,9 +91,14 @@ description: "テストの種類と道具（`cargo test`、Vitest、教材チェ
 ## CI
 
 - リポジトリへの push と pull request のたびに、GitHub Actions で次のものを実行する。
+  - 秘密の情報の検査（`python3 -I tools/check-secrets.py --all`。[開発環境と依存の版](../architecture/development-environment.md)「秘密の情報の検査」）と、そのスクリプトのテスト（`python3 -I tools/tests/test_check_secrets.py`）。ほかのものとは別のジョブ（`secrets`）で実行する。コミットの履歴の全部を取ってから（`actions/checkout` の `fetch-depth: 0`）、取ったすべての参照から届くコミットを確かめる。gitleaks は、固定した版の公式のリリースの Linux 用のファイル（`gitleaks_{版}_linux_x64.tar.gz`）を取り、ワークフローに書いた SHA-256 と合うことを確かめてから使う。サードパーティの Action は使わない
   - `npm ci` の後の `npm run check`。`cargo` のコマンドは、`src-tauri/Cargo.lock` のとおりの依存で実行する（`--locked`）
   - 教材チェックツール（[教材チェックツール](../content-guidelines/check-tool.md)）
   - デザインシステムと画面デザインの検査（`python3 tools/design-system.py check`。[デザインシステムのファイルと変更の手順](../screens/design-system-files.md)「検査」、[画面デザインのファイルと変更の手順](../screens/ui-design-files.md)「検査」）
+- CI の秘密の情報の検査には、次の限界がある。push の前の検査（上の「実行するとき」）と、GitHub の設定（[リポジトリ構成](../architecture/repository.md)「GitHub の設定」の、fork からの pull request のワークフローの承認と Interaction limits）で補う。
+  - 衝突のある pull request では、`pull_request` のワークフローが走らない。
+  - `pull_request` のワークフローは、pull request のマージのコミットで動くので、その pull request で変えたワークフロー・スクリプト・設定が使われる。fork からの pull request も同じである。
+  - CI が見つけるのは push の後なので、公開リポジトリでは、見つけた時点で、すでに公開されている。
 - CI の実行環境は GitHub Actions の ubuntu-latest である。CI の実行環境で、対応環境（[対応環境](environments.md)）ではない。Tauri が Linux でのビルドに要るライブラリを入れて実行する。
 - macOS に固有の動作を確かめるテストは、macOS のときだけ実行するようにし、CI では実行しない。CI の結果を、対応環境で動くことの確かめにしない。
 - 作者の Mac では通り、CI の実行環境でだけ失敗するビルドやテストがあるときは、アプリのコードを Linux に合わせて直さない。そのテストを macOS のときだけ実行するようにするか、そのビルドやテストを CI で実行するものから外す。

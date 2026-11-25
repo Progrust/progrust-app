@@ -1,0 +1,7 @@
+# gitleaks の設定（documents/spec/architecture/repository.md、documents/spec/architecture/development-environment.md）。
+# gitleaks に組み込まれた既定の規則を、そのまま引き継ぐ。
+# 誤検出を除くときは、この下に [[allowlists]] などを足し、なぜ除くかをコメントに書く。
+# このファイルは、実装のループが変えない（documents/conventions/implementation-loop.md「保護するパス」）。
+
+[extend]
+useDefault = true
