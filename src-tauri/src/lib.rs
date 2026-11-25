@@ -29,6 +29,7 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::content::list_chapters,
             commands::content::get_lesson,
             commands::environment::get_environment_status,
+            commands::environment::redetect_tools,
             commands::environment::retry_crate_preparation,
             commands::learning_record::get_dashboard,
             commands::progress::end_session,

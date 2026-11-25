@@ -3,11 +3,12 @@
 //!
 //! - 初回準備の状態（`not_started`・`preparing`・`ready`・`failed`）は [`Environment`] がメモリに持つ。状態が変わる
 //!   たびに `environment_updated` を送る（[`notify`]）。
-//! - 初回準備を始める処理は [`start_crate_preparation`] の 1 か所にまとめる。起動時（[`super::start_detection`]）、
-//!   再試行（[`retry_crate_preparation`]）のほか、再検出や演習のビルドの失敗からも、ここを呼ぶ。`preparing` のときは
-//!   重ねて始めない。
-//! - 「実行する条件」を判定して、当てはまれば始め、当てはまらなければ `ready` にする処理は
-//!   [`prepare_crates_if_needed`]。
+//! - 初回準備を始めてよいかを確かめて `preparing` にする処理は [`begin`]、動かす処理は [`spawn_preparation`] の
+//!   1 か所ずつにまとめる。起動時（[`super::start_detection`]）、再試行（[`retry_crate_preparation`]）、演習のビルドの
+//!   失敗（[`start_crate_preparation`]）、再検出（[`super::redetect::redetect_tools`]）のどれも、ここを通る。
+//!   `preparing` のときは重ねて始めない。
+//! - 起動時に「実行する条件」を判定して、当てはまれば始め、当てはまらなければ `ready` にする処理は
+//!   [`prepare_crates_if_needed`]。判定そのものは [`judge`]。
 //! - 初回準備の手順そのもの（手順の 1〜5）は [`crate::runner::preparation::prepare`] が行う。アプリでは手順の 4
 //!   （`target-validate/` への複製）もする。
 //! - アプリの終了では、[`stop_crate_preparation_on_exit`] で、動いている初回準備の `cargo` を止める。
@@ -20,7 +21,7 @@ use std::time::Duration;
 
 use tauri::{AppHandle, Emitter, Manager, Runtime};
 
-use super::{CratesState, CratesStatus, ENVIRONMENT_UPDATED, Environment, RustTools};
+use super::{CratesState, CratesStatus, ENVIRONMENT_UPDATED, Environment, RustTools, State};
 use crate::commands::error::{CommandError, ErrorCode};
 use crate::runner::RunnerDir;
 use crate::runner::preparation::{PreparationOutcome, PreparationSpec, prepare};
@@ -141,7 +142,7 @@ pub fn stop_crate_preparation_on_exit<R: Runtime>(app: &AppHandle<R>) {
 }
 
 /// 初回準備を始めなかった理由。
-enum Refused {
+pub(super) enum Refused {
     /// 動いている初回準備がある。
     Preparing,
     /// 再試行で、状態が `failed` でない。
@@ -160,34 +161,55 @@ fn state_name(state: CratesState) -> &'static str {
 }
 
 /// 初回準備を始める、ただ 1 つの処理。`only_after_failure` のときは、状態が `failed` のときだけ始める（再試行）。
-/// 状態を確かめて `preparing` にするまでを、1 回のロックの間に行う。
+/// 状態を確かめて `preparing` にするまでを、1 回のロックの間に行う（[`begin`]）。
 fn start_on<R: Runtime>(
     app: &AppHandle<R>,
     environment: &Environment,
     tools: &RustTools,
     only_after_failure: bool,
 ) -> Result<(), Refused> {
-    let (run, stopper) = {
-        let mut state = environment.lock();
-        if state.exiting {
-            return Err(Refused::Exiting);
-        }
-        if state.crates.status == CratesState::Preparing {
-            return Err(Refused::Preparing);
-        }
-        if only_after_failure && state.crates.status != CratesState::Failed {
-            return Err(Refused::NotFailed(state.crates.status));
-        }
-        state.last_run += 1;
-        let run = state.last_run;
-        // Stopper は一度止めると戻せないので、初回準備ごとに新しく作る。
-        let stopper = Stopper::new();
-        state.running = Some((run, stopper.clone()));
-        state.crates = CratesStatus::preparing();
-        (run, stopper)
-    };
+    let started = begin(&mut environment.lock(), only_after_failure)?;
     notify(app, environment);
+    spawn_preparation(app, environment, tools, started);
+    Ok(())
+}
 
+/// [`begin`] で始めると決めた初回準備（番号と、その `cargo` を止める操作）。[`spawn_preparation`] で動かす。
+pub(super) struct Started {
+    run: u64,
+    stopper: Stopper,
+}
+
+/// 初回準備を始めてよいかを確かめ、状態を `preparing` にする。状態のロックを持つ間に呼ぶ。この後、ロックを
+/// 放してから `environment_updated` を送り（[`notify`]）、[`spawn_preparation`] で動かす。
+pub(super) fn begin(state: &mut State, only_after_failure: bool) -> Result<Started, Refused> {
+    if state.exiting {
+        return Err(Refused::Exiting);
+    }
+    if state.crates.status == CratesState::Preparing {
+        return Err(Refused::Preparing);
+    }
+    if only_after_failure && state.crates.status != CratesState::Failed {
+        return Err(Refused::NotFailed(state.crates.status));
+    }
+    state.last_run += 1;
+    let run = state.last_run;
+    // Stopper は一度止めると戻せないので、初回準備ごとに新しく作る。
+    let stopper = Stopper::new();
+    state.running = Some((run, stopper.clone()));
+    state.crates = CratesStatus::preparing();
+    Ok(Started { run, stopper })
+}
+
+/// [`begin`] で始めると決めた初回準備を、別のスレッドで動かす。終わったら、結果（`ready` か `failed`）を状態に
+/// 入れて、`environment_updated` を送る。
+pub(super) fn spawn_preparation<R: Runtime>(
+    app: &AppHandle<R>,
+    environment: &Environment,
+    tools: &RustTools,
+    started: Started,
+) {
+    let Started { run, stopper } = started;
     let app = app.clone();
     let environment = environment.clone();
     let places = places(&app);
@@ -210,7 +232,6 @@ fn start_on<R: Runtime>(
             notify(&app, &environment);
         }
     });
-    Ok(())
 }
 
 /// 初回準備を 1 回動かし、終わった後の状態を返す。止めたときは `None`（状態を変えない）。
@@ -233,7 +254,7 @@ fn run_preparation(spec: PreparationSpec, stopper: &Stopper) -> Option<CratesSta
 
 /// 同梱の許可クレートの定義（アプリの状態の [`RunnerDir`]）と、作業領域（アプリの状態の [`AppDataDir`] の
 /// `workspace/`）。アプリでは、検出を始める前に置いてある。
-fn places<R: Runtime>(app: &AppHandle<R>) -> Result<(RunnerDir, WorkspaceDir), String> {
+pub(super) fn places<R: Runtime>(app: &AppHandle<R>) -> Result<(RunnerDir, WorkspaceDir), String> {
     let runner = app
         .try_state::<RunnerDir>()
         .ok_or("同梱の許可クレートの場所が分かりません（内部エラー）。")?;
