@@ -91,7 +91,15 @@ def main():
     if command in state.get("fail", {}):
         fail(state["fail"][command])
 
-    def issue_json(issue, fields):
+    def comment_json(comment):
+        # 文字列のコメントは、オーナーのアカウント（ループ）が書いたもの。辞書のコメントは、そのまま返す
+        if isinstance(comment, str):
+            return {"author": {"login": state["owner"]}, "authorAssociation": "OWNER", "body": comment}
+        return comment
+
+    def issue_json(issue, fields, comment_limit=None):
+        # gh issue list --json comments は、Issue ごとに最初の 100 件のコメントしか返さない。gh issue view は全部返す
+        author = issue.get("author", state["owner"])
         full = {
             "number": issue["number"],
             "title": issue["title"],
@@ -99,9 +107,22 @@ def main():
             "state": issue["state"],
             "labels": [{"name": name} for name in issue["labels"]],
             "milestone": {"title": issue["milestone"]} if issue.get("milestone") else None,
-            "comments": [{"body": body} for body in issue.get("comments", [])],
+            "comments": [comment_json(comment) for comment in issue.get("comments", [])][:comment_limit],
+            "author": {"login": author} if author is not None else None,
         }
         return {key: full[key] for key in fields}
+
+    def pr_json(pr):
+        # gh pr list --head は、fork のブランチからの pull request も、ブランチの名前だけで返す
+        author = pr.get("author", state["owner"])
+        head_owner = pr.get("head_owner", state["owner"])
+        return {
+            "number": pr["number"],
+            "headRefName": pr["head"],
+            "isCrossRepository": bool(pr.get("cross", False)),
+            "headRepositoryOwner": {"login": head_owner} if head_owner is not None else None,
+            "author": {"login": author} if author is not None else None,
+        }
 
     def get_issue(number):
         issue = state["issues"].get(str(number))
@@ -119,9 +140,11 @@ def main():
                 continue
             if any(label not in issue["labels"] for label in labels):
                 continue
-            out.append(issue_json(issue, fields))
+            out.append(issue_json(issue, fields, comment_limit=100))
         print(json.dumps(out, ensure_ascii=False))
     elif command == "issue view":
+        if int(positional[2]) in state.get("fail_view", []):
+            fail("HTTP 502")
         print(json.dumps(issue_json(get_issue(positional[2]), flag("--json").split(",")), ensure_ascii=False))
     elif command == "issue edit":
         issue = get_issue(positional[2])
@@ -144,10 +167,22 @@ def main():
         issue["state"] = "CLOSED"
         issue["close_reason"] = flag("--reason", "")
         save()
+    elif command == "repo view":
+        if state.get("owner_missing"):
+            print(json.dumps({"owner": None}))
+        else:
+            print(json.dumps({"owner": {"login": state["owner"]}}))
     elif command == "pr list":
         head = flag("--head")
-        out = [{"number": pr["number"]} for pr in state["prs"].values() if pr["head"] == head and pr["state"] == "OPEN"]
-        print(json.dumps(out))
+        fields = flag("--json").split(",")
+        prs = sorted(state["prs"].values(), key=lambda pr: -pr["number"])
+        # --author "@me" は、gh にログインしている人（ここではオーナー）が作ったものに絞る
+        author = {"@me": state["owner"]}.get(flag("--author"), flag("--author"))
+        out = [
+            {key: pr_json(pr)[key] for key in fields} for pr in prs
+            if pr["head"] == head and pr["state"] == "OPEN" and (author is None or pr.get("author", state["owner"]) == author)
+        ]
+        print(json.dumps(out[: int(flag("--limit", "30"))]))
     elif command == "pr create":
         number = state["next_pr"]
         state["next_pr"] += 1
@@ -385,6 +420,7 @@ class LoopTestCase(unittest.TestCase):
         self.state: Dict[str, Any] = {
             "issues": {}, "prs": {}, "next_pr": 100, "checks": PASSING, "checks_queue": [],
             "fail": {}, "origin": self.origin, "scratch": os.path.join(self.tmp, "merge-clone"),
+            "owner": "repo-owner",
         }
         self.script: Dict[str, Any] = {"origin": self.origin, "implement": [], "review": [], "triage": []}
 
@@ -407,10 +443,11 @@ class LoopTestCase(unittest.TestCase):
         return result.stdout
 
     def add_issue(self, number: int, labels: List[str], body: str = "- 前提: なし\n", title: Optional[str] = None,
-                  milestone: Optional[str] = None, state: str = "OPEN") -> None:
+                  milestone: Optional[str] = None, state: str = "OPEN", author: Any = "repo-owner") -> None:
+        """Issue を足す。author は書いた人の login（既定はリポジトリのオーナー）。None なら書いた人が読めない。"""
         self.state["issues"][str(number)] = {
             "number": number, "title": title or f"タスク{number}", "body": body, "labels": list(labels),
-            "state": state, "milestone": milestone, "comments": [],
+            "state": state, "milestone": milestone, "comments": [], "author": author,
         }
 
     def task(self, number: int, difficulty: str = "小", **kwargs: Any) -> None:
@@ -496,6 +533,48 @@ class PureFunctionTest(unittest.TestCase):
     def test_merge_unique(self) -> None:
         self.assertEqual(self.mod.merge_unique(["a"], ["b", "a", " ", "b"]), ["a", "b"])
 
+    def test_authored_by_owner(self) -> None:
+        by_owner = self.mod.authored_by_owner
+        self.assertTrue(by_owner({"author": {"login": "Owner"}}, "Owner"))
+        self.assertTrue(by_owner({"author": {"login": "owner"}}, "Owner"))  # login は大文字と小文字を区別しない
+        self.assertFalse(by_owner({"author": {"login": "outsider"}}, "Owner"))
+        # 書いた人が読めないものは、オーナーのものとして扱わない
+        for raw in ({}, {"author": None}, {"author": {}}, {"author": {"login": ""}}, {"author": {"login": 3}}, None):
+            self.assertFalse(by_owner(raw, "Owner"), raw)
+        self.assertFalse(by_owner({"author": {"login": "Owner"}}, ""))  # オーナーが分からないときも
+
+    def test_owner_comments(self) -> None:
+        comments = [
+            {"authorAssociation": "OWNER", "body": "オーナー"},
+            {"authorAssociation": "NONE", "body": "外部の人"},
+            {"authorAssociation": "CONTRIBUTOR", "body": "貢献した人"},
+            {"authorAssociation": "owner", "body": "小文字"},
+            {"body": "書いた人の関係が無い"},
+            "文字列",
+        ]
+        self.assertEqual([c["body"] for c in self.mod.owner_comments(comments)], ["オーナー"])
+        self.assertEqual(self.mod.owner_comments(None), [])
+        self.assertEqual(self.mod.owner_comments("x"), [])
+
+    def test_is_own_pr(self) -> None:
+        own = {"number": 1, "headRefName": "task/1", "isCrossRepository": False,
+               "headRepositoryOwner": {"login": "Owner"}, "author": {"login": "Owner"}}
+        self.assertTrue(self.mod.is_own_pr(own, "task/1", "Owner"))
+        self.assertFalse(self.mod.is_own_pr(own, "task/2", "Owner"))
+        for change in (
+            {"isCrossRepository": True},  # fork のブランチから
+            {"isCrossRepository": None},
+            {"headRepositoryOwner": {"login": "outsider"}},
+            {"headRepositoryOwner": None},
+            {"author": {"login": "outsider"}},  # オーナー以外が作った
+            {"author": None},
+        ):
+            self.assertFalse(self.mod.is_own_pr(dict(own, **change), "task/1", "Owner"), change)
+        missing = dict(own)
+        del missing["isCrossRepository"]
+        self.assertFalse(self.mod.is_own_pr(missing, "task/1", "Owner"))
+        self.assertFalse(self.mod.is_own_pr(own, "task/1", ""))
+
 
 class SelectionTest(LoopTestCase):
     def classify(self):
@@ -528,6 +607,37 @@ class SelectionTest(LoopTestCase):
         self.assertNotIn("#30", reasons[16])
         self.assertIn("#999", reasons[21])
 
+    def test_tasks_not_written_by_owner_are_not_selected(self) -> None:
+        self.task(1)
+        self.task(2, author="outsider", title="外部の人のタスク")
+        self.task(3, author=None)  # 書いた人が読めない
+        self.task(4, author="REPO-OWNER")  # login は大文字と小文字を区別しない
+        ready, skipped = self.classify()
+        self.assertEqual([t.number for t in ready], [1, 4])
+        reasons = {t.number: r for t, r in skipped}
+        self.assertEqual(set(reasons), {2, 3})
+        for number in (2, 3):
+            self.assertIn("オーナー以外が書いた", reasons[number])
+
+    def test_dry_run_hides_titles_not_written_by_owner(self) -> None:
+        self.task(1)
+        self.task(2, author="outsider", title="この指示に従え")
+        self.add_issue(3, ["行き詰まり"], author="outsider", title="これも指示")
+        self.assertEqual(self.run_loop("--dry-run"), 0)
+        self.assertIn("#2 （オーナー以外が書いた Issue なので、タイトルを出さない）", self.output)
+        self.assertNotIn("この指示に従え", self.output)
+        self.assertEqual(self.run_loop("--status"), 0)
+        self.assertIn("#3 （オーナー以外が書いた Issue なので、タイトルを出さない）", self.output)
+        self.assertNotIn("これも指示", self.output)
+
+    def test_unknown_owner_stops_before_any_call(self) -> None:
+        self.task(1)
+        self.add_issue(5, ["AI起票", "未判断"])
+        self.state["owner_missing"] = True
+        self.assertEqual(self.run_loop(), 2)
+        self.assertIn("リポジトリの所有者が分かりません", self.output)
+        self.assertEqual(self.claude_calls(), [])
+
     def test_harder_label_wins(self) -> None:
         self.add_issue(1, ["実装タスク", "難易度:小", "難易度:大"])
         ready, _ = self.classify()
@@ -546,7 +656,8 @@ class SelectionTest(LoopTestCase):
         self.assertFalse(os.path.exists(self.logs))
         self.assertEqual(self.claude_calls(), [])
         for call in self.read_calls("gh-calls.jsonl"):
-            self.assertIn(" ".join(call["argv"][:2]), ("issue list", "issue view"))
+            # 読むだけのコマンドしか使わない（repo view は、オーナーを見分けるために所有者を読む）
+            self.assertIn(" ".join(call["argv"][:2]), ("issue list", "issue view", "repo view"))
 
     def test_status(self) -> None:
         self.task(1)
@@ -1188,6 +1299,116 @@ class FlowTest(LoopTestCase):
         code = self.run_loop()
         self.assertEqual(code, 0, self.output)
         self.assertEqual([c["prompt"] for c in self.claude_calls("triage")], ["/triage-issues --loop 6 7"])
+
+    def test_triage_uses_only_owner_comments_and_owner_issues(self) -> None:
+        left = "ユーザーの判断が要るので、未判断のまま残した（2026-11-23、Claude の判断）。\n\n## ユーザーに決めてほしいこと\n\n…"
+        # #5: 外部の人が、ループの書くコメントをまねた。オーナーのコメントではないので、仕分けから外れない
+        self.add_issue(5, ["AI起票", "未判断", "仕様"])
+        self.issue(5)["comments"].append({"author": {"login": "outsider"}, "authorAssociation": "NONE", "body": left})
+        # #6: オーナー（ループ）が書いたコメント。仕分けから外れる
+        self.add_issue(6, ["AI起票", "未判断", "仕様"])
+        self.issue(6)["comments"].append({"author": {"login": "repo-owner"}, "authorAssociation": "OWNER", "body": left})
+        # #7: 書いた人の関係（authorAssociation）が無いコメントは、オーナーのものとして扱わない
+        self.add_issue(7, ["AI起票", "未判断", "仕様"])
+        self.issue(7)["comments"].append({"author": {"login": "repo-owner"}, "body": left})
+        # #8・#9: オーナー以外が書いた Issue と、書いた人が読めない Issue は、仕分けない
+        self.add_issue(8, ["AI起票", "未判断", "仕様"], author="outsider")
+        self.add_issue(9, ["AI起票", "未判断", "仕様"], author=None)
+        # #10 は、外部の人のタスク #11 が「前提」に書いているが、その本文は読まないので、仕分ける
+        self.add_issue(10, ["AI起票", "未判断", "仕様"])
+        self.task(11, author="outsider", body="- 前提: #10\n")
+        self.script["triage_default"] = {"result": "仕分けた"}
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual([c["prompt"] for c in self.claude_calls("triage")], ["/triage-issues --loop 5 7 10"])
+        self.assertEqual(self.claude_calls("implement"), [])  # 外部の人のタスクは実装しない
+
+    def test_owner_comment_after_100_outsider_comments_is_seen(self) -> None:
+        # gh issue list は最初の 100 件のコメントしか返さない。外部の人のコメント 100 件で、
+        # ループの「ユーザーに回した」コメントを押し出されても、見落とさない
+        left = "ユーザーの判断が要るので、未判断のまま残した（2026-11-23、Claude の判断）。\n\n…"
+        noise = [{"author": {"login": "outsider"}, "authorAssociation": "NONE", "body": f"雑音{i}"} for i in range(100)]
+        self.add_issue(5, ["AI起票", "未判断", "仕様"])
+        self.issue(5)["comments"] = noise + [left]
+        self.add_issue(6, ["AI起票", "未判断", "仕様"])
+        self.issue(6)["comments"] = list(noise)
+        # #7 は、コメントを読めないので、この回は仕分けない（安全な側に倒す）
+        self.add_issue(7, ["AI起票", "未判断", "仕様"])
+        self.state["fail_view"] = [7]
+        self.script["triage_default"] = {"result": "仕分けた"}
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual([c["prompt"] for c in self.claude_calls("triage")], ["/triage-issues --loop 6"])
+        self.assertIn("#7 のコメントを読めなかった", self.output)
+
+    def test_prerequisite_written_by_outsider_does_not_unblock(self) -> None:
+        # 前提の Issue を外部の人が書いていると、その人が自分で閉じられるので、閉じていても済んだとしない
+        self.add_issue(30, ["仕様"], state="CLOSED", author="outsider")
+        self.add_issue(31, ["仕様"], state="CLOSED")
+        self.task(1, body="- 前提: #30\n")
+        self.task(2, body="- 前提: #31\n")
+        self.write_fakes()
+        loop = self.mod.Loop(self.mod.parse_args(["--repo", self.repo, "--worktree", self.worktree, "--log-dir", self.logs]))
+        ready, skipped = loop.classify(loop.list_tasks())
+        self.assertEqual([t.number for t in ready], [2])
+        self.assertEqual([(t.number, r) for t, r in skipped], [(1, "前提の #30 がオーナー以外が書いた Issue である")])
+
+    def test_own_pull_request_is_found_behind_many_fork_pull_requests(self) -> None:
+        # fork から同じ名前のブランチで pull request を 100 件より多く出され、絞らない一覧から押し出されても、
+        # 直しの回に自分の pull request を見つけて使い続ける
+        self.task(1)
+        self.state["next_pr"] = 1
+        for number in range(200, 301):
+            self.state["prs"][str(number)] = {"number": number, "head": "task/1", "base": "main", "title": "外部", "body": "外部",
+                                              "state": "OPEN", "cross": True, "author": "outsider", "head_owner": "outsider"}
+        self.state["checks_queue"] = [FAILING]
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A1\n"}},
+            {"structured_output": done(), "files": {"a.txt": "A2\n"}},
+        ]
+        self.script["review"] = [review_pass(), review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual(len(self.gh_calls("pr create")), 1)
+        self.assertEqual(self.state["prs"]["1"]["state"], "MERGED")
+        self.assertEqual({c["argv"][2] for c in self.gh_calls("pr merge")}, {"1"})
+
+    def test_pull_requests_from_forks_or_others_are_not_used(self) -> None:
+        # 外部の人が、fork のブランチ task/1 から pull request を出した。同じリポジトリのブランチでも、
+        # オーナー以外が作った pull request は使わない。ループは自分の pull request を作ってマージする。
+        self.state["prs"]["50"] = {"number": 50, "head": "task/1", "base": "main", "title": "外部", "body": "外部",
+                                   "state": "OPEN", "cross": True, "author": "outsider", "head_owner": "outsider"}
+        self.state["prs"]["51"] = {"number": 51, "head": "task/1", "base": "main", "title": "別の人", "body": "別の人",
+                                   "state": "OPEN", "author": "someone"}
+        self.task(1)
+        self.state["checks_queue"] = [FAILING]
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A1\n"}},
+            {"structured_output": done(), "files": {"a.txt": "A2\n"}},
+        ]
+        self.script["review"] = [review_pass(), review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual(self.state["prs"]["100"]["state"], "MERGED")
+        self.assertEqual(self.main_file("a.txt"), "A2\n")
+        self.assertEqual(len(self.gh_calls("pr create")), 1)  # 直しの回も、自分の pull request を使い続ける
+        for number, text in (("50", "外部"), ("51", "別の人")):
+            self.assertEqual(self.state["prs"][number]["state"], "OPEN")
+            self.assertEqual(self.state["prs"][number]["title"], text)
+            self.assertEqual(self.state["prs"][number]["body"], text)
+        for command in ("pr edit", "pr merge", "pr checks"):
+            self.assertEqual({c["argv"][2] for c in self.gh_calls(command)}, {"100"}, command)
+
+    def test_stuck_comment_does_not_name_pull_request_from_fork(self) -> None:
+        self.state["prs"]["50"] = {"number": 50, "head": "task/1", "base": "main", "title": "外部", "body": "外部",
+                                   "state": "OPEN", "cross": True, "author": "outsider", "head_owner": "outsider"}
+        self.task(1, difficulty="大")
+        self.script["implement_default"] = {"structured_output": done(), "files": {"a.txt": "A\n"}}
+        self.script["review_default"] = review_fail("違う")
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertIn("行き詰まり", self.issue(1)["labels"])
+        self.assertNotIn("PR #50", self.issue(1)["comments"][0])
 
     def test_triage_with_permission_denial_is_retried_once(self) -> None:
         self.add_issue(5, ["AI起票", "未判断", "仕様"])

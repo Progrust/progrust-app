@@ -71,7 +71,6 @@ MAX_SAME_MODEL_FIXES = 2
 MAX_ESCALATED_FIXES = 1
 MAX_CONSECUTIVE_STUCK = 3
 
-# スキルの呼び方
 # スキルの呼び方（{number} は Issue の番号、{numbers} は空白で区切った番号）
 PROMPT_IMPLEMENT = "/implement-task {number} --loop"
 PROMPT_FIX = "/implement-task {number} --loop fix\n\n{findings}"
@@ -88,6 +87,10 @@ STRUCTURED_OUTPUT_FAILURE = "error_max_structured_output_retries"
 # ループの仕分けが、ユーザーの判断が要るとして `未判断` のまま残した Issue に書くコメントの、1 行目の始まり。
 # このコメントがあり、`未判断` が付いたままの Issue は、ループでは仕分け直さない（ADR 0193）
 LEFT_FOR_USER_PREFIX = "ユーザーの判断が要るので、未判断のまま残した（"
+
+# リポジトリのオーナーが書いたコメントの authorAssociation。ループは、オーナーが書いた Issue・コメント・
+# pull request だけを判定に使う。書いた人が読めないものは、オーナーのものとして扱わない（ADR 0247）
+OWNER_ASSOCIATION = "OWNER"
 
 # 権限の設定（main にあるものを使う）
 SETTINGS_IMPLEMENT = ".claude/loop-settings.json"
@@ -222,14 +225,57 @@ class StructuredOutputError(InfraError):
         self.session_id = session_id
 
 
+def author_login(raw: Any) -> str:
+    """gh の JSON の `author` の login。無いか読めなければ空。"""
+    author = raw.get("author") if isinstance(raw, dict) else None
+    login = author.get("login") if isinstance(author, dict) else None
+    return login.strip() if isinstance(login, str) else ""
+
+
+def is_owner_login(login: str, owner: str) -> bool:
+    """login がリポジトリのオーナーのものか。GitHub の login は大文字と小文字を区別しない。どちらかが空なら False。"""
+    return bool(login) and bool(owner) and login.casefold() == owner.casefold()
+
+
+def authored_by_owner(raw: Any, owner: str) -> bool:
+    """Issue・pull request を書いた人が、リポジトリのオーナーか。書いた人が読めなければ False。"""
+    return is_owner_login(author_login(raw), owner)
+
+
+def owner_comments(comments: Any) -> List[Dict[str, Any]]:
+    """コメントのうち、オーナーが書いたもの（authorAssociation が OWNER）だけ。無い・読めないものは外す。"""
+    if not isinstance(comments, list):
+        return []
+    return [c for c in comments if isinstance(c, dict) and c.get("authorAssociation") == OWNER_ASSOCIATION]
+
+
+def is_own_pr(raw: Any, branch: str, owner: str) -> bool:
+    """pull request が、このリポジトリのブランチ `branch` から、オーナーが作ったものか。
+
+    `gh pr list --head` は、fork のブランチからの pull request も、ブランチの名前だけで返す。
+    fork からのものと、オーナー以外が作ったものは、ループの pull request として扱わない（ADR 0247）。
+    """
+    if not isinstance(raw, dict) or raw.get("isCrossRepository") is not False:
+        return False
+    if raw.get("headRefName") != branch:
+        return False
+    head_owner = raw.get("headRepositoryOwner")
+    head_login = head_owner.get("login") if isinstance(head_owner, dict) else None
+    if not isinstance(head_login, str) or not is_owner_login(head_login.strip(), owner):
+        return False
+    return authored_by_owner(raw, owner)
+
+
 class Task:
-    def __init__(self, raw: Dict[str, Any]) -> None:
+    def __init__(self, raw: Dict[str, Any], owner: str) -> None:
         self.number: int = int(raw["number"])
         self.title: str = raw.get("title") or ""
         self.body: str = raw.get("body") or ""
         self.labels: Set[str] = {label["name"] for label in raw.get("labels") or []}
         milestone = raw.get("milestone") or {}
         self.milestone: str = milestone.get("title") or ""
+        # オーナー以外が書いた Issue は、本文を指示として読まないために、選ばない（ADR 0247）
+        self.owner_authored: bool = authored_by_owner(raw, owner)
 
     @property
     def difficulty(self) -> Optional[str]:
@@ -245,6 +291,8 @@ class Task:
 
     def skip_reason(self) -> Optional[str]:
         """ループが選ばない理由。選べるなら None。前提はここでは見ない。"""
+        if not self.owner_authored:
+            return "リポジトリのオーナー以外が書いた Issue である"
         for label in (LABEL_STUCK, LABEL_EXCLUDED, LABEL_HOLD):
             if label in self.labels:
                 return f"ラベル `{label}` が付いている"
@@ -259,6 +307,10 @@ class Task:
 
     def describe(self) -> str:
         return f"#{self.number} [難易度:{self.difficulty or '?'}] {self.title}"
+
+    def shown_title(self) -> str:
+        """表示するタイトル。オーナー以外が書いた Issue は、タイトルも出さない（出力を AI が読むことがあるため）。"""
+        return self.title if self.owner_authored else "（オーナー以外が書いた Issue なので、タイトルを出さない）"
 
 
 def parse_prerequisites(body: str) -> Optional[List[int]]:
@@ -350,6 +402,7 @@ class Loop:
         self.log_file: Optional[str] = None
         self.call_index = 0
         self.lock_handle: Any = None
+        self.owner: Optional[str] = None
         self.attempted: Set[int] = set()
         self.triaged: Set[int] = set()
         # 仕分けの会話で権限に拒否された操作があったので、もう一度仕分けることにした Issue（ADR 0194）
@@ -434,40 +487,70 @@ class Loop:
 
     # ---- Issue ----
 
+    def repo_owner(self) -> str:
+        """リポジトリの所有者の login。分からなければ、オーナーを見分けられないので止める。"""
+        if self.owner is None:
+            data = self.gh_json(["repo", "view", "--json", "owner"])
+            owner = data.get("owner") if isinstance(data, dict) else None
+            login = owner.get("login") if isinstance(owner, dict) else None
+            if not isinstance(login, str) or not login.strip():
+                raise InfraError("`gh repo view` から、リポジトリの所有者が分かりません。オーナーが書いた Issue を見分けられないので、止めます。")
+            self.owner = login.strip()
+        return self.owner
+
     def list_tasks(self) -> List[Task]:
         raw = self.gh_json(
             [
                 "issue", "list", "--state", "open", "--label", LABEL_TASK,
-                "--limit", "500", "--json", "number,title,labels,milestone,body",
+                "--limit", "500", "--json", "number,title,labels,milestone,body,author",
             ]
         )
-        return [Task(item) for item in raw]
+        owner = self.repo_owner()
+        return [Task(item, owner) for item in raw]
 
-    def issue_closed(self, number: int, cache: Dict[int, bool]) -> bool:
+    def prerequisite_state(self, number: int, cache: Dict[int, str]) -> str:
+        """前提の Issue の状態。'closed'（オーナーが書いて閉じている）、'open'（閉じていないか、読めない）、
+        'not_owner'（オーナー以外が書いた）のどれか。
+
+        オーナー以外が書いた Issue は、書いた人が自分で閉じられるので、閉じていても前提が済んだとしない（ADR 0247）。
+        """
         if number not in cache:
-            result = self.gh(["issue", "view", str(number), "--json", "state"], check=False)
-            closed = False
+            result = self.gh(["issue", "view", str(number), "--json", "state,author"], check=False)
+            state = "open"
             if result.returncode == 0:
                 try:
-                    closed = json.loads(result.stdout).get("state") == "CLOSED"
+                    data = json.loads(result.stdout)
                 except ValueError:
-                    closed = False
-            cache[number] = closed
+                    data = None
+                if isinstance(data, dict):
+                    if not authored_by_owner(data, self.repo_owner()):
+                        state = "not_owner"
+                    elif data.get("state") == "CLOSED":
+                        state = "closed"
+            cache[number] = state
         return cache[number]
 
     def classify(self, tasks: List[Task]) -> Tuple[List[Task], List[Tuple[Task, str]]]:
         """選べるタスク（選ぶ順）と、選べないタスクとその理由。"""
         ready: List[Task] = []
         skipped: List[Tuple[Task, str]] = []
-        cache: Dict[int, bool] = {}
+        cache: Dict[int, str] = {}
         for task in sorted(tasks, key=Task.sort_key):
             reason = task.skip_reason()
             if reason is None and task.number in self.attempted:
                 reason = "この実行で既に扱った"
             if reason is None:
-                waiting = [n for n in parse_prerequisites(task.body) or [] if not self.issue_closed(n, cache)]
+                prerequisites = parse_prerequisites(task.body) or []
+                states = {n: self.prerequisite_state(n, cache) for n in prerequisites}
+                waiting = [n for n in prerequisites if states[n] == "open"]
+                foreign = [n for n in prerequisites if states[n] == "not_owner"]
+                reasons = []
                 if waiting:
-                    reason = "前提の " + "、".join(f"#{n}" for n in waiting) + " が閉じていない"
+                    reasons.append("前提の " + "、".join(f"#{n}" for n in waiting) + " が閉じていない")
+                if foreign:
+                    reasons.append("前提の " + "、".join(f"#{n}" for n in foreign) + " がオーナー以外が書いた Issue である")
+                if reasons:
+                    reason = "。".join(reasons)
             if reason is None:
                 ready.append(task)
             else:
@@ -478,30 +561,56 @@ class Loop:
         raw = self.gh_json(
             [
                 "issue", "list", "--state", "open", "--label", LABEL_AI_FILED,
-                "--limit", "200", "--json", "number,labels,comments",
+                "--limit", "200", "--json", "number,labels,author",
             ]
         )
+        owner = self.repo_owner()
         # 開いているタスクが「前提」で待っている Issue は、ユーザーの判断を求めるものなので、
         # ループでは仕分けない（ユーザーが決める前に、閉じたりタスクにしたりしないため）。
+        # 本文を読むのは、オーナーが書いたタスクだけ（ADR 0247）。
         awaited: Set[int] = set()
         for task in self.list_tasks():
-            awaited.update(parse_prerequisites(task.body) or [])
+            if task.owner_authored:
+                awaited.update(parse_prerequisites(task.body) or [])
         numbers = []
         for item in raw:
+            # オーナー以外が書いた Issue は、仕分けない（本文を指示として読まないため。ADR 0247）
+            if not authored_by_owner(item, owner):
+                continue
             labels = {label["name"] for label in item.get("labels") or []}
             if LABEL_HOLD in labels or LABEL_TASK in labels:
                 continue
             if int(item["number"]) in self.triaged or int(item["number"]) in awaited:
                 continue
             # 前の実行の仕分けがユーザーに回した Issue は、ユーザーが答えるまで、ループでは仕分け直さない
-            if LABEL_UNDECIDED in labels and any(
-                str(comment.get("body") or "").lstrip().startswith(LEFT_FOR_USER_PREFIX)
-                for comment in item.get("comments") or []
-                if isinstance(comment, dict)
-            ):
+            if LABEL_UNDECIDED in labels and self.left_for_user(int(item["number"])) is not False:
                 continue
             numbers.append(int(item["number"]))
         return sorted(numbers)
+
+    def left_for_user(self, number: int) -> Optional[bool]:
+        """前の実行の仕分けが、ユーザーの判断が要るとして残した Issue か。コメントを全部読めなければ None。
+
+        `gh issue list --json comments` は Issue ごとに最初の 100 件のコメントしか返さないので、
+        コメントを全部返す `gh issue view --json comments` で読む。見るのは、オーナーが書いたコメントだけ
+        （ループのコメントもオーナーのアカウントで書かれる）。外部の人のコメントで押し出されないようにする（ADR 0247）。
+        """
+        result = self.gh(["issue", "view", str(number), "--json", "comments"], check=False)
+        if result.returncode != 0:
+            self.say(f"警告: #{number} のコメントを読めなかったので、この回は仕分けない。")
+            return None
+        try:
+            data = json.loads(result.stdout)
+        except ValueError:
+            data = None
+        comments = data.get("comments") if isinstance(data, dict) else None
+        if not isinstance(comments, list):
+            self.say(f"警告: #{number} のコメントを読めなかったので、この回は仕分けない。")
+            return None
+        return any(
+            str(comment.get("body") or "").lstrip().startswith(LEFT_FOR_USER_PREFIX)
+            for comment in owner_comments(comments)
+        )
 
     def comment(self, number: int, body: str) -> None:
         self.gh(["issue", "comment", str(number), "--body-file", "-"], stdin=body[:COMMENT_CHARS * 3])
@@ -842,8 +951,21 @@ class Loop:
         return must, notes
 
     def find_pr(self, branch: str) -> Optional[int]:
-        raw = self.gh_json(["pr", "list", "--head", branch, "--state", "open", "--json", "number", "--limit", "1"])
-        return int(raw[0]["number"]) if raw else None
+        """このリポジトリのブランチ `branch` からの、オーナーが作った開いている pull request の番号。
+
+        `gh pr list --head` は fork のブランチからの pull request も返すので、手元で外す（ADR 0247）。
+        fork からの pull request をたくさん出されても見つけられるように、gh にログインしている人
+        （ループではオーナー）が作ったものに GitHub の側で絞った一覧（検索を使う）も見る。検索は、作ったばかりの
+        pull request をまだ返さないことがあるので、絞らない一覧も見る。どちらも、手元でオーナーのものか確かめる。
+        """
+        fields = ["--json", "number,headRefName,isCrossRepository,headRepositoryOwner,author", "--limit", "100"]
+        owner = self.repo_owner()
+        for extra in ([], ["--author", "@me"]):
+            raw = self.gh_json(["pr", "list", "--head", branch, "--state", "open"] + extra + fields)
+            own = [item for item in raw if is_own_pr(item, branch, owner)] if isinstance(raw, list) else []
+            if own:
+                return int(own[0]["number"])
+        return None
 
     def remote_head(self, branch: str) -> Optional[str]:
         """origin のブランチの先頭のコミット。ブランチが無ければ None。"""
@@ -992,7 +1114,7 @@ class Loop:
                 history.append(
                     f"{label}: 結果を決まった形で返せなかったので、{data['reported_by']} で同じ会話の続きから結果だけを返させた"
                 )
-            checked =self.verify(task, branch, str(models["review"]), step, label, title, summary, fixed, human, history)
+            checked = self.verify(task, branch, str(models["review"]), step, label, title, summary, fixed, human, history)
             if checked["status"] == "conflict":
                 if allow_restart:
                     return "conflict"
@@ -1352,7 +1474,7 @@ class Loop:
             )
         print(f"選べないタスク: {len(skipped)} 件")
         for task, reason in skipped:
-            print(f"  #{task.number} {task.title}: {reason}")
+            print(f"  #{task.number} {task.shown_title()}: {reason}")
         settings_dir = "（記録のディレクトリ）"
         print("")
         print("実行するコマンド（作業ツリーの中で実行する）:")
@@ -1389,9 +1511,10 @@ class Loop:
         try:
             tasks = self.list_tasks()
             ready, skipped = self.classify(tasks)
-            stuck = self.gh_json(["issue", "list", "--state", "open", "--label", LABEL_STUCK, "--limit", "200", "--json", "number,title"])
-            human = self.gh_json(["issue", "list", "--state", "all", "--label", LABEL_HUMAN_CHECK, "--limit", "200", "--json", "number,title"])
-            undecided = self.gh_json(["issue", "list", "--state", "open", "--label", LABEL_UNDECIDED, "--limit", "200", "--json", "number,title"])
+            stuck = self.gh_json(["issue", "list", "--state", "open", "--label", LABEL_STUCK, "--limit", "200", "--json", "number,title,author"])
+            human = self.gh_json(["issue", "list", "--state", "all", "--label", LABEL_HUMAN_CHECK, "--limit", "200", "--json", "number,title,author"])
+            undecided = self.gh_json(["issue", "list", "--state", "open", "--label", LABEL_UNDECIDED, "--limit", "200", "--json", "number,title,author"])
+            owner = self.repo_owner()
         except InfraError as error:
             print(f"仕組みの失敗: {error}", file=sys.stderr)
             return 2
@@ -1410,7 +1533,9 @@ class Loop:
         ):
             print(f"{heading}: {len(items)} 件")
             for item in sorted(items, key=lambda i: i["number"]):
-                print(f"  #{item['number']} {item['title']}")
+                # オーナー以外が書いた Issue は、タイトルも出さない（この出力を AI が読むことがあるため。ADR 0247）
+                title = item["title"] if authored_by_owner(item, owner) else "（オーナー以外が書いた Issue なので、タイトルを出さない）"
+                print(f"  #{item['number']} {title}")
         return 0
 
 

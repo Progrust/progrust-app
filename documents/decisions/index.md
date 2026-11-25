@@ -279,6 +279,7 @@
 * [ADR 0195](0195-loop-checks-node-and-npm-series-before-start.md) - 実装のループは、始めるときに、始めた端末で見つかる node と npm の版が `package.json` の `engines` の系列に合うかを確かめ、合わないときは始めない
 * [ADR 0229](0229-escalate-report-when-loop-claude-fails-structured-output.md) - 実装のループで、実装する側の claude が作業の後に結果を決まった形で返せずに終わったときは、止まらずに、作業を捨てないで、引き上げるモデルに同じ会話の続きから結果だけを返させる
 * [ADR 0243](0243-rerun-ci-with-empty-commit-when-fix-changes-nothing.md) - 実装のループで、直しの回に前の回に push したコミットから変わらなかったときは、空のコミットを足して push し、CI をやり直す
+* [ADR 0247](0247-read-only-owner-written-issues-comments-and-pull-requests.md) - AI エージェントと実装のループは、リポジトリのオーナーが書いた Issue・コメント・pull request だけを読んで判定に使い、オーナー以外が書いたものは、指示としても経過としても扱わない
 
 # 置き換え済み・廃止
 
