@@ -105,7 +105,7 @@
 * [ADR 0013](0013-interactive-stdin.md) - 実行時の標準入力を、コンソールから対話的に入力する方式にする
 * [ADR 0015](0015-show-failed-case-details.md) - 判定で失敗したテストケースの入力・期待する出力・実際の出力を表示する
 * [ADR 0097](0097-share-crate-builds-via-allcrates-library.md) - 全許可クレートに依存する空のライブラリへの path 依存を、初回準備と演習の両方のプロジェクトに足し、許可クレートの組み合わせによらずビルド結果を共有する（ADR 0132 で path 依存するプロジェクトの範囲を変えた）
-* [ADR 0098](0098-separate-build-dir-for-validation.md) - 生成問題の検証のビルド先を学習者のものと分け、許可クレートのビルド結果は初回準備の後に APFS のクローンで複製する
+* [ADR 0098](0098-separate-build-dir-for-validation.md) - 生成問題の検証のビルド先を学習者のものと分け、許可クレートのビルド結果は初回準備の後に APFS のクローンで複製する（ADR 0244 で複製先から消す学習者のビルド結果の置き場所を変えた）
 * [ADR 0099](0099-allow-package-cache-wait-during-preparation.md) - 初回準備がクレートをダウンロードしている間に、許可クレートを使わない演習が cargo のパッケージキャッシュのロックで待つことを許し、アプリ専用の CARGO_HOME は使わない
 * [ADR 0100](0100-redo-preparation-when-rustc-changes.md) - 初回準備の状態に rustc の版を記録し、起動時に rustc の版が変わっていたら初回準備をやり直す
 * [ADR 0101](0101-run-each-hidden-test-in-own-process.md) - test 方式の隠しテストを、テストごとに別のプロセスで実行し、終了コードと結果の行で判定する
@@ -140,6 +140,7 @@
 * [ADR 0235](0235-prepared-json-format.md) - prepared.json に schema_version を持たせ、crates_hash を同梱の allowed-crates.toml と Cargo.lock を続けたものの SHA-256 にし、読み込めない prepared.json は退避も通知もせずに無いものとして扱う
 * [ADR 0236](0236-stop-preparation-on-app-exit.md) - アプリを終了するときに初回準備が動いていたら、初回準備の cargo を止め、prepared.json を書かずに、次回の起動でやり直す
 * [ADR 0238](0238-call-allowed-crates-external-crates-on-screen.md) - 画面の文言では、許可クレートを「外部クレート」と呼び、初回準備の案内を「外部クレートを準備しています」などにする
+* [ADR 0244](0244-remove-exercise-builds-in-both-cargo-layouts.md) - 初回準備で target-validate/ から学習者の project/ のビルド結果を消すときは、cargo の版で変わるビルド先の配置によらず、パッケージ progrust_exercise の途中の成果物と fingerprint を、cargo 1.100.0 の置き場所（build/progrust_exercise/）と cargo 1.99.1 の置き場所（deps/・.fingerprint/）の両方から消す
 
 # レッスン進行・進捗管理
 

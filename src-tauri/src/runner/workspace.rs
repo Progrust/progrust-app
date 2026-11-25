@@ -37,6 +37,16 @@ impl WorkspaceDir {
         self.root.join("prepared.json")
     }
 
+    /// 全許可クレートに依存する空のライブラリ（`allcrates/`。[`super::preparation`]）。
+    pub fn allcrates(&self) -> PathBuf {
+        self.root.join("allcrates")
+    }
+
+    /// 初回準備用のプロジェクト（`warmup/`。[`super::preparation`]）。
+    pub fn warmup(&self) -> PathBuf {
+        self.root.join("warmup")
+    }
+
     /// 実行・提出のたびに組み立てるプロジェクト（`project/`）。
     pub fn project(&self) -> PathBuf {
         self.root.join("project")
@@ -45,6 +55,11 @@ impl WorkspaceDir {
     /// `project/` の、許可クレートを使う演習のビルド先（`target/`。初回準備と共有）。
     pub fn target(&self) -> PathBuf {
         self.root.join("target")
+    }
+
+    /// `validate/` の、許可クレートを使う問題のビルド先（`target-validate/`。初回準備で `target/` を複製して作る）。
+    pub fn target_validate(&self) -> PathBuf {
+        self.root.join("target-validate")
     }
 
     /// `project/` の、許可クレートを使わない演習のビルド先（`target-std/`）。
@@ -74,8 +89,14 @@ mod tests {
             workspace.prepared_json(),
             Path::new("/tmp/workspace/prepared.json")
         );
+        assert_eq!(workspace.allcrates(), Path::new("/tmp/workspace/allcrates"));
+        assert_eq!(workspace.warmup(), Path::new("/tmp/workspace/warmup"));
         assert_eq!(workspace.project(), Path::new("/tmp/workspace/project"));
         assert_eq!(workspace.target(), Path::new("/tmp/workspace/target"));
+        assert_eq!(
+            workspace.target_validate(),
+            Path::new("/tmp/workspace/target-validate")
+        );
         assert_eq!(
             workspace.target_std(),
             Path::new("/tmp/workspace/target-std")
