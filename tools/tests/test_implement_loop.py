@@ -90,6 +90,12 @@ def main():
 
     if command in state.get("fail", {}):
         fail(state["fail"][command])
+    # fail_times のコマンドは、count の回数だけ失敗し、その後は成功する
+    failing = state.get("fail_times", {}).get(command)
+    if failing and failing["count"] > 0:
+        failing["count"] -= 1
+        save()
+        fail(failing["message"])
 
     def comment_json(comment):
         # 文字列のコメントは、オーナーのアカウント（ループ）が書いたもの。辞書のコメントは、そのまま返す
@@ -232,7 +238,13 @@ def main():
         pr["state"] = "MERGED"
         save()
     elif command == "run view":
-        print(state.get("run_log", "テストが失敗した行"))
+        if "--json" in flags:
+            print(json.dumps({"jobs": state.get("run_jobs", {}).get(positional[2], [])}))
+        else:
+            print(state.get("run_log", "テストが失敗した行"))
+    elif positional[:1] == ["api"] and positional[1].endswith("/annotations"):
+        job_id = positional[1].split("/")[-2]
+        print(json.dumps(state.get("annotations", {}).get(job_id, [])))
     else:
         fail(f"偽の gh が知らないコマンド: {argv}", 2)
 
@@ -1236,6 +1248,67 @@ class FlowTest(LoopTestCase):
         self.assertIn("3 回目（opus）: 前の回に push したコミットから変わらなかったので、空のコミットを足して CI をやり直した", self.issue(1)["comments"][0])
         self.assertEqual(self.state["prs"]["100"]["state"], "OPEN")
         self.assertEqual(self.gh_calls("pr merge"), [])
+        self.assertIsNone(self.main_file("a.txt"))
+
+    def test_ci_job_not_started_stops_without_fix_round(self) -> None:
+        # 支払いの失敗などで GitHub がジョブを開始しなかったときは、コードの失敗として直しに回さず、仕組みの失敗として止まる
+        self.task(1)
+        self.task(2)
+        self.state["checks"] = FAILING
+        self.state["run_jobs"] = {"7": [{"databaseId": 8, "name": "check", "status": "completed", "conclusion": "failure", "steps": []}]}
+        message = "The job was not started because recent account payments have failed or your spending limit needs to be increased."
+        self.state["annotations"] = {"8": [{"annotation_level": "failure", "message": message}]}
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "A\n"}}]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 2, self.output)
+        self.assertIn("ステップを 1 つも実行せずに失敗しました", self.output)
+        self.assertIn(message, self.output)
+        self.assertEqual(len(self.claude_calls("implement")), 1)
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+        self.assertEqual(self.issue(1)["comments"], [])
+        self.assertEqual(self.state["prs"]["100"]["state"], "OPEN")
+        self.assertEqual(self.gh_calls("pr merge"), [])
+        self.assertIsNone(self.main_file("a.txt"))
+
+    def test_ci_job_with_steps_goes_to_fix_round(self) -> None:
+        # ステップを実行して失敗したジョブは、これまでどおり CI の失敗として直しに回す
+        self.task(1)
+        self.state["checks_queue"] = [FAILING]
+        self.state["run_jobs"] = {"7": [{"databaseId": 8, "name": "check", "status": "completed", "conclusion": "failure", "steps": [{"name": "Set up job"}]}]}
+        self.script["implement"] = [
+            {"structured_output": done(), "files": {"a.txt": "A1\n"}},
+            {"structured_output": done(), "files": {"a.txt": "A2\n"}},
+        ]
+        self.script["review"] = [review_pass(), review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertIn("## CI の失敗", self.claude_calls("implement")[1]["prompt"])
+        self.assertEqual(self.main_file("a.txt"), "A2\n")
+
+    def test_transient_pr_checks_failure_is_retried(self) -> None:
+        # CI を待つ間の GitHub の一時的な失敗では止まらず、待ってからやり直す
+        self.task(1)
+        self.state["fail_times"] = {"pr checks": {"count": 2, "message": "HTTP 504: 504 Gateway Timeout (https://api.github.com/graphql)"}}
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "A\n"}}]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 0, self.output)
+        self.assertEqual(len(self.gh_calls("pr checks")), 3)
+        self.assertEqual(self.state["prs"]["100"]["state"], "MERGED")
+        self.assertEqual(self.main_file("a.txt"), "A\n")
+
+    def test_persistent_pr_checks_failure_stops_without_label(self) -> None:
+        self.task(1)
+        self.state["fail"] = {"pr checks": "HTTP 504: 504 Gateway Timeout"}
+        self.script["implement"] = [{"structured_output": done(), "files": {"a.txt": "A\n"}}]
+        self.script["review"] = [review_pass()]
+        code = self.run_loop()
+        self.assertEqual(code, 2, self.output)
+        self.assertIn(f"`gh pr checks` が {self.mod.CI_GH_MAX_FAILURES} 回続けて失敗しました", self.output)
+        self.assertEqual(len(self.gh_calls("pr checks")), self.mod.CI_GH_MAX_FAILURES)
+        self.assertEqual(self.issue(1)["labels"], ["実装タスク", "難易度:小"])
+        self.assertEqual(self.state["prs"]["100"]["state"], "OPEN")
         self.assertIsNone(self.main_file("a.txt"))
 
     def test_conflict_restarts_once_from_new_main(self) -> None:

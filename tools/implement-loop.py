@@ -19,7 +19,8 @@ GitHub の Issue（ラベル `実装タスク`）を 1 件ずつ選び、`claude
 終了コード:
     0    選べるタスクが無くなった、または --max-tasks に達した
     1    行き詰まりが続いたので止めた
-    2    仕組みの失敗（claude・gh・git の失敗、CI のチェックが報告されない、前提の不足）で止めた
+    2    仕組みの失敗（claude・gh・git の失敗、CI のチェックが報告されない、CI のジョブが開始されない、
+         前提の不足）で止めた
     130  Ctrl-C で止めた
 
 標準ライブラリだけを使う。Python 3.9 以降で動く。
@@ -163,6 +164,8 @@ CI_INITIAL_WAIT = 10
 CI_APPEAR_TIMEOUT = 5 * 60
 CI_TIMEOUT = 45 * 60
 CI_POLL_SECONDS = 30
+# CI を待つ間に `gh pr checks` が続けて失敗したら止める回数（GitHub の一時的な失敗は、待ってからやり直す。ADR 0252）
+CI_GH_MAX_FAILURES = 5
 
 # 指摘やコメントに載せる出力の長さ
 TAIL_LINES = 150
@@ -225,6 +228,7 @@ HUMAN_CHECK_HEADING_RE = re.compile(r"^##[ \t]+人が確かめること[ \t]*$",
 NEXT_HEADING_RE = re.compile(r"^##[ \t]+", re.MULTILINE)
 PR_URL_RE = re.compile(r"/pull/(\d+)")
 RUN_LINK_RE = re.compile(r"/actions/runs/(\d+)")
+JOB_LINK_RE = re.compile(r"/actions/runs/\d+/job/(\d+)")
 
 
 class InfraError(Exception):
@@ -1132,10 +1136,14 @@ class Loop:
         return number
 
     def wait_for_ci(self, pr: int) -> List[str]:
-        """CI が終わるのを待つ。失敗したら指摘を返す。チェックが報告されなければ止める。"""
+        """CI が終わるのを待つ。失敗したら指摘を返す。
+
+        チェックが報告されないとき、ジョブが開始されなかったとき、`gh pr checks` の失敗が続いたときは止める。
+        """
         self.say(f"PR #{pr} の CI を待つ")
         time.sleep(CI_INITIAL_WAIT)
         started = time.monotonic()
+        gh_failures = 0
         while True:
             result = self.gh(["pr", "checks", str(pr), "--json", "name,state,bucket,link"], check=False)
             checks: List[Dict[str, Any]] = []
@@ -1145,7 +1153,16 @@ class Loop:
                 except ValueError:
                     raise InfraError(f"`gh pr checks` の出力を JSON として読めません: {tail(result.stderr).strip()}")
             elif result.returncode != 0 and "no checks reported" not in result.stderr:
-                raise InfraError(f"`gh pr checks` が失敗しました: {tail(result.stderr).strip()}")
+                # GitHub の一時的な失敗（HTTP 504 など）では、待ってからやり直す。続いたときだけ止める（ADR 0252）
+                gh_failures += 1
+                if gh_failures >= CI_GH_MAX_FAILURES:
+                    raise InfraError(
+                        f"`gh pr checks` が {gh_failures} 回続けて失敗しました。PR #{pr} は開いたままです: {tail(result.stderr).strip()}"
+                    )
+                self.say(f"  `gh pr checks` が失敗したので、待ってからやり直す（{gh_failures} 回目）: {one_line(tail(result.stderr))[:200]}")
+                time.sleep(CI_POLL_SECONDS)
+                continue
+            gh_failures = 0
             elapsed = time.monotonic() - started
             if not checks:
                 if elapsed >= CI_APPEAR_TIMEOUT:
@@ -1156,12 +1173,64 @@ class Loop:
                 failed = [c for c in checks if c.get("bucket") in ("fail", "cancel")]
                 pending = [c for c in checks if c.get("bucket") == "pending"]
                 if failed:
+                    self.stop_if_not_started(pr, failed)
                     return [self.ci_finding(failed)]
                 if not pending:
                     return []
                 if elapsed >= CI_TIMEOUT:
                     raise InfraError(f"PR #{pr} の CI が {CI_TIMEOUT} 秒たっても終わりません。PR は開いたままです。")
             time.sleep(CI_POLL_SECONDS)
+
+    def stop_if_not_started(self, pr: int, failed: List[Dict[str, Any]]) -> None:
+        """失敗したチェックに、ステップを 1 つも実行せずに終わったジョブがあれば、直しに回さずに止める（ADR 0251）。
+
+        支払いの失敗や利用上限などで、GitHub がジョブを開始しなかったときである。コードを直しても通らない。
+        ジョブの様子が読めないときは、見分けずに、これまでどおり CI の失敗として直しに回す。
+        """
+        jobs_by_run: Dict[str, List[Dict[str, Any]]] = {}
+        names: List[str] = []
+        reasons: List[str] = []
+        for check in failed:
+            link = check.get("link") or ""
+            run = RUN_LINK_RE.search(link)
+            job = JOB_LINK_RE.search(link)
+            if not run or not job:
+                continue
+            if run.group(1) not in jobs_by_run:
+                jobs_by_run[run.group(1)] = self.run_jobs(run.group(1))
+            for item in jobs_by_run[run.group(1)]:
+                steps = item.get("steps")
+                if str(item.get("databaseId")) == job.group(1) and item.get("status") == "completed" and isinstance(steps, list) and not steps:
+                    names.append(str(check.get("name")))
+                    reasons += [r for r in self.job_annotations(job.group(1)) if r not in reasons]
+        if names:
+            why = "".join(f" 注釈: {r}" for r in reasons[:3]) or " 注釈はありません。"
+            raise InfraError(
+                f"PR #{pr} の CI のジョブ（{'、'.join(names)}）が、ステップを 1 つも実行せずに失敗しました。"
+                f"GitHub がジョブを開始しなかったので、直しに回さずに止めます。PR は開いたままです。{why}"
+            )
+
+    def run_jobs(self, run_id: str) -> List[Dict[str, Any]]:
+        """CI の run のジョブの一覧。読めなければ空にする。"""
+        result = self.gh(["run", "view", run_id, "--json", "jobs"], check=False)
+        try:
+            data = json.loads(result.stdout) if result.returncode == 0 else None
+        except ValueError:
+            data = None
+        jobs = data.get("jobs") if isinstance(data, dict) else None
+        return [job for job in jobs if isinstance(job, dict)] if isinstance(jobs, list) else []
+
+    def job_annotations(self, job_id: str) -> List[str]:
+        """ジョブの失敗の注釈の文。読めなければ空にする。"""
+        result = self.gh(["api", f"repos/{{owner}}/{{repo}}/check-runs/{job_id}/annotations"], check=False)
+        try:
+            data = json.loads(result.stdout) if result.returncode == 0 else None
+        except ValueError:
+            data = None
+        if not isinstance(data, list):
+            return []
+        messages = [one_line(str(a.get("message") or ""))[:300] for a in data if isinstance(a, dict) and a.get("annotation_level") == "failure"]
+        return [m for m in messages if m]
 
     def ci_finding(self, failed: List[Dict[str, Any]]) -> str:
         lines = ["## CI の失敗", ""]

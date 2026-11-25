@@ -37,7 +37,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 | `react`、`react-dom` | 19.3 系 |
 | `vite` | 8.3 系 |
 | `typescript` | 6.0 系 |
-| `monaco-editor` | 0.57 系 |
+| `monaco-editor` | 0.58 系 |
 | `@monaco-editor/react` | 4.7 系 |
 | `remotion` と `@remotion/` で始まるすべてのパッケージ | 4.0.545 |
 | `eslint` | 10.15 系 |

@@ -10,7 +10,7 @@ description: "許可クレートの一覧（`runner/allowed-crates.toml`）と�
 
 ```toml
 [dependencies]
-rand = "=0.9.1"
+rand = "=0.9.5"
 ```
 
 - 書式は `Cargo.toml` の `[dependencies]` と同じとし、バージョンは `=` で固定する。
