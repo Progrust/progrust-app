@@ -57,7 +57,7 @@ it("not_found のときは rustup の導入手順を案内し、ボタンで htt
   render(<CargoBanner cargo={NOT_FOUND} />);
   const alert = screen.getByRole("alert");
   expect(alert).toHaveTextContent("Rust ツールチェーンが見つかりません");
-  expect(alert).toHaveTextContent("アプリを開き直してください");
+  expect(alert).toHaveTextContent("設定画面の「環境」で「再検出」してください");
   expect(alert).not.toHaveTextContent("https://");
   await act(async () => {
     fireEvent.click(

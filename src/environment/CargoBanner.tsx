@@ -30,7 +30,7 @@ export function CargoBanner({
           <p>
             <b>Rust ツールチェーンが見つかりません。</b>
             実行・テスト・提出はできません。動画の視聴は続けられます。rustup
-            の導入手順に従って導入してから、アプリを開き直してください。
+            の導入手順に従って導入してから、設定画面の「環境」で「再検出」してください。
           </p>
           <button
             type="button"
@@ -47,7 +47,7 @@ export function CargoBanner({
           、必要なバージョンは {
             cargo.required_rustc_version
           } です。ターミナルで <code>rustup update stable</code>{" "}
-          を実行して更新してから、アプリを開き直してください。
+          を実行して更新してから、設定画面の「環境」で「再検出」してください。
         </p>
       )}
     </div>
