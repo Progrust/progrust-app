@@ -11,6 +11,9 @@
 //! - 実行ファイルは、cargo の JSON の `compiler-artifact` から決める（ADR 0205、ADR 0215）。
 //! - レベルが `error` の診断が指すファイルを残す。`test` 方式の判定で、隠しテストの側でエラーが出たかを見分けるのに使う
 //!   （spec/exercise-runner/submit.md「test 方式」の 3）。
+//! - レベルが `error` の診断の `code`・`message`・`note` の文と、cargo 自身の標準エラー出力から、ビルドの失敗が
+//!   初回準備のやり直しが要る失敗に当てはまるかを判定する（[`BuildOutcome::needs_crate_preparation`]。判定そのものは
+//!   [`super::lost_crates`]）。
 //!
 //! Tauri の実行時に頼らない（判定だけを行うコマンドラインのプログラムからも使う。ADR 0208）。
 
@@ -138,6 +141,17 @@ pub struct BuildArtifact {
     pub executable: PathBuf,
 }
 
+/// レベルが `error` の診断の、初回準備のやり直しの判定（[`super::lost_crates`]）に使う部分。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ErrorDiagnostic {
+    /// 診断の `code`（`E0786` など）。無いときは `None`。
+    pub code: Option<String>,
+    /// 診断の `message`（`found invalid metadata files for crate ...` など）。ANSI エスケープを含まない。
+    pub message: String,
+    /// 子の診断のうち、レベルが `note` のものの `message`（`rendered` の `= note: ...` の行の文）。出た順に並ぶ。
+    pub notes: Vec<String>,
+}
+
 /// ビルドの結果。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct BuildOutcome {
@@ -150,6 +164,8 @@ pub struct BuildOutcome {
     /// レベルが `error` の診断が指すファイル（診断の `spans` の `file_name` と、マクロの展開をさかのぼった
     /// `expansion.span` の `file_name`。cargo の出したまま）。重複を除き、出現順に並ぶ。
     pub error_files: Vec<PathBuf>,
+    /// レベルが `error` の診断。受け取った順に並ぶ。
+    pub error_diagnostics: Vec<ErrorDiagnostic>,
     /// 実行できる成果物。受け取った順に並ぶ。
     pub artifacts: Vec<BuildArtifact>,
     project_dir: PathBuf,
@@ -185,6 +201,29 @@ impl BuildOutcome {
             .filter(|artifact| test || artifact.kinds.iter().any(|kind| kind == "bin"))
             .find(|artifact| canonical(&artifact.src_path) == wanted)
             .map(|artifact| artifact.executable.as_path())
+    }
+
+    /// cargo 自身の標準エラー出力。受け取った順に連結する。
+    pub fn cargo_stderr(&self) -> String {
+        self.output
+            .iter()
+            .filter(|piece| piece.kind == BuildOutputKind::CargoStderr)
+            .map(|piece| piece.text.as_str())
+            .collect()
+    }
+
+    /// ビルドの失敗が、初回準備のやり直しが要る失敗（[`super::lost_crates::needs_crate_preparation`]）に当てはまるか。
+    /// `target_dir` は、このビルドのビルド先（`CARGO_TARGET_DIR`）。cargo が失敗したときだけ当てはまりうる。
+    pub fn needs_crate_preparation(&self, target_dir: &Path) -> bool {
+        let BuildStatus::Failed { exit_code } = self.status else {
+            return false;
+        };
+        super::lost_crates::needs_crate_preparation(
+            exit_code,
+            &self.cargo_stderr(),
+            &self.error_diagnostics,
+            target_dir,
+        )
     }
 
     /// 試行ログの `stderr` に入れるビルドの出力（spec/exercise-runner/attempt-log.md）。
@@ -244,6 +283,7 @@ impl RunningBuild {
             output: collected.output,
             error_codes: collected.error_codes,
             error_files: collected.error_files,
+            error_diagnostics: collected.error_diagnostics,
             artifacts: collected.artifacts,
             project_dir: self.project_dir,
         };
@@ -253,6 +293,7 @@ impl RunningBuild {
                 outcome.output.clear();
                 outcome.error_codes.clear();
                 outcome.error_files.clear();
+                outcome.error_diagnostics.clear();
                 outcome.artifacts.clear();
             }
             BuildStatus::TimedOut => outcome.output.push(BuildOutputPiece {
@@ -323,6 +364,7 @@ struct Collector {
     output: Vec<BuildOutputPiece>,
     error_codes: Vec<String>,
     error_files: Vec<PathBuf>,
+    error_diagnostics: Vec<ErrorDiagnostic>,
     artifacts: Vec<BuildArtifact>,
 }
 
@@ -331,6 +373,7 @@ struct Collected {
     output: Vec<BuildOutputPiece>,
     error_codes: Vec<String>,
     error_files: Vec<PathBuf>,
+    error_diagnostics: Vec<ErrorDiagnostic>,
     artifacts: Vec<BuildArtifact>,
 }
 
@@ -361,6 +404,7 @@ impl Collector {
             output: self.output,
             error_codes: self.error_codes,
             error_files: self.error_files,
+            error_diagnostics: self.error_diagnostics,
             artifacts: self.artifacts,
         }
     }
@@ -391,11 +435,22 @@ impl Collector {
 
     fn push_diagnostic(&mut self, diagnostic: Diagnostic) {
         if diagnostic.level == "error" {
-            if let Some(code) = diagnostic.code.map(|code| code.code)
-                && !self.error_codes.contains(&code)
+            let code = diagnostic.code.map(|code| code.code);
+            if let Some(code) = &code
+                && !self.error_codes.contains(code)
             {
-                self.error_codes.push(code);
+                self.error_codes.push(code.clone());
             }
+            self.error_diagnostics.push(ErrorDiagnostic {
+                code,
+                message: diagnostic.message,
+                notes: diagnostic
+                    .children
+                    .into_iter()
+                    .filter(|child| child.level == "note")
+                    .map(|child| child.message)
+                    .collect(),
+            });
             for span in diagnostic.spans {
                 // マクロの中で出たエラー（`assert_eq!` の中の型の違いなど）の `file_name` はマクロを定義した
                 // ファイルになるので、展開した場所（`expansion.span`）もさかのぼって残す。
@@ -455,11 +510,23 @@ struct CompilerMessage {
 struct Diagnostic {
     level: String,
     #[serde(default)]
+    message: String,
+    #[serde(default)]
     code: Option<DiagnosticCode>,
     #[serde(default)]
     rendered: Option<String>,
     #[serde(default)]
     spans: Vec<DiagnosticSpan>,
+    #[serde(default)]
+    children: Vec<DiagnosticChild>,
+}
+
+/// 子の診断（`note`・`help` など）。
+#[derive(Deserialize)]
+struct DiagnosticChild {
+    level: String,
+    #[serde(default)]
+    message: String,
 }
 
 #[derive(Deserialize)]

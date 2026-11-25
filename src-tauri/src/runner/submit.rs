@@ -10,7 +10,10 @@
 //! - 判定の進み具合は、段階が変わったとき（`build` → `judge`）と、テストケースが 1 件終わるたびに `submit_progress` で送る。
 //! - 止める操作（`stop_run`）で止めた提出は `stopped` にし、試行ログに追記せず、レッスンを完了にしない。アプリの終了で
 //!   止めたときは、`run_finished` も送らない（spec/exercise-runner/submit.md「途中で止めた提出」）。
-//! - `crates_unavailable`（初回準備のやり直しが要る失敗）は、まだ見分けない（M3 で作る）。
+//! - ビルドの失敗が、初回準備のやり直しが要る失敗（[`super::lost_crates`]）に当てはまったときは、ビルドの出力を送らずに
+//!   捨て、`run_output` の `system` で「外部クレートを準備し直しています」を送り、初回準備を始め
+//!   （[`RunEvents::crates_lost`]）、判定結果を `crates_unavailable` にする。試行ログには追記せず、レッスンを完了にしない
+//!   （spec/exercise-runner/submit.md「判定をしなかった提出」）。
 //! - 組み立てから判定までの手順は [`judge_submission`] にまとめ、判定だけを行うコマンドラインのプログラム
 //!   （[`super::lesson_judge`]。ADR 0208）も同じ手順・制限値で判定する。止める操作とイベントの送信は、
 //!   [`JudgeHooks`] でつなぐ。
@@ -34,9 +37,10 @@ use super::judge_test::{
     hidden_test_executable, judge_tests,
 };
 use super::process::Stopper;
-use super::project::{assemble_project, build_env};
+use super::project::{assemble_project, build_env, uses_allowed_crates};
 use super::run::{
-    FinishedKind, RunEvents, RunFinished, app_failure, build_output_chunks, send_output,
+    FinishedKind, RunEvents, RunFinished, app_failure, build_output_chunks, handle_lost_crates,
+    send_output,
 };
 use super::runs::{ActiveRun, Runs};
 use super::workspace::WorkspaceDir;
@@ -70,7 +74,6 @@ pub struct SubmitProgress {
 }
 
 /// `run_finished` の `submit.status`（spec/exercise-runner/submit.md「判定結果」）。
-/// `crates_unavailable` は、初回準備のやり直しを作るとき（M3）に足す。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SubmitResultStatus {
@@ -80,6 +83,8 @@ pub enum SubmitResultStatus {
     Wrong,
     /// ビルドに失敗した（ビルド時間の制限を超えたときを含む）。
     CompileError,
+    /// 判定をしていない。ビルドの失敗が、初回準備のやり直しが要る失敗に当てはまった。
+    CratesUnavailable,
     /// 途中で止めた。
     Stopped,
 }
@@ -97,7 +102,7 @@ pub struct SubmitJudgement {
 }
 
 impl SubmitJudgement {
-    /// テストケースを 1 件も実行しなかった結果（`compile_error`・`stopped`）。`passed`・`total` は 0、`cases` は空にする。
+    /// テストケースを 1 件も実行しなかった結果（`compile_error`・`crates_unavailable`・`stopped`）。`passed`・`total` は 0、`cases` は空にする。
     pub(crate) fn without_cases(status: SubmitResultStatus) -> Self {
         Self {
             status,
@@ -121,13 +126,13 @@ impl SubmitJudgement {
         }
     }
 
-    /// 試行ログに記録する `status`。途中で止めた提出は記録しないので `None`。
+    /// 試行ログに記録する `status`。`crates_unavailable` の提出と、途中で止めた提出は記録しないので `None`。
     fn record_status(&self) -> Option<SubmitStatus> {
         match self.status {
             SubmitResultStatus::Passed => Some(SubmitStatus::Passed),
             SubmitResultStatus::Wrong => Some(SubmitStatus::Wrong),
             SubmitResultStatus::CompileError => Some(SubmitStatus::CompileError),
-            SubmitResultStatus::Stopped => None,
+            SubmitResultStatus::CratesUnavailable | SubmitResultStatus::Stopped => None,
         }
     }
 
@@ -184,10 +189,10 @@ struct Outcome {
 }
 
 impl Outcome {
-    /// 途中で止めた結果。止めた提出は記録しないので、ビルドの出力は持たない。
-    fn stopped() -> Self {
+    /// 判定をしなかった結果（途中で止めた、`crates_unavailable`）。記録しないので、ビルドの出力は持たない。
+    fn not_judged(status: SubmitResultStatus) -> Self {
         Self {
-            judgement: SubmitJudgement::without_cases(SubmitResultStatus::Stopped),
+            judgement: SubmitJudgement::without_cases(status),
             error_codes: Vec::new(),
             build: BuildOutput::default(),
         }
@@ -275,7 +280,11 @@ fn submit_steps(job: &SubmitJob, events: &dyn RunEvents) -> Result<Outcome, Comm
     };
     let hooks = AppHooks { job, events };
     Ok(match judge_submission(&request, &hooks)? {
-        Judged::Stopped => Outcome::stopped(),
+        Judged::Stopped => Outcome::not_judged(SubmitResultStatus::Stopped),
+        Judged::CratesUnavailable(built) => {
+            handle_lost_crates(events, job.active.request_id(), &built);
+            Outcome::not_judged(SubmitResultStatus::CratesUnavailable)
+        }
         Judged::CompileError(built) => compile_error(&built),
         Judged::Done { result, built } => Outcome {
             judgement: SubmitJudgement::judged(result),
@@ -346,7 +355,7 @@ pub trait JudgeHooks {
     }
     /// ビルドを始めた。
     fn building(&self, _build: BuildHandle) {}
-    /// ビルドが終わった（成功と失敗。止めたときは呼ばない）。`test` 方式の隠しテストの側のエラーの案内は、付けた後。
+    /// ビルドが終わった（成功と失敗。止めたときと、初回準備のやり直しが要る失敗のときは呼ばない）。`test` 方式の隠しテストの側のエラーの案内は、付けた後。
     fn built(&self, _built: &BuildOutcome) {}
     /// テストケースの実行を始めた。
     fn judging(&self, _stopper: Stopper) {}
@@ -368,6 +377,9 @@ pub enum Judged {
     Stopped,
     /// ビルドに失敗した（ビルド時間の制限を超えたときを含む）。テストケースは 1 件も実行していない。
     CompileError(BuildOutcome),
+    /// ビルドの失敗が、初回準備のやり直しが要る失敗に当てはまった。テストケースは 1 件も実行していない。
+    /// ビルドの出力は、まだ送っていない（[`JudgeHooks::built`] を呼んでいない）。
+    CratesUnavailable(BuildOutcome),
     /// テストケースを実行した。
     Done {
         result: JudgeResult,
@@ -424,6 +436,16 @@ pub fn judge_submission(
     match built.status {
         // 止める操作で止めたときは、ビルドの出力を捨てている。
         BuildStatus::Stopped => return Ok(Judged::Stopped),
+        // 初回準備のやり直しが要る失敗は、ビルドの出力を送らず、隠しテストの側のエラーの案内も付けない。
+        BuildStatus::Failed { .. }
+            if built.needs_crate_preparation(
+                &request
+                    .workspace
+                    .project_target(uses_allowed_crates(request.dependencies)),
+            ) =>
+        {
+            return Ok(Judged::CratesUnavailable(built));
+        }
         BuildStatus::Failed { .. } | BuildStatus::TimedOut => {
             if matches!(request.judge, ExerciseJudge::Test { .. }) {
                 add_hidden_test_error_hint(&mut built);
@@ -615,6 +637,7 @@ mod tests {
         );
         for (status, text) in [
             (SubmitResultStatus::CompileError, "compile_error"),
+            (SubmitResultStatus::CratesUnavailable, "crates_unavailable"),
             (SubmitResultStatus::Stopped, "stopped"),
         ] {
             assert_eq!(
@@ -628,6 +651,10 @@ mod tests {
     fn stopped_submits_are_not_recorded() {
         assert_eq!(
             SubmitJudgement::without_cases(SubmitResultStatus::Stopped).record_status(),
+            None
+        );
+        assert_eq!(
+            SubmitJudgement::without_cases(SubmitResultStatus::CratesUnavailable).record_status(),
             None
         );
         assert_eq!(

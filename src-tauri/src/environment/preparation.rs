@@ -5,7 +5,7 @@
 //!   たびに `environment_updated` を送る（[`notify`]）。
 //! - 初回準備を始めてよいかを確かめて `preparing` にする処理は [`begin`]、動かす処理は [`spawn_preparation`] の
 //!   1 か所ずつにまとめる。起動時（[`super::start_detection`]）、再試行（[`retry_crate_preparation`]）、演習のビルドの
-//!   失敗（[`start_crate_preparation`]）、再検出（[`super::redetect::redetect_tools`]）のどれも、ここを通る。
+//!   失敗（[`restart_crate_preparation`]）、再検出（[`super::redetect::redetect_tools`]）のどれも、ここを通る。
 //!   `preparing` のときは重ねて始めない。
 //! - 起動時に「実行する条件」を判定して、当てはまれば始め、当てはまらなければ `ready` にする処理は
 //!   [`prepare_crates_if_needed`]。判定そのものは [`judge`]。
@@ -26,7 +26,8 @@ use crate::commands::error::{CommandError, ErrorCode};
 use crate::runner::RunnerDir;
 use crate::runner::preparation::{PreparationOutcome, PreparationSpec, prepare};
 use crate::runner::prepared::{
-    PreparedStatus, crates_hash, needs_preparation, read_prepared, rustc_verbose_version,
+    LOST_CRATES_ERROR, PreparedStatus, crates_hash, mark_prepared_failed, needs_preparation,
+    read_prepared, rustc_verbose_version,
 };
 use crate::runner::process::Stopper;
 use crate::runner::workspace::WorkspaceDir;
@@ -76,6 +77,29 @@ pub fn judge(rustc: &Path, runner: &RunnerDir, workspace: &WorkspaceDir) -> Judg
 pub fn start_crate_preparation<R: Runtime>(app: &AppHandle<R>, tools: &RustTools) -> bool {
     let environment = app.state::<Environment>().inner().clone();
     start_on(app, &environment, tools, false).is_ok()
+}
+
+/// 実行・提出のビルドの失敗が、初回準備のやり直しが要る失敗に当てはまったとき（spec/exercise-runner/
+/// crates-and-workspace.md「初回準備のやり直しが要る失敗」）。`prepared.json` の `status` を `failed` にしてから、
+/// いま検出している `cargo`・`rustc` で初回準備を始める（[`start_crate_preparation`]）。
+///
+/// 先に `prepared.json` を書くのは、初回準備の途中でアプリを終了したとき（`prepared.json` を書かない。ADR 0236）にも、
+/// 次回の起動で初回準備をやり直すためである。`preparing` のときは、動いている初回準備をそのままにする。`cargo` が
+/// 見つからなくなっていたときは、`prepared.json` だけを書く。初回準備を始めたら `true`。
+pub fn restart_crate_preparation<R: Runtime>(app: &AppHandle<R>) -> bool {
+    match places(app) {
+        Ok((_, workspace)) => {
+            if let Err(error) = mark_prepared_failed(&workspace, LOST_CRATES_ERROR) {
+                eprintln!("prepared.json の status を failed にできなかった: {error}");
+            }
+        }
+        Err(error) => eprintln!("prepared.json の status を failed にできなかった: {error}"),
+    }
+    let environment = app.state::<Environment>().inner().clone();
+    match environment.rust_tools() {
+        Ok(tools) => start_on(app, &environment, &tools, false).is_ok(),
+        Err(_) => false,
+    }
 }
 
 /// 「実行する条件」を判定し、当てはまれば初回準備を始め（[`start_crate_preparation`] と同じ処理）、当てはまらなければ

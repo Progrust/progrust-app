@@ -305,12 +305,153 @@ fn errors_are_found_by_file_with_parent_segments_resolved() {
         output: Vec::new(),
         error_codes: Vec::new(),
         error_files: vec![PathBuf::from("src/../progrust_judge_tests.rs")],
+        error_diagnostics: Vec::new(),
         artifacts: Vec::new(),
         project_dir: project.clone(),
     };
     assert!(outcome.has_error_in(Path::new("progrust_judge_tests.rs")));
     assert!(outcome.has_error_in(&project.join("progrust_judge_tests.rs")));
     assert!(!outcome.has_error_in(Path::new("src/main.rs")));
+}
+
+/// rustc 1.100.0 で、ビルド先の依存の rlib を 0 バイトにしてビルドしたときの `compiler-message` の行（パスだけ変えた）。
+fn invalid_metadata_line(rlib: &str) -> String {
+    let line = serde_json::json!({
+        "reason": "compiler-message",
+        "package_id": "path+file:///p#progrust_exercise@0.1.0",
+        "target": { "kind": ["bin"], "name": "progrust_exercise", "src_path": "/p/src/main.rs" },
+        "message": {
+            "$message_type": "diagnostic",
+            "message": "found invalid metadata files for crate `rand`",
+            "code": { "code": "E0786", "explanation": "A metadata file was invalid.\n" },
+            "level": "error",
+            "spans": [{
+                "file_name": "src/main.rs",
+                "byte_start": 4,
+                "byte_end": 8,
+                "line_start": 1,
+                "line_end": 1,
+                "column_start": 5,
+                "column_end": 9,
+                "is_primary": true,
+                "text": [{ "text": "use rand::Rng;", "highlight_start": 5, "highlight_end": 9 }],
+                "label": null,
+                "suggested_replacement": null,
+                "suggestion_applicability": null,
+                "expansion": null,
+            }],
+            "children": [
+                {
+                    "message": format!("failed to mmap file '{rlib}': memory map must have a non-zero length"),
+                    "code": null,
+                    "level": "note",
+                    "spans": [],
+                    "children": [],
+                    "rendered": null,
+                },
+                {
+                    "message": "ヘルプ",
+                    "code": null,
+                    "level": "help",
+                    "spans": [],
+                    "children": [],
+                    "rendered": null,
+                },
+            ],
+            "rendered": format!("\u{1b}[1m\u{1b}[91merror[E0786]\u{1b}[0m: found invalid metadata files for crate `rand`\n  = note: failed to mmap file '{rlib}'\n"),
+        },
+    });
+    format!("{line}\n")
+}
+
+#[test]
+fn error_diagnostics_keep_the_code_the_message_and_the_notes() {
+    let rlib = "/w/target/debug/build/rand/0123/out/librand-0123.rlib";
+    let collected = collect(vec![stdout(
+        &[
+            diagnostic_line("warning", Some("unused_variables"), Some("w\n")),
+            invalid_metadata_line(rlib),
+            diagnostic_line("error", None, Some("aborting\n")),
+        ]
+        .concat(),
+    )]);
+    assert_eq!(
+        collected.error_diagnostics,
+        [
+            ErrorDiagnostic {
+                code: Some("E0786".into()),
+                message: "found invalid metadata files for crate `rand`".into(),
+                notes: vec![format!(
+                    "failed to mmap file '{rlib}': memory map must have a non-zero length"
+                )],
+            },
+            ErrorDiagnostic {
+                code: None,
+                message: "診断".into(),
+                notes: Vec::new(),
+            },
+        ]
+    );
+}
+
+#[test]
+fn only_failed_builds_can_need_the_preparation() {
+    let rlib = "/w/target/debug/deps/librand-0123.rlib";
+    let collected = collect(vec![
+        stdout(&invalid_metadata_line(rlib)),
+        stderr("error: could not compile `progrust_exercise`\n"),
+    ]);
+    let outcome = |status| BuildOutcome {
+        status,
+        output: collected.output.clone(),
+        error_codes: collected.error_codes.clone(),
+        error_files: collected.error_files.clone(),
+        error_diagnostics: collected.error_diagnostics.clone(),
+        artifacts: Vec::new(),
+        project_dir: "/w/project".into(),
+    };
+    let target = Path::new("/w/target");
+    assert!(
+        outcome(BuildStatus::Failed {
+            exit_code: Some(101)
+        })
+        .needs_crate_preparation(target)
+    );
+    // 隣のビルド先を指す診断は当てはまらない。
+    assert!(
+        !outcome(BuildStatus::Failed {
+            exit_code: Some(101)
+        })
+        .needs_crate_preparation(Path::new("/w/target-std"))
+    );
+    for status in [
+        BuildStatus::Failed { exit_code: None },
+        BuildStatus::TimedOut,
+        BuildStatus::Stopped,
+        BuildStatus::Succeeded,
+    ] {
+        assert!(
+            !outcome(status).needs_crate_preparation(target),
+            "{status:?}"
+        );
+    }
+
+    // `.crate` の欠落は、cargo 自身の標準エラー出力から見つける。
+    let collected = collect(vec![stderr(
+        "error: failed to download `cfg-if v1.0.5`\n\nCaused by:\n  attempting to make an HTTP request, but --offline was specified\n",
+    )]);
+    let outcome = BuildOutcome {
+        status: BuildStatus::Failed {
+            exit_code: Some(101),
+        },
+        output: collected.output,
+        error_codes: Vec::new(),
+        error_files: Vec::new(),
+        error_diagnostics: Vec::new(),
+        artifacts: Vec::new(),
+        project_dir: "/w/project".into(),
+    };
+    assert!(outcome.needs_crate_preparation(target));
 }
 
 #[test]
@@ -375,6 +516,7 @@ fn executables_are_chosen_by_root_file_and_test_profile() {
         output: collected.output,
         error_codes: collected.error_codes,
         error_files: collected.error_files,
+        error_diagnostics: collected.error_diagnostics,
         artifacts: collected.artifacts,
         project_dir: "/p".into(),
     };
@@ -407,9 +549,11 @@ fn attempt_output_splits_diagnostics_and_cargo_stderr_without_system_messages() 
         ],
         error_codes: Vec::new(),
         error_files: Vec::new(),
+        error_diagnostics: Vec::new(),
         artifacts: Vec::new(),
         project_dir: "/p".into(),
     };
+    assert_eq!(outcome.cargo_stderr(), "cargo1\ncargo2\n");
     assert_eq!(
         outcome.attempt_output(),
         BuildOutput {

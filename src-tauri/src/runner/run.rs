@@ -9,6 +9,9 @@
 //! - イベントの送り先と試行ログ・進捗の書き込み先は [`RunEvents`] で受け取る。アプリでは Tauri の `emit` で送り、
 //!   学習者データのディレクトリに書く。提出のタスク（[`super::submit`]）も、同じものを使う。
 //! - アプリの終了で止めたときは、試行ログに追記せず、`run_finished` も送らない。
+//! - ビルドの失敗が、初回準備のやり直しが要る失敗（[`super::lost_crates`]）に当てはまったときは、ビルドの出力を送らずに
+//!   捨て、`run_output` の `system` で [`CRATES_LOST_MESSAGE`] を送り、初回準備を始め（[`RunEvents::crates_lost`]）、
+//!   結果を `crates_unavailable` にする。試行ログには追記しない。初回準備が終わっても、自動ではやり直さない。
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
@@ -25,7 +28,7 @@ use super::process::{
     self, Limits, OutputChunk, OutputLimit, OutputStream, ProcessSpec, StdinMode, Termination,
     TimeoutOutput,
 };
-use super::project::{assemble_project, build_env};
+use super::project::{assemble_project, build_env, uses_allowed_crates};
 use super::runs::{ActiveRun, RunLimits, Runs, StdinState};
 use super::submit::{SubmitJudgement, SubmitProgress};
 use super::workspace::WorkspaceDir;
@@ -81,11 +84,39 @@ pub enum FinishedKind {
     Submit,
 }
 
+/// `run_finished` の `run.status`（spec/exercise-runner/run.md「結果の状態」）。試行ログに記録する状態
+/// （[`RunStatus`]）に、記録しない `crates_unavailable` を足したもの。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RunResultStatus {
+    Success,
+    CompileError,
+    RuntimeError,
+    Timeout,
+    Stopped,
+    /// ビルドの失敗が、初回準備のやり直しが要る失敗に当てはまった。学習者のコードは実行していない。
+    CratesUnavailable,
+}
+
+impl RunResultStatus {
+    /// 試行ログに記録する状態。`crates_unavailable` は記録しないので `None`（ADR 0125）。
+    pub fn record_status(self) -> Option<RunStatus> {
+        match self {
+            Self::Success => Some(RunStatus::Success),
+            Self::CompileError => Some(RunStatus::CompileError),
+            Self::RuntimeError => Some(RunStatus::RuntimeError),
+            Self::Timeout => Some(RunStatus::Timeout),
+            Self::Stopped => Some(RunStatus::Stopped),
+            Self::CratesUnavailable => None,
+        }
+    }
+}
+
 /// `run_finished` の `run`。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct RunResultSummary {
     pub mode: RunMode,
-    pub status: RunStatus,
+    pub status: RunResultStatus,
     /// 学習者のプログラム（テスト実行では `cargo test`）の終了コード。起動していないときと、シグナルで終わったとき
     /// （止めた、時間切れ、出力量の上限を含む）は `None`（ADR 0206）。
     pub exit_code: Option<i32>,
@@ -138,6 +169,33 @@ pub trait RunEvents: Send + Sync + 'static {
         session_id: &str,
         at: &str,
     ) -> Result<Option<LessonProgress>, StorageError>;
+    /// ビルドの失敗が、初回準備のやり直しが要る失敗に当てはまった。`prepared.json` の `status` を `failed` にして、
+    /// 初回準備を始める（spec/exercise-runner/crates-and-workspace.md「初回準備のやり直しが要る失敗」）。
+    /// `run_finished` を送る前に呼ぶ。
+    fn crates_lost(&self);
+}
+
+/// ビルドの失敗が、初回準備のやり直しが要る失敗に当てはまったときに、`run_output` の `system` で送る知らせ。
+pub const CRATES_LOST_MESSAGE: &str = "外部クレートを準備し直しています";
+
+/// 初回準備のやり直しが要る失敗になった実行・提出の後始末。ビルドの出力を送らずに捨て、知らせを `system` で送り、
+/// 初回準備を始める（[`RunEvents::crates_lost`]）。捨てたビルドの出力は、原因を後から確かめられるよう、アプリのログ
+/// （標準エラー出力）に書く（ADR 0125）。
+pub(super) fn handle_lost_crates(events: &dyn RunEvents, request_id: &str, built: &BuildOutcome) {
+    let output = built.attempt_output();
+    eprintln!(
+        "要求 {request_id} のビルドで、外部クレートが失われていた（crates_unavailable）:\n{}{}",
+        output.compiler_messages, output.cargo_stderr
+    );
+    send_output(
+        events,
+        request_id,
+        vec![RunOutputChunk {
+            stream: RunStream::System,
+            text: CRATES_LOST_MESSAGE.to_string(),
+        }],
+    );
+    events.crates_lost();
 }
 
 /// 実行時間の制限で止めたときの知らせ。
@@ -188,7 +246,7 @@ pub struct RunJob {
 
 /// 結果の状態が決まった実行。
 struct Outcome {
-    status: RunStatus,
+    status: RunResultStatus,
     exit_code: Option<i32>,
     error_codes: Vec<String>,
     build: BuildOutput,
@@ -198,7 +256,7 @@ struct Outcome {
 
 impl Outcome {
     /// プログラムを起動していない結果。
-    fn without_program(status: RunStatus, build: &BuildOutcome) -> Self {
+    fn without_program(status: RunResultStatus, build: &BuildOutcome) -> Self {
         Self {
             status,
             exit_code: None,
@@ -212,7 +270,7 @@ impl Outcome {
     /// ビルドを始める前に止めた結果。
     fn stopped_before_build() -> Self {
         Self {
-            status: RunStatus::Stopped,
+            status: RunResultStatus::Stopped,
             exit_code: None,
             error_codes: Vec::new(),
             build: BuildOutput::default(),
@@ -236,12 +294,15 @@ pub fn execute(job: RunJob, events: Arc<dyn RunEvents>) {
                 status: outcome.status,
                 exit_code: outcome.exit_code,
             };
-            if !job.active.stopped_for_app_exit() {
+            // `crates_unavailable` の実行と、アプリの終了で止めた実行は、記録しない（attempt-log.md）。
+            if let Some(status) = outcome.status.record_status()
+                && !job.active.stopped_for_app_exit()
+            {
                 let record = RunRecord {
                     at: finished_at.clone(),
                     mode: job.mode,
                     files: job.files.clone(),
-                    status: outcome.status,
+                    status,
                     error_codes: outcome.error_codes,
                     build: outcome.build,
                     stdout: outcome.stdout,
@@ -316,10 +377,29 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
 
     match built.status {
         // 止める操作で止めたときは、ビルドの出力を捨てている（run.md「停止」）。
-        BuildStatus::Stopped => return Ok(Outcome::without_program(RunStatus::Stopped, &built)),
+        BuildStatus::Stopped => {
+            return Ok(Outcome::without_program(RunResultStatus::Stopped, &built));
+        }
+        // 初回準備のやり直しが要る失敗は、ビルドの出力を送らずに捨て、学習者のコードの誤りとして表示しない
+        // （run.md「手順」の 2）。
+        BuildStatus::Failed { .. }
+            if built.needs_crate_preparation(
+                &job.workspace
+                    .project_target(uses_allowed_crates(&job.dependencies)),
+            ) =>
+        {
+            handle_lost_crates(events.as_ref(), job.active.request_id(), &built);
+            return Ok(Outcome::without_program(
+                RunResultStatus::CratesUnavailable,
+                &built,
+            ));
+        }
         BuildStatus::Failed { .. } | BuildStatus::TimedOut => {
             send_build_output(job, events, &built);
-            return Ok(Outcome::without_program(RunStatus::CompileError, &built));
+            return Ok(Outcome::without_program(
+                RunResultStatus::CompileError,
+                &built,
+            ));
         }
         BuildStatus::Succeeded => send_build_output(job, events, &built),
     }
@@ -354,7 +434,7 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
 
     // ビルドが終わってからプログラムを起動するまでに止める指示が来ていたら、起動しない。
     if job.active.stop_cause().is_some() {
-        return Ok(Outcome::without_program(RunStatus::Stopped, &built));
+        return Ok(Outcome::without_program(RunResultStatus::Stopped, &built));
     }
 
     let collected = Arc::new(Mutex::new((String::new(), String::new())));
@@ -399,16 +479,20 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
         .map_err(|error| app_failure("プログラムの終わりを受け取れませんでした。", error))?;
 
     let (status, exit_code, notice) = match termination {
-        Termination::Exited(0) => (RunStatus::Success, Some(0), None),
-        Termination::Exited(code) => (RunStatus::RuntimeError, Some(code), None),
-        Termination::Signaled(_) => (RunStatus::RuntimeError, None, None),
-        Termination::TimedOut => (RunStatus::Timeout, None, Some(timeout_message(&limits))),
+        Termination::Exited(0) => (RunResultStatus::Success, Some(0), None),
+        Termination::Exited(code) => (RunResultStatus::RuntimeError, Some(code), None),
+        Termination::Signaled(_) => (RunResultStatus::RuntimeError, None, None),
+        Termination::TimedOut => (
+            RunResultStatus::Timeout,
+            None,
+            Some(timeout_message(&limits)),
+        ),
         Termination::OutputLimitExceeded => (
-            RunStatus::RuntimeError,
+            RunResultStatus::RuntimeError,
             None,
             Some(output_limit_message(&limits)),
         ),
-        Termination::Stopped => (RunStatus::Stopped, None, None),
+        Termination::Stopped => (RunResultStatus::Stopped, None, None),
     };
     if let Some(text) = notice {
         send(
@@ -531,6 +615,36 @@ mod tests {
     }
 
     #[test]
+    fn crates_unavailable_is_sent_but_not_recorded() {
+        assert_eq!(
+            serde_json::to_value(RunResultStatus::CratesUnavailable).unwrap(),
+            serde_json::json!("crates_unavailable")
+        );
+        assert_eq!(RunResultStatus::CratesUnavailable.record_status(), None);
+        for (status, recorded, text) in [
+            (RunResultStatus::Success, RunStatus::Success, "success"),
+            (
+                RunResultStatus::CompileError,
+                RunStatus::CompileError,
+                "compile_error",
+            ),
+            (
+                RunResultStatus::RuntimeError,
+                RunStatus::RuntimeError,
+                "runtime_error",
+            ),
+            (RunResultStatus::Timeout, RunStatus::Timeout, "timeout"),
+            (RunResultStatus::Stopped, RunStatus::Stopped, "stopped"),
+        ] {
+            assert_eq!(status.record_status(), Some(recorded));
+            assert_eq!(
+                serde_json::to_value(status).unwrap(),
+                serde_json::json!(text)
+            );
+        }
+    }
+
+    #[test]
     fn events_serialize_in_the_spec_shape() {
         assert_eq!(
             serde_json::to_value(RunStarted {
@@ -571,7 +685,7 @@ mod tests {
             error: None,
             run: Some(RunResultSummary {
                 mode: RunMode::Test,
-                status: RunStatus::RuntimeError,
+                status: RunResultStatus::RuntimeError,
                 exit_code: Some(101),
             }),
             submit: None,

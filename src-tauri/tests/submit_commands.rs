@@ -3,6 +3,15 @@
 //! spec/lesson-flow/completion.md）を、モックの実行環境と、実物の `cargo`（このテストを動かしている cargo）で確かめる。
 
 mod common;
+#[cfg(target_os = "macos")]
+#[path = "fake_tools/cargo_behavior.rs"]
+mod fake_cargo;
+#[cfg(target_os = "macos")]
+#[path = "fake_tools/rust.rs"]
+mod fake_rust;
+#[cfg(target_os = "macos")]
+#[path = "fake_tools/offline_cargo.rs"]
+mod offline_cargo;
 
 use std::{
     collections::BTreeMap,
@@ -41,6 +50,8 @@ const TEST_LESSON: &str = "ch01-02";
 const LEARNER_TESTS_LESSON: &str = "ch01-03";
 /// `test` 方式の演習。隠しテストの実行に時間がかかる（止める操作を確かめる）。
 const SLOW_TEST_LESSON: &str = "ch01-04";
+/// `test` 方式の、許可クレートを使う演習。`add` を実装する。
+const CRATES_TEST_LESSON: &str = "ch01-05";
 
 /// 2 つの数の和を出力する、正しいコード。
 const SUM: &str = "use std::io::Read;\n\
@@ -133,7 +144,13 @@ fn make_content() -> TempDir {
             "id": "ch01",
             "title": "第1章",
             "description": "",
-            "lessons": [STDOUT_LESSON, TEST_LESSON, LEARNER_TESTS_LESSON, SLOW_TEST_LESSON],
+            "lessons": [
+                STDOUT_LESSON,
+                TEST_LESSON,
+                LEARNER_TESTS_LESSON,
+                SLOW_TEST_LESSON,
+                CRATES_TEST_LESSON,
+            ],
         }])
         .to_string(),
     );
@@ -156,6 +173,11 @@ fn make_content() -> TempDir {
         .to_string(),
     );
     for (id, judge, judge_tests) in [
+        (
+            CRATES_TEST_LESSON,
+            json!({ "mode": "test", "target": "src/main.rs" }),
+            ADD_JUDGE_TESTS,
+        ),
         (
             TEST_LESSON,
             json!({ "mode": "test", "target": "src/main.rs" }),
@@ -181,6 +203,12 @@ fn make_content() -> TempDir {
                 json!({ "adds_positive": "正の数の足し算", "adds_negative": "負の数の足し算" }),
             ),
         );
+        if id == CRATES_TEST_LESSON {
+            let path = root.join(format!("lessons/{id}/lesson.json"));
+            let mut lesson: Value = serde_json::from_slice(&fs::read(&path).unwrap()).unwrap();
+            lesson["exercise"]["dependencies"] = json!(["rand"]);
+            fs::write(path, lesson.to_string()).unwrap();
+        }
         write(
             root,
             &format!("lessons/{id}/exercise/judge_tests.rs"),
@@ -656,6 +684,83 @@ fn errors_on_the_hidden_test_side_also_send_the_hint_as_system() {
         finished.text("system"),
         "問題文で指定された関数名・型・シグネチャを確認してください。"
     );
+}
+
+// ---- 初回準備のやり直しが要る失敗 ----
+
+/// 初回準備を `ready` まで進めるので（手順の 4 の `cp -c`）、macOS のときだけ実行する。
+#[cfg(target_os = "macos")]
+mod lost_crates {
+    use super::*;
+    use crate::fake_cargo::{cargo_calls, hanging_pid, set_behavior};
+    use crate::offline_cargo::OfflineCargo;
+    use progrust_lib::environment::CratesState;
+    use progrust_lib::environment::preparation::{
+        start_crate_preparation, stop_crate_preparation_on_exit,
+    };
+    use progrust_lib::runner::prepared::{LOST_CRATES_ERROR, PreparedStatus, read_prepared};
+    use progrust_lib::runner::workspace::WorkspaceDir;
+
+    /// 初回準備の後に、許可クレートのソースとレジストリの索引が失われた（空の `CARGO_HOME`）ときは、許可クレートを使う
+    /// 演習の提出を `crates_unavailable` にし、ビルドの出力と隠しテストの側のエラーの案内を送らず、試行ログに記録せず、
+    /// レッスンを完了にせず、`prepared.json` を `failed` にして初回準備を始める。
+    #[test]
+    fn a_submit_with_lost_crates_is_crates_unavailable_and_starts_the_preparation_again() {
+        // 演習のビルドは、実物の cargo を空の CARGO_HOME で動かす。初回準備は、偽の cargo で動かす。
+        let offline = OfflineCargo::new();
+        let fake = offline.fake.cargo();
+        let fx = Fixture::with(Some(offline.tools()));
+        let _stop = StopPreparationOnDrop(&fx);
+        let environment = fx.app.state::<Environment>().inner().clone();
+        set_behavior(fake, "succeed", "succeed");
+        assert!(start_crate_preparation(fx.app.handle(), &offline.tools()));
+        assert!(environment.wait_preparation_finished(WAIT));
+        assert_eq!(environment.crates_status().status, CratesState::Ready);
+        let calls_before = cargo_calls(fake).len();
+        set_behavior(fake, "hang", "hang");
+
+        let code = "fn add(a: i32, b: i32) -> i32 {\n    a + b\n}\n\nfn main() {}\n";
+        fx.submit(CRATES_TEST_LESSON, "s1", &[("src/main.rs", code)])
+            .unwrap();
+        let finished = fx.wait_finished(&request_id(CRATES_TEST_LESSON, "s1"));
+
+        assert_eq!(
+            finished.submit(),
+            &json!({ "status": "crates_unavailable", "passed": 0, "total": 0, "cases": [] })
+        );
+        assert_eq!(finished.payload["progress"], Value::Null);
+        assert_eq!(finished.text("stderr"), "");
+        assert_eq!(finished.text("system"), "外部クレートを準備し直しています");
+        assert_eq!(finished.progress_steps(), [("build".to_string(), 0, None)]);
+        assert!(submit_events(finished.log).is_empty());
+        assert!(!fx.lesson_completed(CRATES_TEST_LESSON));
+        // run_finished を送る前に、初回準備を始めている。
+        assert_eq!(environment.crates_status().status, CratesState::Preparing);
+        let recorded = read_prepared(&WorkspaceDir::in_app_data(&fx.data_dir()))
+            .unwrap()
+            .unwrap();
+        assert_eq!(recorded.status, PreparedStatus::Failed);
+        assert_eq!(recorded.error.as_deref(), Some(LOST_CRATES_ERROR));
+        wait_until("初回準備の cargo が動き出さない", || {
+            hanging_pid(fake).is_some()
+        });
+        assert_eq!(cargo_calls(fake)[calls_before..], ["build --quiet"]);
+        // 初回準備が終わるまで受け付けず、自動ではやり直さない。
+        assert_eq!(
+            error_code(fx.submit(CRATES_TEST_LESSON, "s2", &[("src/main.rs", code)])),
+            "crates_not_ready"
+        );
+        fx.assert_no_finished_within(Duration::from_millis(200));
+    }
+
+    /// 落としたときに、動いている初回準備を止める。
+    struct StopPreparationOnDrop<'a>(&'a Fixture);
+
+    impl Drop for StopPreparationOnDrop<'_> {
+        fn drop(&mut self) {
+            stop_crate_preparation_on_exit(self.0.app.handle());
+        }
+    }
 }
 
 // ---- 止める ----

@@ -7,6 +7,7 @@
 //!   実行・提出の `project/` の組み立てとビルドの条件は [`project`]。
 //! - 学習者のプログラムなどを新しいプロセスグループで動かし、出力・標準入力・停止・制限を扱う部品は [`process`]。
 //! - `project/` を cargo でビルドし、ビルドの出力・エラーコード・実行ファイルを得る部品は [`build`]。
+//! - ビルドの失敗が、初回準備のやり直しが要る失敗に当たるかの判定は [`lost_crates`]。
 //! - ビルド済みの実行ファイルを `stdout` 方式で判定する部品は [`judge`]、`test` 方式の隠しテストを組み込んで
 //!   判定し、`min_learner_tests` のある演習では学習者が書いたテストも判定する部品は [`judge_test`]。
 //! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
@@ -23,6 +24,7 @@ pub mod file_path;
 pub mod judge;
 pub mod judge_test;
 pub mod lesson_judge;
+pub mod lost_crates;
 pub mod preparation;
 pub mod prepared;
 pub mod process;
