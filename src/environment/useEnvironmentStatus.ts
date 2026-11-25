@@ -52,3 +52,16 @@ export function useEnvironmentStatus(): EnvironmentStatus | null {
 export function cargoUsable(status: EnvironmentStatus | null): boolean {
   return status === null || status.cargo.status !== "not_found";
 }
+
+// 許可クレートを使う演習（dependencies が空でない）を、外部クレートの準備の状態から始められるか。
+// 許可クレートを使わない演習と、読み込むまでは、いつでも始められる。
+export function cratesReadyFor(
+  status: EnvironmentStatus | null,
+  dependencies: readonly string[],
+): boolean {
+  return (
+    dependencies.length === 0 ||
+    status === null ||
+    status.crates.status === "ready"
+  );
+}

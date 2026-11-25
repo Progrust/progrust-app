@@ -9,7 +9,12 @@ import { listChapters } from "../commands/content";
 import type { ChapterList } from "../commands/content";
 import { getDashboard } from "../commands/learningRecord";
 import type { Dashboard } from "../commands/learningRecord";
-import { CargoBanner, useEnvironmentStatus } from "../environment";
+import {
+  CargoBanner,
+  ClaudeBanner,
+  CratesBanner,
+  useEnvironmentStatus,
+} from "../environment";
 import { useNavigation } from "../router";
 import "./home.css";
 
@@ -151,9 +156,11 @@ export function Home({
 
   return (
     <main className="pgx-home">
-      {environment !== null && environment.cargo.status !== "found" && (
+      {environment !== null && (
         <div className="pgx-banners">
           <CargoBanner cargo={environment.cargo} />
+          <CratesBanner crates={environment.crates} where="home" />
+          <ClaudeBanner claude={environment.claude} />
         </div>
       )}
       <div className="pgx-home-row">

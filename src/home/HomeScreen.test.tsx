@@ -213,35 +213,45 @@ afterEach(() => {
   clearMocks();
 });
 
-// 導入手順を開いたときの open_url の引数を返す。
-function mockCargo(status: "found" | "not_found" | "version_too_old") {
+type CargoState = "found" | "not_found" | "version_too_old";
+type ClaudeState = "found" | "not_found";
+type CratesState = "not_started" | "preparing" | "ready" | "failed";
+
+// 環境の状態を返すようにする。開いた導入手順と、呼ばれたコマンドを返す。
+function mockEnvironment(
+  cargo: CargoState,
+  claude: ClaudeState = "found",
+  crates: CratesState = "ready",
+) {
   const opened: unknown[] = [];
+  const calls: string[] = [];
   mockIPC(
     (command, args) => {
+      calls.push(command);
       if (command === "plugin:opener|open_url") {
         opened.push(args);
       }
       return command === "get_environment_status"
         ? {
             cargo: {
-              status,
+              status: cargo,
               cargo_path: null,
               rustc_path: null,
-              rustc_version: status === "version_too_old" ? "1.99.0" : null,
+              rustc_version: cargo === "version_too_old" ? "1.99.0" : null,
               required_rustc_version: "1.100.0",
             },
-            claude: { status: "not_found", path: null, version: null },
-            crates: { status: "preparing", prepared_at: null, error: null },
+            claude: { status: claude, path: null, version: null },
+            crates: { status: crates, prepared_at: null, error: null },
           }
         : null;
     },
     { shouldMockEvents: true },
   );
-  return opened;
+  return { opened, calls };
 }
 
-it("cargo が見つからないときは、rustup の導入手順を案内する（claude と初回準備の案内は出さない）", async () => {
-  const opened = mockCargo("not_found");
+it("cargo が見つからないときは、rustup の導入手順を案内する（ほかが正常なら、ほかの案内は出さない）", async () => {
+  const { opened } = mockEnvironment("not_found");
   renderHome(dashboard);
   const alert = await screen.findByRole("alert");
   expect(alert).toHaveTextContent("Rust ツールチェーンが見つかりません");
@@ -257,7 +267,7 @@ it("cargo が見つからないときは、rustup の導入手順を案内する
 });
 
 it("rustc が古いときは、今のバージョンと必要なバージョンと更新の手順を案内する", async () => {
-  mockCargo("version_too_old");
+  mockEnvironment("version_too_old");
   renderHome(dashboard);
   const alert = await screen.findByRole("alert");
   expect(alert).toHaveTextContent("1.99.0");
@@ -265,10 +275,57 @@ it("rustc が古いときは、今のバージョンと必要なバージョン�
   expect(alert).toHaveTextContent("rustup update stable");
 });
 
-it("cargo が見つかっているときは、案内を出さない", async () => {
-  mockCargo("found");
+it("すべて見つかって準備ができているときは、案内を出さない", async () => {
+  mockEnvironment("found");
   renderHome(dashboard);
   await screen.findByRole("region", { name: "次のレッスン" });
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(screen.queryByRole("alert")).toBeNull();
+  expect(screen.queryByRole("status")).toBeNull();
+});
+
+it("初回準備が not_started のときは、案内を出さない", async () => {
+  mockEnvironment("found", "found", "not_started");
+  renderHome(dashboard);
+  await screen.findByRole("region", { name: "次のレッスン" });
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  expect(screen.queryByText(/外部クレート/)).toBeNull();
+});
+
+it("初回準備中は「外部クレートを準備しています」を表示する", async () => {
+  mockEnvironment("found", "found", "preparing");
+  renderHome(dashboard);
+  expect(
+    await screen.findByText("外部クレートを準備しています。"),
+  ).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "再試行" })).toBeNull();
+});
+
+it("初回準備に失敗したときは、失敗を表示し、再試行のボタンで retry_crate_preparation を呼ぶ", async () => {
+  const { calls } = mockEnvironment("found", "found", "failed");
+  renderHome(dashboard);
+  expect(
+    await screen.findByText("外部クレートの準備に失敗しました。"),
+  ).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "再試行" }));
+  await waitFor(() => {
+    expect(calls).toContain("retry_crate_preparation");
+  });
+});
+
+it("claude が見つからないときは、導入手順とパスの指定を案内し、パスの指定で設定画面へ移る", async () => {
+  const { opened } = mockEnvironment("found", "not_found");
+  const navigate = renderHome(dashboard);
+  const alert = await screen.findByRole("alert");
+  expect(alert).toHaveTextContent("Claude Code が見つかりません");
+  fireEvent.click(
+    within(alert).getByRole("button", { name: /導入手順を見る/ }),
+  );
+  await waitFor(() => {
+    expect(opened).toEqual([
+      { url: "https://code.claude.com/docs/ja/setup", with: undefined },
+    ]);
+  });
+  fireEvent.click(within(alert).getByRole("button", { name: "パスを指定" }));
+  expect(navigate).toHaveBeenCalledWith({ name: "settings" });
 });
