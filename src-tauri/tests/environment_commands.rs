@@ -28,6 +28,11 @@ use progrust_lib::environment::{
     REQUIRED_RUSTC_VERSION, RustTools, ToolSearch, VERSION_TIMEOUT, configured_cargo,
     configured_claude, start_detection,
 };
+use progrust_lib::runner::RunnerDir;
+use progrust_lib::runner::prepared::{
+    PreparedRecord, crates_hash, rustc_verbose_version, write_prepared,
+};
+use progrust_lib::runner::workspace::WorkspaceDir;
 use progrust_lib::settings::Settings;
 use progrust_lib::storage::AppDataDir;
 use serde_json::{Value, json};
@@ -406,13 +411,53 @@ fn cargo_search_only(cargo: CargoSearch) -> ToolSearch {
     }
 }
 
-fn status_json(cargo: Value) -> Value {
+fn status_json(cargo: Value, crates: Value) -> Value {
     json!({
         "cargo": cargo,
-        // claude はどこも探さないので not_found、初回準備は作るまで not_started。
+        // claude はどこも探さないので not_found。
         "claude": claude_not_found_json(),
-        "crates": { "status": "not_started", "error": null },
+        "crates": crates,
     })
+}
+
+/// 初回準備を始めていないときの `crates`。
+fn not_started_json() -> Value {
+    json!({ "status": "not_started", "prepared_at": null, "error": null })
+}
+
+/// 前の初回準備が終わった日時（テストで書く `prepared.json` の `prepared_at`）。
+const PREPARED_AT: &str = "2026-11-24T19:02:00+09:00";
+
+fn ready_json() -> Value {
+    json!({ "status": "ready", "prepared_at": PREPARED_AT, "error": null })
+}
+
+/// 学習者データのディレクトリと同梱の許可クレートの定義を置き、`fake` の `rustc` と同梱の一覧で初回準備が済んで
+/// いる（`prepared.json` が「実行する条件」のどれにも当てはまらない）アプリ。起動時の判定は `ready` になり、
+/// 初回準備は動かない。初回準備を動かすテストは tests/crate_preparation.rs にある。
+fn app_prepared_for(
+    fake: &FakeRust,
+) -> (
+    tauri::App<tauri::test::MockRuntime>,
+    tauri::WebviewWindow<tauri::test::MockRuntime>,
+    TempDir,
+) {
+    let (app, window) = app();
+    let data = empty_dir();
+    let data_dir = AppDataDir::new(data.path());
+    let runner = RunnerDir::new(Path::new(env!("CARGO_MANIFEST_DIR")).join("../runner"));
+    write_prepared(
+        &WorkspaceDir::in_app_data(&data_dir),
+        &PreparedRecord::ready(
+            crates_hash(&runner).unwrap(),
+            rustc_verbose_version(fake.rustc()).unwrap(),
+            PREPARED_AT,
+        ),
+    )
+    .unwrap();
+    app.manage(data_dir);
+    app.manage(runner);
+    (app, window, data)
 }
 
 #[test]
@@ -425,13 +470,17 @@ fn get_environment_status_without_cargo_returns_not_found() {
         cargo_search_only(search(None, &[path.path()], home.path())),
     );
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
-    assert_eq!(response, Ok(status_json(not_found_json())));
+    // cargo が見つからないときは、初回準備の条件を判定しない。
+    assert_eq!(
+        response,
+        Ok(status_json(not_found_json(), not_started_json()))
+    );
 }
 
 #[test]
 fn get_environment_status_returns_the_detected_tools() {
-    let (app, window) = app();
     let fake = FakeRust::new("1.100.0");
+    let (app, window, _data) = app_prepared_for(&fake);
     let home = empty_dir();
     start_detection(
         app.handle(),
@@ -440,7 +489,10 @@ fn get_environment_status_returns_the_detected_tools() {
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
     assert_eq!(
         response,
-        Ok(status_json(found_json("found", &fake, "1.100.0")))
+        Ok(status_json(
+            found_json("found", &fake, "1.100.0"),
+            ready_json()
+        ))
     );
 }
 
@@ -456,29 +508,33 @@ fn get_environment_status_waits_for_detection() {
         environment.finish_detection(cargo_only(Some(finished)));
     });
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
+    // 検出の結果を直接入れたときは、初回準備を始めない。
     assert_eq!(
         response,
-        Ok(status_json(found_json("version_too_old", &fake, "1.99.0")))
+        Ok(status_json(
+            found_json("version_too_old", &fake, "1.99.0"),
+            not_started_json()
+        ))
     );
     finisher.join().unwrap();
 }
 
 #[test]
 fn environment_updated_is_sent_when_detection_finishes() {
-    let (app, window) = app();
+    let fake = FakeRust::new("1.101.0");
+    let (app, window, _data) = app_prepared_for(&fake);
     let (sender, receiver) = mpsc::channel();
     app.listen(ENVIRONMENT_UPDATED, move |event| {
         let payload: Value = serde_json::from_str(event.payload()).unwrap();
         let _ = sender.send(payload);
     });
-    let fake = FakeRust::new("1.101.0");
     let home = empty_dir();
     start_detection(
         app.handle(),
         cargo_search_only(search(None, &[dir_of(&fake)], home.path())),
     );
     let payload = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
-    let expected = status_json(found_json("found", &fake, "1.101.0"));
+    let expected = status_json(found_json("found", &fake, "1.101.0"), ready_json());
     assert_eq!(payload, expected);
     // 送った後に読んでも、同じ状態が返る。
     let response = invoke(&window, LOCAL_URL, "get_environment_status", json!({}));
@@ -901,13 +957,13 @@ fn claude_waits_for_detection() {
 /// `environment_updated` で返す。
 #[test]
 fn get_environment_status_returns_the_detected_claude() {
-    let (app, window) = app();
+    let rust = FakeRust::new("1.100.0");
+    let (app, window, _data) = app_prepared_for(&rust);
     let (sender, receiver) = mpsc::channel();
     app.listen(ENVIRONMENT_UPDATED, move |event| {
         let payload: Value = serde_json::from_str(event.payload()).unwrap();
         let _ = sender.send(payload);
     });
-    let rust = FakeRust::new("1.100.0");
     let claude = FakeClaude::new();
     let home = empty_dir();
     start_detection(
@@ -920,7 +976,7 @@ fn get_environment_status_returns_the_detected_claude() {
     let expected = json!({
         "cargo": found_json("found", &rust, "1.100.0"),
         "claude": claude_found_json(&claude, "2.1.329"),
-        "crates": { "status": "not_started", "error": null },
+        "crates": ready_json(),
     });
     let payload = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
     assert_eq!(payload, expected);

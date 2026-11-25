@@ -3,6 +3,10 @@
 //! モックの実行環境と、実物の `cargo`（このテストを動かしている cargo）で確かめる。
 
 mod common;
+#[path = "fake_tools/cargo_behavior.rs"]
+mod fake_cargo;
+#[path = "fake_tools/rust.rs"]
+mod fake_rust;
 
 use std::{
     collections::BTreeMap,
@@ -15,10 +19,15 @@ use std::{
 };
 
 use common::{LOCAL_URL, app, invoke};
+use fake_cargo::{cargo_calls, hanging_pid, set_behavior};
+use fake_rust::FakeRust;
 use progrust_lib::attempts::{AttemptLog, Event, RunEvent, RunStatus, SessionKind};
 use progrust_lib::commands::run::stop_runs_on_exit;
 use progrust_lib::content::ContentDir;
-use progrust_lib::environment::{DetectedTools, Environment, RustTools};
+use progrust_lib::environment::preparation::{
+    start_crate_preparation, stop_crate_preparation_on_exit,
+};
+use progrust_lib::environment::{CratesState, DetectedTools, Environment, RustTools};
 use progrust_lib::runner::RunnerDir;
 use progrust_lib::runner::run::{RUN_FINISHED, RUN_OUTPUT, RUN_STARTED};
 use progrust_lib::runner::runs::{RunLimits, Runs};
@@ -1099,6 +1108,62 @@ fn exercises_with_crates_need_the_preparation_to_be_ready() {
     );
     assert!(fx.runs().current().is_none());
     assert!(!fx.data.path().join("workspace").exists());
+}
+
+/// 初回準備中（`preparing`）でも、許可クレートを使わない演習は、初回準備の終わりを待たずに実行できる。
+/// 許可クレートを使う演習は、`ready` になるまで受け付けない。
+#[test]
+fn exercises_without_crates_run_while_the_preparation_is_running() {
+    let fx = Fixture::new();
+    // 初回準備は、止めるまで終わらない偽の cargo で動かす。演習のビルドは、実物の cargo で行う。
+    let fake = FakeRust::new("1.100.0");
+    set_behavior(fake.cargo(), "hang", "hang");
+    let fake_tools = RustTools {
+        cargo: fake.cargo().to_path_buf(),
+        rustc: fake.rustc().to_path_buf(),
+        rustc_version: "1.100.0".parse().unwrap(),
+    };
+    assert!(start_crate_preparation(fx.app.handle(), &fake_tools));
+    // テストが途中で失敗しても、終わらない偽の cargo を残さない。
+    let _stop = StopPreparationOnDrop(&fx);
+    let environment = fx.app.state::<Environment>().inner().clone();
+    // 初回準備の cargo が動き出し、終わらないでいる。
+    let deadline = Instant::now() + WAIT;
+    while hanging_pid(fake.cargo()).is_none() {
+        assert!(Instant::now() < deadline, "初回準備の cargo が動き出さない");
+        thread::sleep(Duration::from_millis(20));
+    }
+    assert_eq!(environment.crates_status().status, CratesState::Preparing);
+
+    assert_eq!(
+        fx.run_code("r1", "main", &[("src/main.rs", HELLO)]),
+        Ok(Value::Null)
+    );
+    let finished = fx.wait_finished("r1");
+    assert_eq!(finished.status(), "success");
+    assert_eq!(finished.text("stdout"), "hello\n");
+    // 実行が終わった時点でも、初回準備は動いている。
+    assert_eq!(environment.crates_status().status, CratesState::Preparing);
+    assert!(!environment.wait_preparation_finished(Duration::ZERO));
+
+    assert_eq!(
+        error_code(fx.run_lesson("r2", CRATES_LESSON, "main", &[("src/main.rs", HELLO)])),
+        "crates_not_ready"
+    );
+
+    // 初回準備の cargo は、build を 1 回だけ起動して、終わらずにいた。
+    assert_eq!(cargo_calls(fake.cargo()), ["build --quiet"]);
+    stop_crate_preparation_on_exit(fx.app.handle());
+    assert!(environment.wait_preparation_finished(Duration::ZERO));
+}
+
+/// 落としたときに、動いている初回準備を止める。
+struct StopPreparationOnDrop<'a>(&'a Fixture);
+
+impl Drop for StopPreparationOnDrop<'_> {
+    fn drop(&mut self) {
+        stop_crate_preparation_on_exit(self.0.app.handle());
+    }
 }
 
 #[test]

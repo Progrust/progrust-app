@@ -231,7 +231,7 @@ function mockCargo(status: "found" | "not_found" | "version_too_old") {
               required_rustc_version: "1.100.0",
             },
             claude: { status: "not_found", path: null, version: null },
-            crates: { status: "preparing", error: null },
+            crates: { status: "preparing", prepared_at: null, error: null },
           }
         : null;
     },

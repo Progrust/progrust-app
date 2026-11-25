@@ -5,6 +5,9 @@
 //! `claude` を探す。結果は [`Environment`] がメモリに持ち、`get_environment_status` と、実行・提出の
 //! コマンド（[`Environment::rust_tools`]）と、`claude` を起動する処理（[`Environment::claude`]）が使う。
 //! 検出が終わる前に読まれたときは、終わるまで待つ。
+//!
+//! 許可クレートの初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）も
+//! [`Environment`] が持つ。初回準備を始める・止める処理は [`preparation`] にある。
 
 use std::{
     ffi::OsString,
@@ -20,11 +23,14 @@ use std::{
 };
 
 use serde::Serialize;
-use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::claude::ClaudeEnv;
 use crate::commands::error::{CommandError, ErrorCode};
+use crate::runner::process::Stopper;
 use crate::storage::AppDataDir;
+
+pub mod preparation;
 
 /// `rustc` に必要な最低バージョン（spec/architecture/external-tools.md「検出」の表）。
 pub const REQUIRED_RUSTC_VERSION: &str = "1.100.0";
@@ -508,10 +514,14 @@ impl ClaudeStatus {
     }
 }
 
-/// 初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
+/// 初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」、
+/// spec/architecture/commands/environment.md「環境の状態」の `crates`）。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct CratesStatus {
     pub status: CratesState,
+    /// `ready` のときの、初回準備が終わった日時（`prepared.json` の `prepared_at`）。ほかの状態では `None`。
+    pub prepared_at: Option<String>,
+    /// `failed` のときのエラーの内容。ほかの状態では `None`。
     pub error: Option<String>,
 }
 
@@ -524,9 +534,45 @@ pub enum CratesState {
     Failed,
 }
 
-// ---- メモリに持つ検出結果 ----
+impl CratesStatus {
+    /// 初回準備を始めていない（`cargo` が見つからず、判定していないときを含む）。
+    pub fn not_started() -> Self {
+        Self::with(CratesState::NotStarted)
+    }
 
-/// 検出結果をメモリに持つ。Tauri の状態として `manage` で置く。複製は同じ結果を指す。
+    /// 初回準備を実行している。
+    pub fn preparing() -> Self {
+        Self::with(CratesState::Preparing)
+    }
+
+    /// 初回準備が `prepared_at` に成功して終わり、「実行する条件」のどれにも当てはまらない。
+    pub fn ready(prepared_at: impl Into<String>) -> Self {
+        Self {
+            prepared_at: Some(prepared_at.into()),
+            ..Self::with(CratesState::Ready)
+        }
+    }
+
+    /// 最後の初回準備が、エラーの内容 `error` で失敗した。
+    pub fn failed(error: impl Into<String>) -> Self {
+        Self {
+            error: Some(error.into()),
+            ..Self::with(CratesState::Failed)
+        }
+    }
+
+    fn with(status: CratesState) -> Self {
+        Self {
+            status,
+            prepared_at: None,
+            error: None,
+        }
+    }
+}
+
+// ---- メモリに持つ検出結果と初回準備の状態 ----
+
+/// 検出結果と初回準備の状態をメモリに持つ。Tauri の状態として `manage` で置く。複製は同じ状態を指す。
 #[derive(Debug, Clone)]
 pub struct Environment {
     shared: Arc<Shared>,
@@ -534,70 +580,116 @@ pub struct Environment {
 
 #[derive(Debug)]
 struct Shared {
+    state: Mutex<State>,
+    /// 検出が終わったときと、初回準備のスレッドが終わったときに起こす。
+    changed: Condvar,
+    /// `environment_updated` を送る順番を守るロック（[`preparation::notify`]）。
+    notify: Mutex<()>,
+}
+
+/// 1 つのロックで守る状態。検出結果と初回準備の状態を、一緒に読み書きする。
+#[derive(Default)]
+struct State {
     /// `cargo`・`rustc` と `claude` の検出結果。検出が終わるまでは `None`。
-    tools: Mutex<Option<DetectedTools>>,
-    detected: Condvar,
+    tools: Option<DetectedTools>,
+    /// 初回準備の状態。
+    crates: CratesStatus,
+    /// 動いている初回準備（番号と、その `cargo` を止める操作）。動いていないときは `None`。
+    running: Option<(u64, Stopper)>,
+    /// 最後に始めた初回準備の番号。
+    last_run: u64,
+    /// アプリを終了するところで、初回準備を新しく始めない。
+    exiting: bool,
+}
+
+impl Default for CratesStatus {
+    fn default() -> Self {
+        Self::not_started()
+    }
+}
+
+impl fmt::Debug for State {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("State")
+            .field("tools", &self.tools)
+            .field("crates", &self.crates)
+            .field("running", &self.running.as_ref().map(|(run, _)| run))
+            .field("exiting", &self.exiting)
+            .finish()
+    }
 }
 
 impl Environment {
     /// 検出が終わっていない状態。[`Environment::finish_detection`] で結果を入れる。
+    /// 初回準備の状態は `not_started`。
     pub fn pending() -> Self {
         Self {
             shared: Arc::new(Shared {
-                tools: Mutex::new(None),
-                detected: Condvar::new(),
+                state: Mutex::new(State::default()),
+                changed: Condvar::new(),
+                notify: Mutex::new(()),
             }),
         }
     }
 
-    /// 検出が終わり、結果が `tools` の状態。テストでは、偽のツールのパスをここに与える。
+    /// 検出が終わり、結果が `tools` の状態。初回準備は始めない（`not_started`）。テストでは、偽のツールの
+    /// パスをここに与える。
     pub fn detected(tools: DetectedTools) -> Self {
         let environment = Self::pending();
         environment.finish_detection(tools);
         environment
     }
 
-    /// 検出の結果を入れ、待っている読み手を起こす。
+    /// 検出の結果を入れ、待っている読み手を起こす。初回準備の状態は変えない。
     pub fn finish_detection(&self, tools: DetectedTools) {
-        *self.lock() = Some(tools);
-        self.shared.detected.notify_all();
+        self.lock().tools = Some(tools);
+        self.shared.changed.notify_all();
     }
 
-    fn lock(&self) -> MutexGuard<'_, Option<DetectedTools>> {
-        // 持っている値は検出結果の置き換えだけで、途中の状態にならないので、毒されていても使う。
+    fn lock(&self) -> MutexGuard<'_, State> {
+        // 状態はロックを持つ間に書き換え終わり、途中の状態にならないので、毒されていても使う。
         self.shared
-            .tools
+            .state
             .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+    }
+
+    /// 検出が終わるまで待って、状態のロックを返す。
+    fn wait_detected(&self) -> MutexGuard<'_, State> {
+        self.shared
+            .changed
+            .wait_while(self.lock(), |state| state.tools.is_none())
             .unwrap_or_else(|poisoned| poisoned.into_inner())
     }
 
     /// 検出が終わるまで待って、検出結果を返す。
     fn wait_tools(&self) -> DetectedTools {
-        let guard = self
-            .shared
-            .detected
-            .wait_while(self.lock(), |tools| tools.is_none())
-            .unwrap_or_else(|poisoned| poisoned.into_inner());
-        guard.clone().unwrap_or_default()
+        self.wait_detected().tools.clone().unwrap_or_default()
     }
 
     /// 検出が終わるまで待って、環境の状態を返す。待つので、メインスレッドでは呼ばない。
     pub fn status(&self) -> EnvironmentStatus {
-        let tools = self.wait_tools();
-        EnvironmentStatus {
-            cargo: CargoStatus::from_tools(tools.cargo.as_ref()),
-            claude: ClaudeStatus::from_tool(tools.claude.as_ref()),
-            crates: self.crates_status(),
-        }
+        Self::status_of(&self.wait_detected()).expect("検出が終わるまで待った")
     }
 
-    /// 初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
+    /// 検出が終わっていれば、環境の状態を返す。終わっていなければ、待たずに `None` を返す。
+    fn status_if_detected(&self) -> Option<EnvironmentStatus> {
+        Self::status_of(&self.lock())
+    }
+
+    fn status_of(state: &State) -> Option<EnvironmentStatus> {
+        let tools = state.tools.as_ref()?;
+        Some(EnvironmentStatus {
+            cargo: CargoStatus::from_tools(tools.cargo.as_ref()),
+            claude: ClaudeStatus::from_tool(tools.claude.as_ref()),
+            crates: state.crates.clone(),
+        })
+    }
+
+    /// いまの初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
+    /// 検出が終わるのを待たない。
     pub fn crates_status(&self) -> CratesStatus {
-        // 初回準備は M3 で作る。それまでは、初回準備を始めていないので `not_started` を返す。
-        CratesStatus {
-            status: CratesState::NotStarted,
-            error: None,
-        }
+        self.lock().crates.clone()
     }
 
     /// 許可クレートを使う演習を実行・提出できるか。初回準備の状態が `ready` でないときは `crates_not_ready`。
@@ -634,15 +726,25 @@ impl Environment {
 }
 
 /// 検出を別のスレッドで始め、検出結果を持つ [`Environment`] をアプリの状態に置く。
-/// 検出が終わったら、結果を入れてから `environment_updated` を送る。
+///
+/// 検出が終わったら、`cargo` が見つかったときは、初回準備の「実行する条件」を判定し、当てはまれば初回準備を
+/// 始める（[`preparation::prepare_crates_if_needed`]）。見つからないときは判定せず、`not_started` のままにする。
+/// 判定を終えてから検出結果を入れ、`environment_updated` を送る。そのため、`get_environment_status` が返す
+/// 最初の状態に、判定の結果（`preparing` か `ready`）が入る。
+///
+/// 初回準備は、アプリの状態に置いた [`RunnerDir`](crate::runner::RunnerDir) と
+/// [`AppDataDir`] の作業領域を使う。この関数より先に置いておく。
 pub fn start_detection<R: Runtime>(app: &AppHandle<R>, search: ToolSearch) {
     let environment = Environment::pending();
     app.manage(environment.clone());
     let app = app.clone();
     thread::spawn(move || {
-        environment.finish_detection(search.detect());
-        // 送れなくても（ウィンドウがまだ無いなど）、画面は get_environment_status で読む。
-        let _ = app.emit(ENVIRONMENT_UPDATED, environment.status());
+        let tools = search.detect();
+        if let Some(rust) = &tools.cargo {
+            preparation::prepare_crates_if_needed(&app, &environment, rust);
+        }
+        environment.finish_detection(tools);
+        preparation::notify(&app, &environment);
     });
 }
 

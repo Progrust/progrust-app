@@ -25,6 +25,8 @@ export type ClaudeStatus = {
 // 初回準備の状態（documents/spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
 export type CratesStatus = {
   status: "not_started" | "preparing" | "ready" | "failed";
+  // ready のときの、初回準備が終わった日時（時差を付けた ISO 8601）。ほかの状態では null。
+  prepared_at: string | null;
   // failed のときのエラーの内容。ほかの状態では null。
   error: string | null;
 };
@@ -39,6 +41,12 @@ export type EnvironmentStatus = {
 // 環境の状態を、バックエンドから受け取る。起動時の検出が終わっていなければ、終わってから返る。
 export function getEnvironmentStatus(): Promise<EnvironmentStatus> {
   return invoke<EnvironmentStatus>("get_environment_status");
+}
+
+// 初回準備に失敗したときに、初回準備をやり直す。始めたら null で解決し、経過と結果は environment_updated で届く。
+// 初回準備の状態が failed でないときは invalid_state、cargo が見つからないときは cargo_unavailable で拒否される。
+export function retryCratePreparation(): Promise<null> {
+  return invoke<null>("retry_crate_preparation");
 }
 
 // 環境の状態が変わったときのイベント。内容は、変わった後の環境の状態（全体）。

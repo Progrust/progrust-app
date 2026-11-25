@@ -29,6 +29,7 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::content::list_chapters,
             commands::content::get_lesson,
             commands::environment::get_environment_status,
+            commands::environment::retry_crate_preparation,
             commands::learning_record::get_dashboard,
             commands::progress::end_session,
             commands::progress::get_passed_code,
@@ -72,7 +73,8 @@ pub fn run() {
             app.manage(RunnerDir::from_app(app.handle())?);
             // 実行・提出を同時に 1 つだけ行う状態。作業領域は `{app_data_dir}/workspace/`（実行のコマンドが使う）。
             app.manage(Runs::default());
-            // cargo・rustc と claude を、画面の表示を待たせずに別のスレッドで探す。
+            // cargo・rustc と claude を、画面の表示を待たせずに別のスレッドで探す。cargo が見つかったら、
+            // 初回準備の「実行する条件」を判定し、当てはまれば初回準備を始める（上の AppDataDir と RunnerDir を使う）。
             environment::start_detection(
                 app.handle(),
                 ToolSearch::from_process(configured_cargo, configured_claude),
@@ -85,6 +87,8 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event {
                 // 動いている実行・テスト実行・提出を止める。run_finished を送らず、試行ログに追記しない。
                 commands::run::stop_runs_on_exit(app);
+                // 動いている初回準備の cargo を止める。prepared.json は書かず、次回の起動でやり直す（ADR 0236）。
+                environment::preparation::stop_crate_preparation_on_exit(app);
                 end_sessions_on_exit(app);
             }
         });

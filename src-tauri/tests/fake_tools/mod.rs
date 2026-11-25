@@ -13,6 +13,7 @@ use std::{
 
 use serde_json::json;
 
+pub mod cargo_behavior;
 pub mod claude;
 pub mod rust;
 pub use claude::FakeClaude;
