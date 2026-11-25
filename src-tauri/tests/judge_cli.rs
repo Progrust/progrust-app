@@ -1,10 +1,22 @@
 //! 判定だけを行うコマンドラインのプログラム（`src/bin/progrust-judge.rs`。spec/content-guidelines/check-tool.md、
-//! ADR 0208）を、実物の `cargo` で動かして確かめる。テストごとに、一時ディレクトリにレッスンと作業領域を作る。
+//! ADR 0208、ADR 0242）を、実物の `cargo` で動かして確かめる。テストごとに、一時ディレクトリにレッスンと作業領域を作る。
+//!
+//! 許可クレートを使う演習のテスト（名前が `network_` で始まるもの）は、作業領域の初回準備でクレートをダウンロード
+//! するので、ネットワークが要る（ダウンロード済みなら要らない）。初回準備の失敗は、偽の `cargo` で確かめる。
+
+#[path = "fake_tools/rust.rs"]
+mod fake_rust;
 
 use std::fs;
 use std::path::Path;
 use std::process::{Command, Output};
 
+use fake_rust::FakeRust;
+use progrust_lib::runner::RunnerDir;
+use progrust_lib::runner::prepared::{
+    LOST_CRATES_ERROR, PreparedRecord, crates_hash, rustc_verbose_version, write_prepared,
+};
+use progrust_lib::runner::workspace::WorkspaceDir;
 use serde_json::{Value, json};
 
 const STDOUT_LESSON: &str = r#"{
@@ -54,14 +66,49 @@ fn lesson(dir: &Path, lesson_json: &str, files: &[(&str, &str)]) {
 }
 
 fn judge(lesson_dir: &Path, files: &str, workspace: &Path) -> Output {
+    judge_with(lesson_dir, files, workspace, Path::new(env!("CARGO")))
+}
+
+/// `cargo` を使って判定する。
+fn judge_with(lesson_dir: &Path, files: &str, workspace: &Path, cargo: &Path) -> Output {
     Command::new(env!("CARGO_BIN_EXE_progrust-judge"))
         .arg("--lesson")
         .arg(lesson_dir)
         .args(["--files", files, "--workspace"])
         .arg(workspace)
-        .env("CARGO", env!("CARGO"))
+        .env("CARGO", cargo)
         .output()
         .unwrap()
+}
+
+/// 許可クレートの `rand` を使い、標準入力の 2 つの整数から `expr` を計算して出力するプログラム。
+/// `rand` の値は 0 しか出ないので、出力は `expr` の値になる。
+fn rand_program(expr: &str) -> String {
+    format!(
+        "use rand::Rng;\n\
+         use std::io::Read;\n\
+         fn main() {{\n\
+         \x20   let mut input = String::new();\n\
+         \x20   std::io::stdin().read_to_string(&mut input).unwrap();\n\
+         \x20   let n: Vec<i64> = input.split_whitespace().map(|s| s.parse().unwrap()).collect();\n\
+         \x20   let (a, b) = (n[0], n[1]);\n\
+         \x20   let zero: i64 = rand::rng().random_range(0..1);\n\
+         \x20   println!(\"{{}}\", zero + {expr});\n\
+         }}\n"
+    )
+}
+
+/// 許可クレートの `rand` を使う stdout 方式のレッスン。
+fn crates_lesson(dir: &Path, solution: &str, starter: &str) {
+    lesson(
+        dir,
+        &STDOUT_LESSON.replace(r#""dependencies": []"#, r#""dependencies": ["rand"]"#),
+        &[
+            ("exercise/cases.json", CASES),
+            ("exercise/solution/src/main.rs", solution),
+            ("exercise/starter/src/main.rs", starter),
+        ],
+    );
 }
 
 /// 終了コード 0 で終わり、標準出力の JSON を返す。
@@ -210,15 +257,6 @@ fn lessons_that_cannot_be_judged_fail_with_a_message() {
         r#"{ "id": "video", "chapter": "ch01", "kind": "video_only", "title": "t" }"#,
         &[],
     );
-    let crates = temp.path().join("lessons/crates");
-    lesson(
-        &crates,
-        &STDOUT_LESSON.replace(r#""dependencies": []"#, r#""dependencies": ["rand"]"#),
-        &[
-            ("exercise/cases.json", CASES),
-            ("exercise/solution/src/main.rs", &program("a + b")),
-        ],
-    );
     let missing_cases = temp.path().join("lessons/missing");
     lesson(
         &missing_cases,
@@ -228,7 +266,6 @@ fn lessons_that_cannot_be_judged_fail_with_a_message() {
 
     for (dir, expected) in [
         (&video_only, "演習の無いレッスン"),
-        (&crates, "許可クレートを使う演習"),
         (&missing_cases, "cases.json"),
     ] {
         let output = judge(dir, "solution", &workspace);
@@ -239,6 +276,153 @@ fn lessons_that_cannot_be_judged_fail_with_a_message() {
     }
     // 判定しなかったので、作業領域を作っていない。
     assert!(!workspace.exists());
+}
+
+/// 許可クレートを使う演習は、判定の前に作業領域で初回準備をしてから、アプリと同じく判定する（ネットワークが要る）。
+#[test]
+fn network_judges_lessons_that_use_allowed_crates_after_preparing_the_workspace() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = temp.path().join("lessons/ch01-04");
+    crates_lesson(&dir, &rand_program("a + b"), &rand_program("a * b"));
+    let workspace = temp.path().join("workspace");
+
+    let passed = judgement(&judge(&dir, "solution", &workspace));
+    assert_eq!(passed["status"], "passed", "{passed}");
+    assert_eq!(
+        (&passed["passed"], &passed["total"]),
+        (&json!(2), &json!(2))
+    );
+    // 初回準備をして、prepared.json に ready を書いた。target-validate/ への複製（手順の 4）はしない。
+    let prepared: Value =
+        serde_json::from_slice(&fs::read(workspace.join("prepared.json")).unwrap()).unwrap();
+    assert_eq!(prepared["status"], "ready", "{prepared}");
+    assert!(workspace.join("warmup/Cargo.toml").is_file());
+    assert!(workspace.join("target").is_dir());
+    assert!(!workspace.join("target-validate").exists());
+    let prepared_at = prepared["prepared_at"].clone();
+
+    let wrong = judgement(&judge(&dir, "starter", &workspace));
+    assert_eq!(wrong["status"], "wrong", "{wrong}");
+    // 「実行する条件」に当てはまらないので、2 回目は初回準備をしない。
+    let prepared: Value =
+        serde_json::from_slice(&fs::read(workspace.join("prepared.json")).unwrap()).unwrap();
+    assert_eq!(prepared["prepared_at"], prepared_at);
+}
+
+/// 初回準備に失敗したら、判定結果を返さずに 0 以外の終了コードで終わり、理由を標準エラー出力に書く。
+#[test]
+fn a_failed_preparation_exits_without_a_judgement() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = temp.path().join("lessons/ch01-05");
+    crates_lesson(&dir, &rand_program("a + b"), &rand_program("a * b"));
+    let workspace = temp.path().join("workspace");
+    let fake = FakeRust::new("1.100.0");
+    // 偽の cargo の `cargo build` を失敗させる（tests/fake_tools/cargo の説明）。
+    fs::write(fake.cargo().with_file_name("cargo-build"), "fail").unwrap();
+
+    let output = judge_with(&dir, "solution", &workspace, fake.cargo());
+    assert_eq!(output.status.code(), Some(1));
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("初回準備に失敗"), "{stderr}");
+    assert!(stderr.contains("`cargo build`が失敗しました"), "{stderr}");
+    // 初回準備の cargo build だけを動かし、判定のビルドはしていない。
+    assert_eq!(
+        fs::read_to_string(fake.cargo().with_file_name("cargo-calls")).unwrap(),
+        "build --quiet\n"
+    );
+    // 失敗を prepared.json に書いた。rustc は、cargo と同じディレクトリのものを使った。
+    let prepared: Value =
+        serde_json::from_slice(&fs::read(workspace.join("prepared.json")).unwrap()).unwrap();
+    assert_eq!(prepared["status"], "failed", "{prepared}");
+    let rustc = Command::new(fake.rustc()).arg("-vV").output().unwrap();
+    assert_eq!(
+        prepared["rustc_version"],
+        String::from_utf8(rustc.stdout).unwrap()
+    );
+}
+
+/// 判定のビルドが、初回準備のやり直しが要る失敗（許可クレートが失われている）になったときは、`prepared.json` の
+/// `status` を `failed` にして、初回準備をやり直す。ここでは、cargo をオフラインにして、やり直しの初回準備を失敗させ、
+/// 判定結果を返さずに 0 以外の終了コードで終わることを確かめる（ネットワークは使わない）。
+#[test]
+fn lost_crates_prepare_the_workspace_again() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = temp.path().join("lessons/ch01-07");
+    crates_lesson(&dir, &rand_program("a + b"), &rand_program("a * b"));
+    let workspace = temp.path().join("workspace");
+    // 初回準備が済んだことにして、クレートのダウンロード先（CARGO_HOME）を空にする。
+    let cargo = Path::new(env!("CARGO"));
+    let runner = RunnerDir::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../runner"));
+    write_prepared(
+        &WorkspaceDir::new(&workspace),
+        &PreparedRecord::ready(
+            crates_hash(&runner).unwrap(),
+            rustc_verbose_version(&cargo.with_file_name("rustc")).unwrap(),
+            "2026-11-24T19:02:00+09:00",
+        ),
+    )
+    .unwrap();
+    // 初回準備の手順の 1 で作る allcrates/（spec/exercise-runner/crates-and-workspace.md「作業領域」）。
+    write(
+        &workspace.join("allcrates/Cargo.toml"),
+        &format!(
+            "[package]\nname = \"progrust_allowed_crates\"\nversion = \"0.1.0\"\nedition = \"2024\"\n\n{}",
+            fs::read_to_string(runner.allowed_crates()).unwrap()
+        ),
+    );
+    write(&workspace.join("allcrates/src/lib.rs"), "");
+    let cargo_home = temp.path().join("cargo-home");
+    fs::create_dir(&cargo_home).unwrap();
+
+    let output = Command::new(env!("CARGO_BIN_EXE_progrust-judge"))
+        .arg("--lesson")
+        .arg(&dir)
+        .args(["--files", "solution", "--workspace"])
+        .arg(&workspace)
+        .env("CARGO", cargo)
+        .env("CARGO_HOME", &cargo_home)
+        .env("CARGO_NET_OFFLINE", "true")
+        .output()
+        .unwrap();
+    assert_eq!(
+        output.status.code(),
+        Some(1),
+        "{}",
+        String::from_utf8_lossy(&output.stdout)
+    );
+    assert!(output.stdout.is_empty());
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("初回準備に失敗"), "{stderr}");
+    assert!(stderr.contains("`cargo build`が失敗しました"), "{stderr}");
+    // やり直した初回準備の失敗を、prepared.json に書いた。
+    let prepared: Value =
+        serde_json::from_slice(&fs::read(workspace.join("prepared.json")).unwrap()).unwrap();
+    assert_eq!(prepared["status"], "failed", "{prepared}");
+    assert_ne!(prepared["error"], LOST_CRATES_ERROR, "{prepared}");
+    assert!(workspace.join("warmup/Cargo.toml").is_file());
+}
+
+/// 許可クレートを使わない演習は、初回準備をしない。
+#[test]
+fn lessons_without_allowed_crates_do_not_prepare_the_workspace() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = temp.path().join("lessons/ch01-06");
+    lesson(
+        &dir,
+        STDOUT_LESSON,
+        &[
+            ("exercise/cases.json", CASES),
+            ("exercise/solution/src/main.rs", &program("a + b")),
+        ],
+    );
+    let workspace = temp.path().join("workspace");
+    assert_eq!(
+        judgement(&judge(&dir, "solution", &workspace))["status"],
+        "passed"
+    );
+    assert!(!workspace.join("prepared.json").exists());
+    assert!(!workspace.join("warmup").exists());
 }
 
 #[test]

@@ -1,6 +1,8 @@
 // 教材チェックツールの検査「模範解答」「初期コード」（documents/spec/content-guidelines/check-tool.md）のテスト。
 // エラーになる教材とならない教材を一時ディレクトリに作り、実物の cargo で判定する。
 // 判定だけを行うプログラムを cargo run でビルドするので、はじめての実行には数分かかることがある。
+// 許可クレートを使う演習（名前が crates- で始まるレッスン）は、判定の作業領域の初回準備でクレートをダウンロードするので、
+// ネットワークが要る（ダウンロード済みなら要らない）。
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
@@ -52,6 +54,36 @@ function addProgram(expr: string): string {
 function stdoutLesson(solution: string, starter: string): LessonSpec {
   return {
     exercise: STDOUT_EXERCISE,
+    files: {
+      "exercise/cases.json": CASES,
+      "exercise/solution/src/main.rs": solution,
+      "exercise/starter/src/main.rs": starter,
+    },
+  };
+}
+
+// 許可クレートの rand を使い、標準入力の 2 つの整数から `expr` を計算して出力するプログラム。
+// rand の値は 0 しか出ないので、出力は `expr` の値になる。
+function randProgram(expr: string): string {
+  return [
+    "use rand::Rng;",
+    "use std::io::Read;",
+    "",
+    "fn main() {",
+    "    let mut input = String::new();",
+    "    std::io::stdin().read_to_string(&mut input).unwrap();",
+    "    let n: Vec<i64> = input.split_whitespace().map(|s| s.parse().unwrap()).collect();",
+    "    let (a, b) = (n[0], n[1]);",
+    "    let zero: i64 = rand::rng().random_range(0..1);",
+    `    println!("{}", zero + ${expr});`,
+    "}",
+    "",
+  ].join("\n");
+}
+
+function cratesLesson(solution: string, starter: string): LessonSpec {
+  return {
+    exercise: { ...STDOUT_EXERCISE, dependencies: ["rand"] },
     files: {
       "exercise/cases.json": CASES,
       "exercise/solution/src/main.rs": solution,
@@ -130,15 +162,10 @@ const lessons: Record<string, LessonSpec> = {
   ),
   // 初期コードが正解になる。
   "passing-starter": stdoutLesson(addProgram("a + b"), addProgram("b + a")),
-  // 許可クレートを使う演習は、まだ判定しない（模範解答が通らなくてもエラーにならない）。
-  "uses-crates": {
-    exercise: { ...STDOUT_EXERCISE, dependencies: ["rand"] },
-    files: {
-      "exercise/cases.json": CASES,
-      "exercise/solution/src/main.rs": addProgram("a - b"),
-      "exercise/starter/src/main.rs": addProgram("a + b"),
-    },
-  },
+  // 許可クレートを使う演習で、模範解答が通り、初期コードが正解にならない（エラーにならない。ネットワークを使う）。
+  "crates-ok": cratesLesson(randProgram("a + b"), randProgram("a - b")),
+  // 許可クレートを使う演習で、模範解答が通らず、初期コードが正解になる（ネットワークを使う）。
+  "crates-wrong": cratesLesson(randProgram("a * b"), randProgram("b + a")),
   // 動画のみのレッスンは判定しない。
   "video-only": { kind: "video_only", files: {} },
 };
@@ -246,9 +273,33 @@ describe("初期コード", () => {
   });
 });
 
+describe("許可クレートを使う演習（ネットワークを使う）", () => {
+  it("模範解答が通り、初期コードが正解にならないレッスンは、エラーにならない", () => {
+    expect(ofLesson("crates-ok")).toEqual([]);
+  });
+
+  it("模範解答が通らないと「模範解答」の、初期コードが正解になると「初期コード」のエラーになる", () => {
+    expect(ofLesson("crates-wrong")).toEqual([
+      {
+        severity: "error",
+        check: SOLUTION_CHECK,
+        file: "lessons/crates-wrong/exercise/solution",
+        lesson: "crates-wrong",
+        message: expect.stringContaining("wrong、0/2 件通過"),
+      },
+      {
+        severity: "error",
+        check: STARTER_CHECK,
+        file: "lessons/crates-wrong/exercise/starter",
+        lesson: "crates-wrong",
+        message: expect.stringContaining("passed、2/2 件通過"),
+      },
+    ]);
+  });
+});
+
 describe("判定しないレッスン", () => {
-  it("許可クレートを使う演習、動画のみのレッスン、準備中のレッスンは判定しない", () => {
-    expect(ofLesson("uses-crates")).toEqual([]);
+  it("動画のみのレッスン、準備中のレッスンは判定しない", () => {
     expect(ofLesson("video-only")).toEqual([]);
     expect(ofLesson(PREPARING)).toEqual([]);
   });
@@ -257,6 +308,7 @@ describe("判定しないレッスン", () => {
     const lessonsWithErrors = new Set(findings.map((f) => f.lesson));
     expect([...lessonsWithErrors].sort()).toEqual([
       "broken-solution",
+      "crates-wrong",
       "passing-starter",
       "wrong-solution",
     ]);
@@ -304,6 +356,60 @@ describe("判定できないとき", () => {
           ),
         );
         expect(result[0].message).toContain("cases.json");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+    JUDGE_TIMEOUT,
+  );
+
+  it(
+    "判定の作業領域の初回準備に失敗すると、その検査のエラーになる",
+    () => {
+      const dir = mkdtempSync(join(tmpdir(), "progrust-judge-check-prepare-"));
+      try {
+        write(
+          join(dir, "content/chapters.json"),
+          JSON.stringify([
+            {
+              id: "ch01",
+              title: "章",
+              description: "説明",
+              lessons: ["crates"],
+            },
+          ]),
+        );
+        write(
+          join(dir, "content/lessons/crates/lesson.json"),
+          JSON.stringify({
+            id: "crates",
+            chapter: "ch01",
+            kind: "lesson",
+            title: "crates",
+            exercise: { ...STDOUT_EXERCISE, dependencies: ["rand"] },
+          }),
+        );
+        const lesson = cratesLesson(randProgram("a + b"), randProgram("a - b"));
+        for (const [path, content] of Object.entries(lesson.files)) {
+          write(join(dir, "content/lessons/crates", path), content);
+        }
+        // 作業領域の場所の途中にファイルを置き、初回準備で作業領域を作れないようにする（ネットワークは使わない）。
+        write(join(dir, "file"), "");
+        const result = checkJudge({
+          contentDir: join(dir, "content"),
+          curriculumDir: join(dir, "content"),
+          judgeWorkspaceDir: join(dir, "file/workspace"),
+        });
+        expect(result).toEqual(
+          [SOLUTION_CHECK, STARTER_CHECK].map((check) =>
+            expect.objectContaining({
+              severity: "error",
+              check,
+              lesson: "crates",
+              message: expect.stringContaining("初回準備に失敗"),
+            }),
+          ),
+        );
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }

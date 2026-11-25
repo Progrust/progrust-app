@@ -95,6 +95,7 @@
 * [ADR 0208](0208-content-check-runs-judge-via-backend-cli.md) - 教材チェックツールの「模範解答」「初期コード」の判定を、バックエンドのクレートに置いた判定だけを行うコマンドラインのプログラム（`src-tauri/src/bin/`）を `cargo run` で起動して行い、作業領域を `src-tauri/target/` の下の専用のディレクトリにする
 * [ADR 0222](0222-build-judge-cli-only-with-content-check-feature.md) - 教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない（ADR 0242 で許可クレートを使う演習の扱いを変えた）
 * [ADR 0242](0242-content-check-prepares-crates-before-judging.md) - 教材チェックツールは、許可クレートを使う演習の模範解答と初期コードも判定し、判定の前に progrust-judge が判定の作業領域で初回準備をする
+* [ADR 0245](0245-content-check-prepares-again-on-lost-crates.md) - 教材チェックツールの判定のビルドが、初回準備のやり直しが要る失敗になったときは、progrust-judge が判定の作業領域の prepared.json の status を failed にし、初回準備をやり直してから 1 回だけ判定し直し、また同じ失敗になったら判定結果を返さずに 0 以外の終了コードで終わる
 
 # コード実行・判定
 
