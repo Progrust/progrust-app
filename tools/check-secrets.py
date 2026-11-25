@@ -63,6 +63,8 @@ GITLEAKS_FOUND = 99
 GIT_CONFIG = [
     "-c", "core.quotePath=false",
     "-c", "core.hooksPath=" + os.devnull,
+    # GIT_GRAFT_FILE を指すと、git が、grafts は廃止予定だという案内を毎回出す。案内だけを止める
+    "-c", "advice.graftFileDeprecated=false",
     "-c", "color.ui=never",
     "-c", "diff.noprefix=false",
     "-c", "diff.mnemonicPrefix=false",

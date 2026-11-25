@@ -502,7 +502,9 @@ class Loop:
         # ループの claude が作業ツリーと共有する .git にフックや置き換えを置いても、ループのコミット・マージ・push と、
         # 検査の道具の取り出しが、それに左右されないようにする。
         env = dict(os.environ, GIT_NO_REPLACE_OBJECTS="1", GIT_GRAFT_FILE=os.devnull)
-        result = self.run(["git", "-c", f"core.hooksPath={os.devnull}"] + args, cwd or self.worktree, GIT_TIMEOUT, env=env)
+        # GIT_GRAFT_FILE を指すと、git が、grafts は廃止予定だという案内を毎回出すので、案内だけを止める
+        quiet = ["-c", "advice.graftFileDeprecated=false"]
+        result = self.run(["git", "-c", f"core.hooksPath={os.devnull}"] + quiet + args, cwd or self.worktree, GIT_TIMEOUT, env=env)
         if check and result.returncode != 0:
             raise InfraError(f"`git {' '.join(args[:3])}` が失敗しました: {tail(result.stderr).strip()}")
         return result
