@@ -228,8 +228,10 @@ describe("開いたとき", () => {
     expect(commands(calls, "open_lesson")).toEqual([{ lesson_id: "ch04-02" }]);
     expect(commands(calls, "get_lesson")).toEqual([{ lesson_id: "ch04-02" }]);
     expect(loadLessonVideo).toHaveBeenCalledWith("ch04-02");
-    expect(container.querySelector(".pg-video-time b")).toHaveTextContent(
-      "0:02",
+    await waitFor(() =>
+      expect(container.querySelector(".pg-video-time b")).toHaveTextContent(
+        "0:02",
+      ),
     );
   });
 
