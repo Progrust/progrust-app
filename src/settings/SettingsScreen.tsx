@@ -1,14 +1,10 @@
 // 設定画面。画面の配置は design-system/ui-design/Settings.dc.html、
 // 決まりは documents/spec/screens/settings-screen.md。
-// このマイルストーンでは「表示」「動画」「アプリ」の区分だけを作る。
+// このマイルストーンでは「表示」「動画」「環境」「アプリ」の区分だけを作る。
 import { ChevronDown, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import type {
-  CSSProperties,
-  KeyboardEvent,
-  PointerEvent,
-  ReactNode,
-} from "react";
+import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
+import { redetectTools } from "../commands/environment";
 import {
   getAppVersion,
   getSettings,
@@ -16,6 +12,8 @@ import {
 } from "../commands/settings";
 import type { PlaybackRate, Settings, Theme } from "../commands/settings";
 import { applyTheme } from "../theme";
+import { EnvironmentSection } from "./EnvironmentSection";
+import { Row, Section } from "./SettingsParts";
 import "./settings.css";
 
 const THEMES: { value: Theme; label: string }[] = [
@@ -105,12 +103,40 @@ export function SettingsView({
     change({ ...latest.current, video: { ...latest.current.video, ...patch } });
   };
 
+  // パスを保存して、検出し直す。保存は設定の保存の順番に並べ、保存できなかったときは検出し直さずに reject する。
+  const saveToolPath = (
+    tool: keyof Settings["tool_paths"],
+    path: string | null,
+  ): Promise<void> => {
+    const run = queue.current.then(async () => {
+      const before = latest.current.tool_paths;
+      const next = {
+        ...latest.current,
+        tool_paths: { ...before, [tool]: path },
+      };
+      latest.current = next;
+      try {
+        await updateSettings(next);
+      } catch (error: unknown) {
+        // 保存できなかったパスは、画面にも、次の保存にも残さない。
+        latest.current = { ...latest.current, tool_paths: before };
+        throw error;
+      }
+      setSettings((current) => ({ ...current, tool_paths: next.tool_paths }));
+      await redetectTools();
+    });
+    queue.current = run.catch((error: unknown) => {
+      console.error("パスの保存か検出し直しに失敗した", error);
+    });
+    return run;
+  };
+
   return (
     <main className="settings-wrap">
       <div className="settings-head">
         <div>
           <h1>設定</h1>
-          <p>表示・動画の設定です。変更はすぐに保存されます。</p>
+          <p>表示・動画・環境の設定です。変更はすぐに保存されます。</p>
         </div>
       </div>
       {saveFailed && <p role="alert">設定を保存できませんでした。</p>}
@@ -239,49 +265,17 @@ export function SettingsView({
         </Row>
       </Section>
 
+      <EnvironmentSection
+        toolPaths={settings.tool_paths}
+        onSavePath={saveToolPath}
+      />
+
       <Section id="s-app" title="アプリ">
         <Row title="バージョン" help={`Progrust ${version}`}>
           {null}
         </Row>
       </Section>
     </main>
-  );
-}
-
-function Section({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: ReactNode;
-}) {
-  return (
-    <section className="settings-sec" aria-labelledby={id}>
-      <h2 id={id}>{title}</h2>
-      <div className="pg-settings">{children}</div>
-    </section>
-  );
-}
-
-function Row({
-  title,
-  help,
-  children,
-}: {
-  title: string;
-  help: string;
-  children: ReactNode;
-}) {
-  return (
-    <div className="pg-settings-row">
-      <div>
-        <h3>{title}</h3>
-        <p>{help}</p>
-      </div>
-      <div className="settings-ctrl">{children}</div>
-    </div>
   );
 }
 
