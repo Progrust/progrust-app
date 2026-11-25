@@ -25,7 +25,11 @@ function env(c: CargoStatus): EnvironmentStatus {
   return {
     cargo: c,
     claude: { status: "not_found", path: null, version: null },
-    crates: { status: "ready", error: null },
+    crates: {
+      status: "ready",
+      prepared_at: "2026-11-24T19:02:00+09:00",
+      error: null,
+    },
   };
 }
 

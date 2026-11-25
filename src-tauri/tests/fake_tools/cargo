@@ -2,8 +2,17 @@
 # テスト用の偽の cargo（spec/non-functional/testing.md「偽の claude と偽の cargo」）。
 #
 # テストでは、この原本を指すシンボリックリンクを、偽の rustc と同じ一時ディレクトリに置いて
-# 使う（tests/fake_tools/mod.rs）。`--version` が返す版は、実行ファイル（リンク）と同じ
-# ディレクトリの rust-version に書く。ほかの引数には対応しない。
+# 使う（tests/fake_tools/mod.rs）。動きは、実行ファイル（リンク）と同じディレクトリのファイルで
+# 決める（環境変数では決めない）。
+#
+# - `--version` が返す版は rust-version に書く。
+# - `build` の動きは cargo-build に、`test --no-run` の動きは cargo-test-no-run に、次のどれかの
+#   1 語で書く。ファイルが無いときは、ほかの引数と同じく、対応していない引数として失敗する。
+#   - succeed: 環境変数 CARGO_TARGET_DIR のディレクトリ（ビルド先）を作って、成功する。
+#   - fail: 標準エラー出力に失敗の文を書いて、終了コード 101 で失敗する。
+#   - hang: 自分のプロセス ID を cargo-pid に書いてから、止められるまで終わらない。
+# - `build` と `test` の呼び出しは、引数を 1 行にして cargo-calls に書き足す。
+# テストからは、tests/fake_tools/cargo_behavior.rs の手助けで、これらのファイルを書き、読む。
 
 dir=${0%/*}
 if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
@@ -13,6 +22,49 @@ if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
   }
   echo "cargo $version (0123456789 2026-01-01)"
   exit 0
+fi
+
+behavior_file=
+case "$1" in
+  build)
+    behavior_file="$dir/cargo-build"
+    ;;
+  test)
+    case " $* " in
+      *" --no-run "*) behavior_file="$dir/cargo-test-no-run" ;;
+    esac
+    ;;
+esac
+case "$1" in
+  build | test) echo "$*" >> "$dir/cargo-calls" ;;
+esac
+
+if [ -n "$behavior_file" ] && [ -f "$behavior_file" ]; then
+  IFS= read -r behavior < "$behavior_file" || [ -n "$behavior" ]
+  case "$behavior" in
+    succeed)
+      if [ -z "$CARGO_TARGET_DIR" ]; then
+        echo "fake cargo: CARGO_TARGET_DIR が無い" >&2
+        exit 1
+      fi
+      mkdir -p "$CARGO_TARGET_DIR" || exit 1
+      exit 0
+      ;;
+    fail)
+      echo "fake cargo: 失敗するように用意した: $*" >&2
+      exit 101
+      ;;
+    hang)
+      echo "$$" > "$dir/cargo-pid"
+      while :; do
+        sleep 1
+      done
+      ;;
+    *)
+      echo "fake cargo: $behavior_file の動きが分からない: $behavior" >&2
+      exit 1
+      ;;
+  esac
 fi
 echo "fake cargo: 対応していない引数: $*" >&2
 exit 1

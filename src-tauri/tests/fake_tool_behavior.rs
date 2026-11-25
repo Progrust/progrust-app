@@ -13,6 +13,7 @@ use std::{
     time::{Duration, Instant},
 };
 
+use fake_tools::cargo_behavior::{cargo_calls, hanging_pid, set_behavior};
 use fake_tools::{FakeClaude, FakeRust, originals_dir, stream_json};
 use serde_json::Value;
 
@@ -383,6 +384,92 @@ fn rustc_verbose_version_has_the_prepared_version() {
     assert_eq!(lines[0], "rustc 1.99.0 (0123456789 2026-01-01)");
     assert!(lines.contains(&"release: 1.99.0"), "{stdout}");
     assert!(lines.contains(&"binary: rustc"), "{stdout}");
+}
+
+/// `build`・`test --no-run` の動きを決めていないときは、ほかの引数と同じく失敗する。
+#[test]
+fn cargo_build_fails_without_a_behavior() {
+    let fake = FakeRust::new("1.100.0");
+    let output = Command::new(fake.cargo())
+        .args(["build", "--quiet"])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    assert!(
+        String::from_utf8_lossy(&output.stderr).contains("fake cargo: 対応していない引数"),
+        "{output:?}"
+    );
+}
+
+/// 成功する `build`・`test --no-run` は、`CARGO_TARGET_DIR` のディレクトリを作り、呼び出しを書き残す。
+#[test]
+fn cargo_can_succeed_and_creates_the_target_dir() {
+    let fake = FakeRust::new("1.100.0");
+    set_behavior(fake.cargo(), "succeed", "succeed");
+    let temp = tempfile::tempdir().unwrap();
+    let target = temp.path().join("workspace/target");
+    for args in [
+        &["build", "--quiet"][..],
+        &["test", "--no-run", "--quiet"][..],
+    ] {
+        let output = Command::new(fake.cargo())
+            .args(args)
+            .env("CARGO_TARGET_DIR", &target)
+            .output()
+            .unwrap();
+        assert!(output.status.success(), "{args:?}: {output:?}");
+    }
+    assert!(target.is_dir());
+    assert_eq!(
+        cargo_calls(fake.cargo()),
+        ["build --quiet", "test --no-run --quiet"]
+    );
+    // `test --no-run` 以外の test は、動きを決めていないので失敗する。
+    let output = Command::new(fake.cargo()).arg("test").output().unwrap();
+    assert_eq!(output.status.code(), Some(1));
+}
+
+/// `build` と `test --no-run` の動きは、別々に決められる。
+#[test]
+fn cargo_build_and_test_no_run_behave_separately() {
+    let fake = FakeRust::new("1.100.0");
+    let temp = tempfile::tempdir().unwrap();
+    set_behavior(fake.cargo(), "succeed", "fail");
+    let run = |args: &[&str]| {
+        Command::new(fake.cargo())
+            .args(args)
+            .env("CARGO_TARGET_DIR", temp.path().join("target"))
+            .output()
+            .unwrap()
+    };
+    assert!(run(&["build", "--quiet"]).status.success());
+    let failed = run(&["test", "--no-run", "--quiet"]);
+    assert_eq!(failed.status.code(), Some(101));
+    assert!(
+        String::from_utf8_lossy(&failed.stderr).contains("失敗するように用意した"),
+        "{failed:?}"
+    );
+}
+
+/// 終わらない `build` は、自分のプロセス ID を書いてから、止めるまで動き続ける。
+#[test]
+fn cargo_can_hang_until_killed() {
+    let fake = FakeRust::new("1.100.0");
+    set_behavior(fake.cargo(), "hang", "fail");
+    let mut child = Command::new(fake.cargo())
+        .args(["build", "--quiet"])
+        .stdout(Stdio::null())
+        .stderr(Stdio::null())
+        .spawn()
+        .unwrap();
+    wait_until("プロセス ID を書く", || {
+        hanging_pid(fake.cargo()).is_some()
+    });
+    assert_eq!(hanging_pid(fake.cargo()), Some(child.id()));
+    thread::sleep(Duration::from_millis(300));
+    assert!(child.try_wait().unwrap().is_none(), "終わってしまった");
+    child.kill().unwrap();
+    child.wait().unwrap();
 }
 
 // ---- 偽のツールがアプリに同梱されないこと ----

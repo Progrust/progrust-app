@@ -206,7 +206,11 @@ function mockCommands(calls: Calls, options: Options = {}) {
             required_rustc_version: "1.100.0",
           },
           claude: { status: "not_found", path: null, version: null },
-          crates: { status: "ready", error: null },
+          crates: {
+            status: "ready",
+            prepared_at: "2026-11-24T19:02:00+09:00",
+            error: null,
+          },
         };
       }
       case "get_settings":
@@ -766,7 +770,11 @@ describe("環境の案内", () => {
           required_rustc_version: "1.100.0",
         },
         claude: { status: "not_found", path: null, version: null },
-        crates: { status: "ready", error: null },
+        crates: {
+          status: "ready",
+          prepared_at: "2026-11-24T19:02:00+09:00",
+          error: null,
+        },
       });
     });
     expect(screen.queryByRole("alert")).toBeNull();
