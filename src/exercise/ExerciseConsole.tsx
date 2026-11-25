@@ -38,7 +38,13 @@ import {
   exerciseControls,
   exerciseReducer,
 } from "./exerciseState";
-import { CargoBanner, cargoUsable, useEnvironmentStatus } from "../environment";
+import {
+  CargoBanner,
+  CratesBanner,
+  cargoUsable,
+  cratesReadyFor,
+  useEnvironmentStatus,
+} from "../environment";
 import type { ExerciseState } from "./exerciseState";
 import type { SubmitFinished } from "./judgeResult";
 import { shortcutEnabled } from "./shortcuts";
@@ -47,6 +53,8 @@ import { useStopOnLeave } from "./useStopOnLeave";
 
 export type ExerciseConsoleProps = {
   lessonId: string;
+  // 演習が使う許可クレート。空でないときだけ、外部クレートの準備の状態で、実行・テスト・提出を無効にする。
+  dependencies: readonly string[];
   // エディタ上の全ファイル。コマンドを送る直前に読む。
   getFiles: () => DraftFiles;
   // 下書きのコマンドの列に、run_code・submit_code を並べる。前の保存より後に送るためである。
@@ -72,6 +80,7 @@ function appendLines(log: ConsoleLog, lines: ConsoleLine[]): ConsoleLog {
 
 export function ExerciseConsole({
   lessonId,
+  dependencies,
   getFiles,
   enqueue,
   draftSave,
@@ -95,7 +104,11 @@ export function ExerciseConsole({
   );
 
   const environment = useEnvironmentStatus();
-  const controls = exerciseControls(state, cargoUsable(environment));
+  const controls = exerciseControls(
+    state,
+    cargoUsable(environment),
+    cratesReadyFor(environment, dependencies),
+  );
   const requestId = activeRequestId(state);
 
   useEffect(() => {
@@ -283,10 +296,19 @@ export function ExerciseConsole({
     <Console
       log={log}
       banner={
-        <CargoBanner
-          cargo={environment?.cargo ?? null}
-          className="exercise-banner"
-        />
+        <>
+          <CargoBanner
+            cargo={environment?.cargo ?? null}
+            className="exercise-banner"
+          />
+          {dependencies.length > 0 && (
+            <CratesBanner
+              crates={environment?.crates ?? null}
+              where="exercise"
+              className="exercise-banner"
+            />
+          )}
+        </>
       }
       stdin={stdin}
       actions={

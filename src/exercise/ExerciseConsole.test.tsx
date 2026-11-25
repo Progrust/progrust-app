@@ -27,6 +27,10 @@ type Options = {
   emitOnStart?: (requestId: string) => Promise<void>;
   // run_code・submit_code の戻りを、この Promise が解決するまで待たせる。
   hold?: Promise<void>;
+  // 演習が使う許可クレート。
+  dependencies?: string[];
+  // get_environment_status が返す、外部クレートの準備の状態。
+  crates?: "not_started" | "preparing" | "ready" | "failed";
 };
 
 const FILES = { "src/main.rs": "fn main() {}\n" };
@@ -37,6 +41,19 @@ function setup(options: Options = {}) {
     async (command, args) => {
       const payload = (args ?? {}) as Record<string, unknown>;
       calls.push({ command, args: payload });
+      if (command === "get_environment_status" && options.crates) {
+        return {
+          cargo: {
+            status: "found",
+            cargo_path: "/c/cargo",
+            rustc_path: "/c/rustc",
+            rustc_version: "1.100.0",
+            required_rustc_version: "1.100.0",
+          },
+          claude: { status: "found", path: "/c/claude", version: "1.0.0" },
+          crates: { status: options.crates, prepared_at: null, error: null },
+        };
+      }
       if (command === "run_code" || command === "submit_code") {
         await options.emitOnStart?.(payload.request_id as string);
         await options.hold;
@@ -57,6 +74,7 @@ function setup(options: Options = {}) {
   const view = render(
     <ExerciseConsole
       lessonId="ch04-04"
+      dependencies={options.dependencies ?? []}
       getFiles={() => FILES}
       enqueue={(task) => task()}
       draftSave={draftSave}
@@ -464,5 +482,60 @@ describe("画面を離れるとき", () => {
       release();
     });
     expect(draftSave.edited).toHaveBeenCalled();
+  });
+});
+
+describe("外部クレートの準備", () => {
+  const buttons = () =>
+    ["実行", "テスト", "提出"].map((name) =>
+      screen.getByRole("button", { name }),
+    );
+
+  it.each([
+    ["preparing", "外部クレートを準備しています"],
+    ["failed", "外部クレートの準備に失敗しました"],
+  ] as const)(
+    "許可クレートを使う演習は、%s のとき案内を出し、実行・テスト・提出を無効にする",
+    async (crates, text) => {
+      setup({ dependencies: ["rand"], crates });
+      expect(await screen.findByText(new RegExp(text))).toBeInTheDocument();
+      for (const button of buttons()) {
+        expect(button).toBeDisabled();
+      }
+    },
+  );
+
+  it.each(["preparing", "failed"] as const)(
+    "許可クレートを使わない演習は、%s のときも案内を出さず、ボタンを無効にしない",
+    async (crates) => {
+      setup({ dependencies: [], crates });
+      await act(async () => {});
+      expect(screen.queryByText(/外部クレート/)).toBeNull();
+      for (const button of buttons()) {
+        expect(button).toBeEnabled();
+      }
+    },
+  );
+
+  it("ready になると、案内が消えてボタンが有効になる", async () => {
+    setup({ dependencies: ["rand"], crates: "preparing" });
+    await screen.findByText(/外部クレートを準備しています/);
+    await act(async () => {
+      await emit("environment_updated", {
+        cargo: {
+          status: "found",
+          cargo_path: "/c/cargo",
+          rustc_path: "/c/rustc",
+          rustc_version: "1.100.0",
+          required_rustc_version: "1.100.0",
+        },
+        claude: { status: "found", path: "/c/claude", version: "1.0.0" },
+        crates: { status: "ready", prepared_at: null, error: null },
+      });
+    });
+    expect(screen.queryByText(/外部クレートを準備/)).toBeNull();
+    for (const button of buttons()) {
+      expect(button).toBeEnabled();
+    }
   });
 });

@@ -789,6 +789,7 @@ function ExerciseWorkspace({
           <div className="exercise-bottom">
             <ExerciseConsole
               lessonId={lessonId}
+              dependencies={loaded.detail.lesson.exercise?.dependencies ?? []}
               getFiles={() => filesRef.current}
               enqueue={enqueue}
               draftSave={scheduler}

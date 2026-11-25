@@ -229,3 +229,20 @@ describe("ボタンの有効・無効", () => {
     });
   });
 });
+
+describe("外部クレートの準備", () => {
+  it("cratesReady が false のときは、待機でも実行・テスト・提出を無効にする", () => {
+    expect(exerciseControls(INITIAL_EXERCISE_STATE, true, false)).toMatchObject(
+      {
+        runEnabled: false,
+        testEnabled: false,
+        submitEnabled: false,
+      },
+    );
+    expect(exerciseControls(INITIAL_EXERCISE_STATE, true, true)).toMatchObject({
+      runEnabled: true,
+      testEnabled: true,
+      submitEnabled: true,
+    });
+  });
+});

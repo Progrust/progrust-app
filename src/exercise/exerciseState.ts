@@ -126,11 +126,14 @@ export type ExerciseControls = {
 };
 
 // cargoFound: cargo が見つかっているか。見つからないときは、実行・テスト・提出を無効にする。
+// cratesReady: 演習が使う許可クレートの準備ができているか（許可クレートを使わない演習では常に true）。
+// false のときも、実行・テスト・提出を無効にする。
 export function exerciseControls(
   state: ExerciseState,
   cargoFound: boolean,
+  cratesReady = true,
 ): ExerciseControls {
-  const canStart = cargoFound && state.kind === "idle";
+  const canStart = cargoFound && cratesReady && state.kind === "idle";
   return {
     runEnabled: canStart,
     testEnabled: canStart,
