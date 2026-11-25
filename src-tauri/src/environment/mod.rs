@@ -4,7 +4,8 @@
 //! アプリの起動時に [`start_detection`] で、画面の表示を待たせずに別のスレッドで `cargo`・`rustc` と
 //! `claude` を探す。結果は [`Environment`] がメモリに持ち、`get_environment_status` と、実行・提出の
 //! コマンド（[`Environment::rust_tools`]）と、`claude` を起動する処理（[`Environment::claude`]）が使う。
-//! 検出が終わる前に読まれたときは、終わるまで待つ。
+//! 検出が終わる前に読まれたときは、終わるまで待つ。設定画面と初回起動画面の「再検出」（`redetect_tools`）では、
+//! [`redetect`] が検出し直して、メモリの検出結果を置き換える。
 //!
 //! 許可クレートの初回準備の状態（spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）も
 //! [`Environment`] が持つ。初回準備を始める・止める処理は [`preparation`] にある。
@@ -31,6 +32,7 @@ use crate::runner::process::Stopper;
 use crate::storage::AppDataDir;
 
 pub mod preparation;
+pub mod redetect;
 
 /// `rustc` に必要な最低バージョン（spec/architecture/external-tools.md「検出」の表）。
 pub const REQUIRED_RUSTC_VERSION: &str = "1.100.0";
@@ -585,6 +587,10 @@ struct Shared {
     changed: Condvar,
     /// `environment_updated` を送る順番を守るロック（[`preparation::notify`]）。
     notify: Mutex<()>,
+    /// 再検出（[`redetect::redetect_tools`]）で使う、探す場所（`PATH`・ホームディレクトリなど）。設定の
+    /// `tool_paths` は、再検出のたびに読み直して入れ替える。起動時の検出（[`start_detection`]）が置く。置いて
+    /// いないときは、アプリのプロセスの環境から作る。再検出を 1 つずつ行うためのロックも兼ねる。
+    redetect: Mutex<Option<ToolSearch>>,
 }
 
 /// 1 つのロックで守る状態。検出結果と初回準備の状態を、一緒に読み書きする。
@@ -628,6 +634,7 @@ impl Environment {
                 state: Mutex::new(State::default()),
                 changed: Condvar::new(),
                 notify: Mutex::new(()),
+                redetect: Mutex::new(None),
             }),
         }
     }
@@ -734,8 +741,15 @@ impl Environment {
 ///
 /// 初回準備は、アプリの状態に置いた [`RunnerDir`](crate::runner::RunnerDir) と
 /// [`AppDataDir`] の作業領域を使う。この関数より先に置いておく。
+///
+/// `search` は、再検出（[`redetect::redetect_tools`]）でも、探す場所として使う（設定の `tool_paths` は読み直す）。
 pub fn start_detection<R: Runtime>(app: &AppHandle<R>, search: ToolSearch) {
     let environment = Environment::pending();
+    *environment
+        .shared
+        .redetect
+        .lock()
+        .unwrap_or_else(|poisoned| poisoned.into_inner()) = Some(search.clone());
     app.manage(environment.clone());
     let app = app.clone();
     thread::spawn(move || {

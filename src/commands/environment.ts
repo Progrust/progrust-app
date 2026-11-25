@@ -43,6 +43,12 @@ export function getEnvironmentStatus(): Promise<EnvironmentStatus> {
   return invoke<EnvironmentStatus>("get_environment_status");
 }
 
+// 設定の tool_paths を読み直して cargo・claude を検出し直し、検出し直した後の環境の状態で解決する（「再検出」）。
+// environment_updated も届く。初回準備を始めたときは、crates.status が preparing になる。
+export function redetectTools(): Promise<EnvironmentStatus> {
+  return invoke<EnvironmentStatus>("redetect_tools");
+}
+
 // 初回準備に失敗したときに、初回準備をやり直す。始めたら null で解決し、経過と結果は environment_updated で届く。
 // 初回準備の状態が failed でないときは invalid_state、cargo が見つからないときは cargo_unavailable で拒否される。
 export function retryCratePreparation(): Promise<null> {
