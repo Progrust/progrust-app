@@ -15,7 +15,7 @@ rand = "=0.9.5"
 
 - 書式は `Cargo.toml` の `[dependencies]` と同じとし、バージョンは `=` で固定する。
 - この一覧から生成した `runner/Cargo.lock` もリポジトリに置き、アプリに同梱する。`Cargo.lock` は、下の「作業領域」の `allcrates/` のライブラリ（パッケージ名 `progrust_allowed_crates`）をルートのパッケージにして生成する。
-- クレートを追加・変更したら `Cargo.lock` を作り直す。`npm run runner:lock` が、一時ディレクトリに `allcrates/` と同じ形のライブラリを作り、`cargo generate-lockfile` で `runner/Cargo.lock` を作り直す（[ADR 0209](../../decisions/0209-regenerate-runner-lock-with-npm-script.md)）。
+- クレートを追加・変更したら `Cargo.lock` を作り直す。`npm run runner:lock` が、一時ディレクトリに `allcrates/` と同じ形のライブラリを作り、`cargo generate-lockfile` で `runner/Cargo.lock` を作り直す。
 
 ## 作業領域
 

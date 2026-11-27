@@ -30,14 +30,14 @@ description: "`tools/` の教材チェックツールで検証するチェック
 
 「模範解答」「初期コード」は、アプリと同じ判定処理（[コード実行・判定](../exercise-runner/index.md)）で判定する。判定処理は、バックエンド（`src-tauri/`）のクレートに置いた、判定だけを行うコマンドラインのプログラムとして動かす。
 
-- プログラムの名前は `progrust-judge`（`src-tauri/src/bin/progrust-judge.rs`）とする。Cargo の feature `content-check` を付けたときだけビルドし、アプリの `.app` には入れない（[ADR 0222](../../decisions/0222-build-judge-cli-only-with-content-check-feature.md)）。
+- プログラムの名前は `progrust-judge`（`src-tauri/src/bin/progrust-judge.rs`）とする。Cargo の feature `content-check` を付けたときだけビルドし、アプリの `.app` には入れない。
 - 教材チェックツールは、このプログラムを `cargo run --manifest-path src-tauri/Cargo.toml --locked --features content-check --bin progrust-judge -- --lesson {レッスンのディレクトリ} --files {solution か starter}` で起動し、判定結果を JSON で標準出力から受け取る。演習のあるレッスンごとに、模範解答、初期コードの順に、1 つずつ判定する。
 - 判定の作業領域は、アプリの学習者データ（`{app_data_dir}`）ではなく、`src-tauri/target/` の下の教材チェックツール専用のディレクトリ（`src-tauri/target/content-check/`）にする。ビルド先の分け方（`target/`・`target-std/`）は、アプリの作業領域（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「作業領域」）と同じにする。
 - 判定は、学習者の提出（[コードの提出（submit）](../exercise-runner/submit.md)）と同じ手順・制限値で行う。判定結果の `status` が `passed` なら「模範解答」は通り、「初期コード」はエラーになる。
 - 判定結果の JSON は、提出の判定結果（[コードの提出（submit）](../exercise-runner/submit.md)「判定結果」）の `status`・`passed`・`total`・`cases` に、ビルドの出力（ANSI エスケープを除いたもの）の `build_output` を足したものとする。「模範解答」のエラーには、判定結果の要約（`status`、通過数、失敗したテストケース、最初に失敗したテストケースの `detail`）と、`compile_error` ではビルドの出力の先頭を入れる。
 - プログラムが判定結果を返さなかったとき（0 以外の終了コードで終わった、JSON を読めない、など）は、その検査（「模範解答」か「初期コード」）のエラーにする。
 - 許可クレートを使う演習（`lesson.json` の `exercise.dependencies` が空でない演習）を判定するときは、`progrust-judge` が、判定の前に、判定の作業領域で初回準備（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「初回準備」）の「実行する条件」を判定し、当てはまれば同じ手順で初回準備をする。初回準備にはネットワークが要る。判定の作業領域の初回準備では、手順の 4（`target-validate/` の複製）を行わない。教材チェックツールは生成問題の検証をしないからである。初回準備が失敗したときは、判定結果を返さずに 0 以外の終了コードで終わり、その検査のエラーになる。判定のビルドは、アプリと同じく `--offline` で行う。
-- 判定のビルドが、初回準備のやり直しが要る失敗（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「初回準備のやり直しが要る失敗」）になったときは、`progrust-judge` は、判定の作業領域の `prepared.json` の `status` を `failed` にし、初回準備をやり直してから、1 回だけ判定し直す。やり直した初回準備が失敗したときと、また同じ失敗になったときは、判定結果を返さずに 0 以外の終了コードで終わり、その検査のエラーになる（[ADR 0245](../../decisions/0245-content-check-prepares-again-on-lost-crates.md)）。
+- 判定のビルドが、初回準備のやり直しが要る失敗（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「初回準備のやり直しが要る失敗」）になったときは、`progrust-judge` は、判定の作業領域の `prepared.json` の `status` を `failed` にし、初回準備をやり直してから、1 回だけ判定し直す。やり直した初回準備が失敗したときと、また同じ失敗になったときは、判定結果を返さずに 0 以外の終了コードで終わり、その検査のエラーになる。
 
 準備中のレッスン（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)「準備中のレッスン」）は、次のように扱う。
 
