@@ -229,19 +229,3 @@ export async function listenRunEvents(
   }
   return unlistenAll;
 }
-
-// コマンドが拒否されたときに、画面に出す文。コマンドのエラー（CommandError）の message（学習者に見せてよい日本語）を
-// 使う。CommandError でないもの（コマンドを呼べなかったときの Error など）は、決まった文にする。
-export function commandErrorMessage(error: unknown): string {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    !(error instanceof Error) &&
-    "message" in error &&
-    typeof error.message === "string" &&
-    error.message !== ""
-  ) {
-    return error.message;
-  }
-  return "コマンドを実行できませんでした。";
-}
