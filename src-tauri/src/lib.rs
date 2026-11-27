@@ -14,6 +14,8 @@ pub mod storage;
 
 use tauri::{AppHandle, Builder, Context, Manager, Runtime};
 
+use chat::PromptDir;
+use chat::answering::Chats;
 use content::ContentDir;
 use environment::ToolSearch;
 use runner::RunnerDir;
@@ -27,6 +29,8 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         // （spec/architecture/tauri-permissions.md）。
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            commands::chat::cancel_chat,
+            commands::chat::send_chat,
             commands::content::list_chapters,
             commands::content::get_lesson,
             commands::environment::get_environment_status,
@@ -74,6 +78,10 @@ pub fn run() {
             app.manage(ContentDir::from_app(app.handle())?);
             // 同梱の許可クレートの定義（`runner/`）も、`resource_dir()` の下にある。
             app.manage(RunnerDir::from_app(app.handle())?);
+            // 質疑応答の指示文（`prompts/`）も、`resource_dir()` の下にある。
+            app.manage(PromptDir::from_app(app.handle())?);
+            // 回答中の質問を同時に 1 つだけ持つ状態。実行・提出とは別に数える。
+            app.manage(Chats::default());
             // 実行・提出を同時に 1 つだけ行う状態。作業領域は `{app_data_dir}/workspace/`（実行のコマンドが使う）。
             app.manage(Runs::default());
             // cargo・rustc と claude を、画面の表示を待たせずに別のスレッドで探す。cargo が見つかったら、
@@ -90,6 +98,8 @@ pub fn run() {
             if let tauri::RunEvent::Exit = event {
                 // 動いている実行・テスト実行・提出を止める。run_finished を送らず、試行ログに追記しない。
                 commands::run::stop_runs_on_exit(app);
+                // 回答中の質問の claude を止め、終わるまで待つ（最大で数秒）。chat_finished は送らない。
+                commands::chat::stop_chats_on_exit(app);
                 // 動いている初回準備の cargo を止める。prepared.json は書かず、次回の起動でやり直す（ADR 0236）。
                 environment::preparation::stop_crate_preparation_on_exit(app);
                 end_sessions_on_exit(app);

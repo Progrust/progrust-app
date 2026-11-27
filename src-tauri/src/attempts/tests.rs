@@ -573,3 +573,66 @@ fn a_passed_session_is_ended_only_after_before_end_succeeds() {
         None
     );
 }
+
+fn chat_event(context: &str, question: &str) -> ChatEvent {
+    ChatEvent {
+        at: "2026-10-31T13:10:00+09:00".into(),
+        context: context.into(),
+        question: question.into(),
+        answer_summary: None,
+    }
+}
+
+#[test]
+fn a_chat_event_is_appended_to_the_unfinished_session_in_the_spec_shape() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = AppDataDir::new(temp.path());
+    let log = dir
+        .start_or_continue_session_at("ch04-04", SessionKind::Lesson, at(13, 2, 0))
+        .unwrap();
+    let appended = dir
+        .append_chat(
+            "ch04-04",
+            chat_event("video:m5", "ムーブ後に使えないのはなぜ？"),
+        )
+        .unwrap();
+    assert_eq!(appended.as_deref(), Some(log.session_id.as_str()));
+    dir.append_chat("ch04-04", chat_event("explanation", "次の質問"))
+        .unwrap();
+    assert_eq!(
+        saved_json(&temp, &log.session_id)["events"],
+        json!([
+            { "type": "chat", "at": "2026-10-31T13:10:00+09:00", "context": "video:m5",
+              "question": "ムーブ後に使えないのはなぜ？", "answer_summary": null },
+            { "type": "chat", "at": "2026-10-31T13:10:00+09:00", "context": "explanation",
+              "question": "次の質問", "answer_summary": null },
+        ])
+    );
+}
+
+/// 未完了のセッションが無いとき（動画のみのレッスン、終えたセッションの後）は、セッションを始めず、何も書かない。
+#[test]
+fn a_chat_event_without_an_unfinished_session_writes_nothing() {
+    let temp = tempfile::tempdir().unwrap();
+    let dir = AppDataDir::new(temp.path());
+    assert_eq!(
+        dir.append_chat("ch01-03", chat_event("video:t1", "質問"))
+            .unwrap(),
+        None
+    );
+    assert!(!temp.path().join("attempts").exists());
+
+    let log = dir
+        .start_or_continue_session_at("ch04-04", SessionKind::Lesson, at(13, 2, 0))
+        .unwrap();
+    dir.end_attempt_session(&log.session_id, "2026-10-31T13:30:00+09:00")
+        .unwrap();
+    let before = saved_json(&temp, &log.session_id);
+    assert_eq!(
+        dir.append_chat("ch04-04", chat_event("explanation", "質問"))
+            .unwrap(),
+        None
+    );
+    assert_eq!(saved_json(&temp, &log.session_id), before);
+    assert_eq!(attempt_names(&temp), [format!("{}.json", log.session_id)]);
+}

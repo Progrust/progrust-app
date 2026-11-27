@@ -1,14 +1,15 @@
 //! 試行ログ（`attempts/{session_id}.json`。spec/learning-record-and-analysis/attempt-log.md）の型と読み書き、
-//! 試行セッションの開始と継続、実行・提出の `run`・`submit` イベントの追記（spec/exercise-runner/attempt-log.md）。
+//! 試行セッションの開始と継続、実行・提出の `run`・`submit` イベントの追記（spec/exercise-runner/attempt-log.md）と、
+//! 質問の `chat` イベントの追記（spec/qa-chat/attempt-log.md）。
 //!
 //! - 読み込めない試行ログは `.broken-{日時}` を付けて退避し、作り直さずに、無いものとして扱う
 //!   （spec/architecture/data-locations.md「書き込みの規則」）。
 //! - 試行ログの「読んで、変えて、書く」は [`SESSION_LOCK`] で 1 つずつ行う。
 //! - セッションの開始・継続は [`AppDataDir::start_or_continue_session`]、イベントの追記は
-//!   [`AppDataDir::append_run`]・[`AppDataDir::append_submit`]、正解と終了は [`AppDataDir::mark_session_passed`]・
-//!   [`AppDataDir::end_attempt_session`]・[`AppDataDir::end_passed_session_of_lesson`]・
-//!   [`AppDataDir::end_passed_session_by_id`]、未完了のセッションは [`AppDataDir::unfinished_session`]・
-//!   [`AppDataDir::unfinished_sessions`] で扱う。
+//!   [`AppDataDir::append_run`]・[`AppDataDir::append_submit`]・[`AppDataDir::append_chat`]、正解と終了は
+//!   [`AppDataDir::mark_session_passed`]・[`AppDataDir::end_attempt_session`]・
+//!   [`AppDataDir::end_passed_session_of_lesson`]・[`AppDataDir::end_passed_session_by_id`]、未完了のセッションは
+//!   [`AppDataDir::unfinished_session`]・[`AppDataDir::unfinished_sessions`] で扱う。
 
 pub mod output;
 
@@ -87,7 +88,7 @@ impl AttemptLog {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", rename_all = "snake_case")]
 pub enum Event {
-    /// 質問のイベント。書くのは質疑応答（M4）で、ここでは、書かれた試行ログを読めるように形だけを持つ。
+    /// 質問のイベント（[`AppDataDir::append_chat`]）。
     Chat(ChatEvent),
     Run(RunEvent),
     Submit(SubmitEvent),
@@ -365,6 +366,25 @@ impl AppDataDir {
         record: SubmitRecord,
     ) -> Result<String, StorageError> {
         self.append_event(lesson_id, kind, record.into_event())
+    }
+
+    /// 質問を送信したときに呼ぶ（spec/qa-chat/attempt-log.md）。レッスン `lesson_id` の未完了のセッションがあれば、
+    /// `chat` イベントを追記し、そのセッションの ID を返す。未完了のセッションが無いとき（動画のみのレッスンなど）は、
+    /// 新しいセッションを始めずに、何も書かずに `None` を返す。
+    ///
+    /// `send_chat` がエラーを返すときと、エラーの後の「再試行」のときは、呼ばない。
+    pub fn append_chat(
+        &self,
+        lesson_id: &str,
+        event: ChatEvent,
+    ) -> Result<Option<String>, StorageError> {
+        let _guard = lock_sessions();
+        let Some(mut log) = self.find_unfinished_session(lesson_id)? else {
+            return Ok(None);
+        };
+        log.events.push(Event::Chat(event));
+        self.write_json(attempt_file(&log.session_id), &log)?;
+        Ok(Some(log.session_id))
     }
 
     /// 提出で正解したときに呼ぶ。セッション `session_id` の `passed_at` を `at` にし、更新した後の試行ログを返す。
