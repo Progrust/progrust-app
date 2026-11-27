@@ -3,6 +3,7 @@
 //! コマンドは分類ごとのモジュールに置き、`lib.rs` の `app_builder` でハンドラに載せる。
 //! どのコマンドにも `#[tauri::command(rename_all = "snake_case")]` を付け、`Result` を返す。
 
+pub mod chat;
 pub mod content;
 pub mod environment;
 pub mod error;

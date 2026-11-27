@@ -1,9 +1,10 @@
-//! 質疑応答で AI に渡す入力の組み立て（spec/qa-chat/ai-input.md）。
+//! 質疑応答で AI に渡す入力の組み立て（spec/qa-chat/ai-input.md）と、回答中の質問の扱い（[`answering`]）。
 //!
 //! 指示文（`{app_resources}/prompts/chat-video.md`・`chat-explanation.md`）の `{{name}}` に、教材と試行ログと
 //! 会話履歴から作った文を埋め込む。Tauri の実行時に頼らずに呼べるように、教材のディレクトリ（[`ContentDir`]）と
 //! 指示文のディレクトリ（[`PromptDir`]）と試行ログ（[`AttemptLog`]）を引数で受け取る。
 
+pub mod answering;
 pub mod template;
 
 use std::collections::{BTreeMap, BTreeSet};
@@ -14,6 +15,7 @@ use std::path::{Path, PathBuf};
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tauri::{AppHandle, Manager, Runtime};
 
 use crate::attempts::AttemptLog;
 use crate::content::{ContentDir, ContentError, Element};
@@ -38,6 +40,12 @@ impl PromptDir {
     /// `root` を指示文のディレクトリとして使う。
     pub fn new(root: impl Into<PathBuf>) -> Self {
         Self { root: root.into() }
+    }
+
+    /// Tauri の `resource_dir()` の下の `prompts/` を指示文のディレクトリとして使う
+    /// （spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）。
+    pub fn from_app<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Self> {
+        Ok(Self::new(app.path().resource_dir()?.join("prompts")))
     }
 
     /// 指示文のディレクトリのパス。
