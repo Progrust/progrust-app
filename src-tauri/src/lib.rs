@@ -48,6 +48,7 @@ pub fn app_builder<R: Runtime>(builder: Builder<R>) -> Builder<R> {
             commands::settings::get_app_version,
             commands::settings::get_settings,
             commands::settings::update_settings,
+            commands::settings::test_claude_connection,
         ])
 }
 

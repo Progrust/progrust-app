@@ -1,12 +1,109 @@
 //! 設定のコマンド（spec/architecture/commands/settings.md）。
 
+use std::path::PathBuf;
+use std::time::Duration;
+
 use serde::Serialize;
 use serde_json::Value;
 use tauri::{AppHandle, PackageInfo, Runtime, State};
 
-use super::error::CommandError;
+use super::error::{CommandError, ErrorCode};
+use crate::claude::{ClaudeCall, ClaudeEnv, ClaudeError, ClaudeOutcome, ClaudeRequest};
+use crate::environment::{ClaudeTool, Environment};
 use crate::settings::Settings;
 use crate::storage::AppDataDir;
+
+/// 接続テストの制限時間。質疑応答と同じ（spec/claude-integration/invocation.md「制限時間」）。
+pub const CONNECTION_TEST_TIME_LIMIT: Duration = Duration::from_secs(120);
+
+/// 接続テストで `--system-prompt` に渡す文。応答が返るかだけを確かめる。
+pub const CONNECTION_TEST_SYSTEM_PROMPT: &str =
+    "あなたは接続テストに答えるアシスタントです。指示に従い、できるだけ短く答えてください。";
+
+/// 接続テストで標準入力に渡す指示文。
+pub const CONNECTION_TEST_PROMPT: &str = "接続テストです。「OK」とだけ答えてください。";
+
+/// `test_claude_connection` の戻り値。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ConnectionTestResult {
+    /// 応答が返ったら `true`。
+    pub ok: bool,
+    /// 使ったモデル（質疑応答のモデル）。
+    pub model: String,
+    /// `ok` が `false` のときのエラー。
+    pub error: Option<ClaudeError>,
+}
+
+/// 短い指示文を `model` で `claude` に実行させ、応答が返るかを確かめる。呼び出しが終わるまで待つ。
+/// `claude` が見つからない（`claude` が `None`）ときは `claude_unavailable`。
+pub fn run_connection_test(
+    claude: Option<ClaudeTool>,
+    model: String,
+    env: ClaudeEnv,
+    work_dir_parent: PathBuf,
+    time_limit: Duration,
+) -> Result<ConnectionTestResult, CommandError> {
+    let Some(claude) = claude else {
+        return Err(CommandError {
+            code: ErrorCode::ClaudeUnavailable,
+            message: "Claude Code が見つかりません。".into(),
+            detail: None,
+        });
+    };
+    let call = ClaudeCall::new(ClaudeRequest {
+        claude: claude.path,
+        env,
+        model: model.clone(),
+        system_prompt: CONNECTION_TEST_SYSTEM_PROMPT.into(),
+        prompt: CONNECTION_TEST_PROMPT.into(),
+        time_limit,
+        work_dir_parent,
+    });
+    match call.run(None) {
+        ClaudeOutcome::Completed { .. } => Ok(ConnectionTestResult {
+            ok: true,
+            model,
+            error: None,
+        }),
+        ClaudeOutcome::Failed(error) => Ok(ConnectionTestResult {
+            ok: false,
+            model,
+            error: Some(error),
+        }),
+        // 中断する手段を渡していないので、ここには来ない。
+        ClaudeOutcome::Cancelled => Err(CommandError {
+            code: ErrorCode::Internal,
+            message: "接続テストが中断されました。".into(),
+            detail: None,
+        }),
+    }
+}
+
+/// 設定の質疑応答のモデルで、短い指示文を実際の `claude` に実行させ、応答が返るかを確かめる。
+/// 終わるまで最大 120 秒かかるので、async のコマンドにして、別のスレッドで呼ぶ。
+#[tauri::command(rename_all = "snake_case")]
+pub async fn test_claude_connection(
+    data_dir: State<'_, AppDataDir>,
+    environment: State<'_, Environment>,
+) -> Result<ConnectionTestResult, CommandError> {
+    let model = data_dir.read_settings()?.models.chat;
+    let environment = environment.inner().clone();
+    tauri::async_runtime::spawn_blocking(move || {
+        run_connection_test(
+            environment.claude(),
+            model,
+            ClaudeEnv::from_process(),
+            std::env::temp_dir(),
+            CONNECTION_TEST_TIME_LIMIT,
+        )
+    })
+    .await
+    .map_err(|error| CommandError {
+        code: ErrorCode::Internal,
+        message: "接続テストを実行できませんでした。".into(),
+        detail: Some(error.to_string()),
+    })?
+}
 
 /// `get_app_version` の戻り値。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]

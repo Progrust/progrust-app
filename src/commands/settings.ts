@@ -1,5 +1,6 @@
 // 設定のコマンド（documents/spec/architecture/commands/settings.md）。
 import { invoke } from "@tauri-apps/api/core";
+import type { AiError } from "../claude/aiErrorMessage";
 
 export type AppVersion = {
   version: string;
@@ -43,4 +44,18 @@ export function getSettings(): Promise<Settings> {
 // 変えた後の設定の全体を保存し、保存した設定を受け取る。schema_version はバックエンドが付ける。
 export function updateSettings(settings: Settings): Promise<Settings> {
   return invoke<Settings>("update_settings", { settings });
+}
+
+// 接続テストの結果（documents/spec/architecture/commands/settings.md「test_claude_connection」）。
+export type ConnectionTestResult = {
+  ok: boolean;
+  // 使ったモデル（質疑応答のモデル）。
+  model: string;
+  error: AiError | null;
+};
+
+// 質疑応答のモデルで短い指示文を実行し、応答が返るかを確かめる。終わるまで最大 120 秒かかる。
+// `claude` が見つからないときは、`claude_unavailable` で reject する。
+export function testClaudeConnection(): Promise<ConnectionTestResult> {
+  return invoke<ConnectionTestResult>("test_claude_connection");
 }

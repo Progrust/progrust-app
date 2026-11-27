@@ -57,3 +57,24 @@
   flex: 1 1 280px;
   width: auto;
 }
+
+/* 「AI」の、保存できなかった理由と、接続テストの失敗の詳細（行の下に、幅いっぱいに出す）。 */
+.settings-field-error,
+.settings-field-detail {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.settings-field-error {
+  color: var(--danger-ink);
+}
+
+.settings-field-detail pre {
+  margin: var(--space-4) 0 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono, monospace);
+  color: var(--ink-2);
+}
