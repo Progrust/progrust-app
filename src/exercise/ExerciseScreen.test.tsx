@@ -107,6 +107,8 @@ type Options = {
   failLesson?: boolean;
   layout?: "single" | "multi";
   readonlyFiles?: string[];
+  // get_environment_status の claude の状態。無いときは見つかっている。
+  claude?: "found" | "not_found";
   // 開いたときに完了済みか。
   completed?: boolean;
   // get_passed_code の戻り値。無いときは not_found で拒否する。
@@ -205,7 +207,10 @@ function mockCommands(calls: Calls, options: Options = {}) {
                   : "1.99.0",
             required_rustc_version: "1.100.0",
           },
-          claude: { status: "not_found", path: null, version: null },
+          claude:
+            options.claude === "not_found"
+              ? { status: "not_found", path: null, version: null }
+              : { status: "found", path: "/c/claude", version: "2.0.0" },
           crates: {
             status: "ready",
             prepared_at: "2026-11-24T19:02:00+09:00",
@@ -1010,10 +1015,10 @@ describe("判定結果と正解", () => {
     expect(screen.getByRole("tabpanel")).toHaveTextContent(
       "fn main() { /* 正解 */ }",
     );
-    // 質疑応答は M4 で作るので、準備中の表示にする。
+    // 右の列に、解説についての質疑応答を置く。会話が空のときは、何を聞けるかを書く。
     expect(
-      screen.getByRole("complementary", { name: "解説について質問" }),
-    ).toHaveTextContent("準備中");
+      screen.getByRole("complementary", { name: "解説について質問する" }),
+    ).toHaveTextContent("自分のコードと模範解答の違い");
     // 次のレッスン（学習順で後の、準備中でないレッスン）の番号と名前を添える。
     expect(
       within(dialog).getByRole("button", { name: /次のレッスンへ/ }),
@@ -1064,6 +1069,86 @@ describe("判定結果と正解", () => {
     expect(
       within(solvedBar()).getByRole("button", { name: "レッスン一覧へ" }),
     ).toBeVisible();
+  });
+
+  describe("解説についての質疑応答", () => {
+    const input = () =>
+      screen.getByRole("textbox", { name: "解説や自分のコードについて質問" });
+    const ask = async (text: string, init = {}) => {
+      fireEvent.change(input(), { target: { value: text } });
+      fireEvent.keyDown(input(), { key: "Enter", metaKey: true, ...init });
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      });
+    };
+
+    it("解答中は、質問の入力欄を表示しない", async () => {
+      setup("ch04-02");
+      await editor();
+      expect(
+        screen.queryByRole("textbox", {
+          name: "解説や自分のコードについて質問",
+        }),
+      ).toBeNull();
+      expect(screen.queryByRole("complementary")).toBeNull();
+    });
+
+    it("正解のモーダルで質問を送ると、send_chat に explanation と sentence_id なしが渡る", async () => {
+      const { calls } = setup("ch04-02");
+      await editor();
+      await submit(calls, PASSED);
+      await ask("自分のコードと模範解答の違いは？");
+      expect(commands(calls, "send_chat")).toEqual([
+        expect.objectContaining({
+          lesson_id: "ch04-02",
+          context: "explanation",
+          sentence_id: null,
+          question: "自分のコードと模範解答の違いは？",
+        }),
+      ]);
+    });
+
+    it("モーダルを閉じて「解説を開く」で開き直しても、会話が残る", async () => {
+      const { calls } = setup("ch04-02");
+      await editor();
+      await submit(calls, PASSED);
+      await ask("残る質問");
+      fireEvent.click(
+        within(passDialog()).getAllByRole("button", {
+          name: "閉じてコードを見る",
+        })[0],
+      );
+      expect(screen.queryByRole("dialog", { name: "正解" })).toBeNull();
+      fireEvent.click(
+        within(solvedBar()).getByRole("button", { name: "解説を開く" }),
+      );
+      expect(screen.getByText("残る質問")).toBeVisible();
+    });
+
+    it("演習画面を離れると会話が消え、回答中なら cancel_chat を送る", async () => {
+      const first = setup("ch04-02");
+      await editor();
+      await submit(first.calls, PASSED);
+      await ask("消える質問");
+      expect(screen.getByText("消える質問")).toBeVisible();
+      first.unmount();
+      await flush();
+      expect(commands(first.calls, "cancel_chat")).toHaveLength(1);
+      const second = setup("ch04-02");
+      await editor();
+      await submit(second.calls, PASSED);
+      expect(screen.queryByText("消える質問")).toBeNull();
+    });
+
+    it("入力欄の Cmd+Enter は送信で、run_code を呼ばない", async () => {
+      const { calls } = setup("ch04-02");
+      await editor();
+      await submit(calls, PASSED);
+      const before = commands(calls, "run_code").length;
+      await ask("送信するだけ");
+      expect(commands(calls, "send_chat")).toHaveLength(1);
+      expect(commands(calls, "run_code")).toHaveLength(before);
+    });
   });
 
   describe("end_session", () => {
