@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "質疑応答のコマンドとイベント"
-description: "質疑応答のコマンド `send_chat`（質問の場面 `context`、再生中の文の ID、フロントエンドが持つ会話履歴 `history`）と `cancel_chat` の引数と戻り値、イベント `chat_delta`（回答の断片）と `chat_finished`（`completed`・`cancelled`・`error`）の内容を定める。"
+description: "質疑応答のコマンド `send_chat`（質問の場面 `context`、再生中の文の ID、フロントエンドが持つ会話履歴 `history`、再試行かどうか `retry`）と `cancel_chat` の引数と戻り値、イベント `chat_delta`（回答の断片）と `chat_finished`（`completed`・`cancelled`・`error`）の内容を定める。"
 ---
 
 動作は [質疑応答](../../qa-chat/index.md) に従う。共通の決まりは [コマンドとイベントの共通の決まり](conventions.md) に従う。
@@ -22,7 +22,8 @@ description: "質疑応答のコマンド `send_chat`（質問の場面 `context
   "question": "ムーブ後に使えないのはなぜ？",
   "history": [
     { "question": "所有者とは何ですか？", "answer": "値を持っている変数のことです。…" }
-  ]
+  ],
+  "retry": false
 }
 ```
 
@@ -33,10 +34,11 @@ description: "質疑応答のコマンド `send_chat`（質問の場面 `context
 | `context` | `"video" \| "explanation"` | 質問の場面（[質疑応答を利用できる場面](../../qa-chat/availability.md)）。`video` は動画の再生中、`explanation` は演習の解説表示中 |
 | `sentence_id` | `string \| null` | `video` のとき、質問を送信したときに再生中だった文の ID。`explanation` では `null` |
 | `question` | `string` | 質問文 |
-| `history` | `{ question: string, answer: string }[]` | フロントエンドが持つ会話履歴。古い順に並べる |
+| `history` | `{ question: string, answer: string }[]` | フロントエンドが持つ会話履歴。古い順に並べる。入れる往復と、止めた往復の `answer` は [質疑応答の会話履歴](../../qa-chat/history.md) に従う |
+| `retry` | `boolean` | エラーの後の「再試行」（[質疑応答の画面](../../qa-chat/screen.md)）で送り直すときは `true`。ほかは `false` |
 
 - AI に渡す入力は [質疑応答で AI に渡す入力](../../qa-chat/ai-input.md) に従い、バックエンドが組み立てる。会話履歴は、`history` の末尾から [質疑応答の会話履歴](../../qa-chat/history.md) の往復数までを入れる。`explanation` の「学習者が正解したときのコード」は、バックエンドが試行ログから読む。
-- 試行ログの `chat` イベントの追記は [質疑応答の試行ログへの記録](../../qa-chat/attempt-log.md) に従う。`context` が `video` のときの試行ログの `context` は `video:{sentence_id}` とする（[質疑応答を利用できる場面](../../qa-chat/availability.md)）。
+- 試行ログの `chat` イベントの追記は [質疑応答の試行ログへの記録](../../qa-chat/attempt-log.md) に従う。`retry` が `true` のときは追記しない。`context` が `video` のときの試行ログの `context` は `video:{sentence_id}` とする（[質疑応答を利用できる場面](../../qa-chat/availability.md)）。
 - 戻り値: `null`。呼び出しを始めたら返す。回答は `chat_delta` と `chat_finished` で知らせる。
 - エラー:
   - `question` が空のとき、[質疑応答の画面](../../qa-chat/screen.md) の文字数の上限を超えるとき、`context` が `video` で `sentence_id` が `null` のときは `invalid_argument`。

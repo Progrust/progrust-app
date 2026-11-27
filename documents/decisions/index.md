@@ -35,6 +35,7 @@
 * [ADR 0249](0249-scan-secrets-with-pinned-gitleaks-before-push-and-in-ci.md) - 秘密の情報の検査を、パッチまで固定した gitleaks で行い、確かめる中身（push していないコミットの中身・差分・ファイルの名前、ステージした変更、作業ツリーの変更）をスクリプトが git で、置き換えの参照と出力の形を変える設定に左右されずに取り出して gitleaks の stdin に渡し、毎回の自己点検で検出できることを確かめ、実装のループでは GitHub の origin の main の道具と SHA で、フックを動かさずに、すべての push の直前に確かめて、失敗したら直しに回さずに push せずに止まり、守るのは誤って書いたときまでとし、CI では公式のリリースを SHA-256 で確かめて別のジョブで履歴全体を確かめる
 * [ADR 0250](0250-keep-remotion-skill-out-of-git-and-restore-from-lock.md) - Remotion のスキルを、コミットの履歴は書き換えずに、今後のコミットから外して .gitignore し、手元では skills-lock.json から版を固定した skills の CLI で入れ直し、実装のループの作業ツリーには用意しない
 * [ADR 0253](0253-upgrade-monaco-and-rand-for-dependabot-alerts.md) - Dependabot alerts が報告した依存の脆弱性に対応して、monaco-editor を 0.58 系に上げて間接の依存の dompurify を直った版にし、許可クレートの rand を 0.9.5 に上げる
+* [ADR 0259](0259-stage-prompts-in-build-script.md) - 同梱する指示文を、ビルドスクリプトがリポジトリの `prompts/` の直下の `.md` だけ `src-tauri/gen/bundled/prompts/` に写し、Tauri がそれを `{app_resources}/prompts/` に入れる
 
 # 教材データ形式
 
@@ -168,11 +169,15 @@
 * [ADR 0106](0106-isolated-claude-flags-and-oauth-only.md) - `claude -p` を検証で確かめたフラグの組み合わせで隔離して呼び、既定のシステムプロンプトを置き換え、認証は claude.ai のログインだけを使う
 * [ADR 0107](0107-classify-claude-errors-from-stream-json.md) - ジョブも stream-json で呼び出し、AI 呼び出しのエラーを `is_error` と `assistant` の行の `error` の分類コードで見分ける
 * [ADR 0124](0124-pass-only-six-env-vars-to-claude.md) - アプリが `claude` を起動するときは、引き継いだ環境変数をそのまま渡さず、HOME・USER・LOGNAME・PATH・SHELL・TMPDIR の 6 つだけを渡す
+* [ADR 0257](0257-stop-claude-by-process-group.md) - `claude -p` を新しいプロセスグループで起動し、制限時間を超えたときと中断のときは、グループ全体に SIGTERM を送り、3 秒で終わらなければ SIGKILL を送る
 
 # 質疑応答
 
 * [ADR 0025](0025-chat-history-only-while-open.md) - 質疑応答の会話履歴を、画面を開いている間だけ保持する
 * [ADR 0072](0072-do-not-pause-video-on-question.md) - 質問を送信しても、動画を一時停止しない
+* [ADR 0254](0254-do-not-log-chat-retry.md) - 質疑応答のエラーの後の「再試行」で送り直した質問は、試行ログの `chat` イベントに記録しない
+* [ADR 0255](0255-include-stopped-turns-in-chat-history.md) - 回答を途中で止めた往復は、止めるまでに表示した回答で会話履歴に含め、エラーになった往復は会話履歴に含めない
+* [ADR 0256](0256-start-video-chat-panel-closed.md) - 動画画面の質問のチャットパネルは、動画画面を開くたびに閉じた状態で始め、開閉の状態を保存しない
 
 # 学習記録・分析
 
@@ -238,6 +243,7 @@
 * [ADR 0231](0231-exercise-shortcuts-off-while-modal-is-open.md) - 演習画面のキーボードショートカット（実行・テスト実行・提出・停止）は、モーダル（前回の正解コード、初期コードに戻すの確認、正解のモーダル）を開いている間は効かないようにする
 * [ADR 0239](0239-enter-tool-paths-as-text.md) - 設定画面の cargo・claude のパスの手動指定は文字の入力欄で行い、空にすると自動検出に戻し、保存したら検出し直す
 * [ADR 0241](0241-first-launch-redetect-and-crates-status.md) - 初回起動画面に、再検出のボタンと、外部クレートの初回準備の状態と再試行を置き、ヘッダーにはロゴだけを表示する
+* [ADR 0258](0258-reject-model-values-starting-with-dash.md) - `settings.json` の AI のモデルの値は、空でなく、空白と制御文字を含まず、`-` で始まらないものだけを受け付ける
 
 # 非機能要件
 

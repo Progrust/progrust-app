@@ -54,5 +54,6 @@ description: "設定画面の設定項目（表示、動画、AI、環境、学�
 ```
 
 - `video.volume` は 0.0〜1.0、`video.playback_rate` は [動画画面](video-screen.md) の再生速度のどれかとする。
+- `models.chat`・`models.background` は、[AI モデルの選択](../claude-integration/model-selection.md) のモデルのエイリアスかモデル ID とする。空でなく、空白と制御文字を含まず、`-` で始まらない文字列とする。
 - `tool_paths` が `null` の場合は自動検出する。
 - `settings.json` が無いときは、次の初期値の設定として扱う。`theme` は `system`、`editor_font_size` は `14`、`video` は `{ "volume": 1.0, "muted": false, "playback_rate": 1.0, "captions": false }`、`models` は [AI モデルの選択](../claude-integration/model-selection.md) の既定値、`tool_paths` はどちらも `null`、`first_launch_completed` は `false` とする。

@@ -35,6 +35,7 @@ description: "学習者データ（`{app_data_dir}`）とアプリ同梱デー�
 
 - `content/` は、ビルドスクリプト（`src-tauri/build.rs`）が、リポジトリの `content/` から同梱するファイルだけを `src-tauri/gen/bundled/content/` に写し、Tauri がそれを `{app_resources}/content/` に入れる。写すときに、`.` で始まる名前のファイルとディレクトリ（`.DS_Store` など）も除く。
 - `runner/` は、ビルドスクリプトが、リポジトリの `runner/` の `allowed-crates.toml` と `Cargo.lock` だけを `src-tauri/gen/bundled/runner/` に写し、Tauri がそれを `{app_resources}/runner/` に入れる（[ADR 0209](../../decisions/0209-regenerate-runner-lock-with-npm-script.md)）。
+- `prompts/` は、ビルドスクリプトが、リポジトリの `prompts/` の直下の `.md` のファイルだけを `src-tauri/gen/bundled/prompts/` に写し、Tauri がそれを `{app_resources}/prompts/` に入れる（[ADR 0259](../../decisions/0259-stage-prompts-in-build-script.md)）。
 - 開発時の起動（`npm run dev`）でも、同じものを読む。Tauri のビルドが、同梱するファイルを実行ファイルの隣に写し、そこが `{app_resources}` になる。
 
 ```
