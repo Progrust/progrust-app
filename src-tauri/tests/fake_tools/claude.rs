@@ -1,9 +1,12 @@
 //! テスト用の偽の `claude`（spec/non-functional/testing.md「偽の claude と偽の cargo」）を置くための
-//! 手助けのうち、置くことと、`--version` の出力を決めることと、受け取ったものを読むこと。
+//! 手助けのうち、置くことと、受け取ったもの（引数・環境変数・標準入力）を読むこと。
 //!
-//! `-p` の呼び出しの出力を決めるものは `mod.rs` にある。`claude` の検出のテストのように、`-p` を
-//! 使わないテストからも、このファイルだけを `#[path = "fake_tools/claude.rs"] mod fake_claude;` で
-//! 読み込めるよう、ほかのファイルに頼らずに書く。
+//! `--version` の出力を決めるものは `claude_version.rs` に、`-p` の呼び出しの出力を決めるものと、
+//! `-p` の呼び出しで書き残したプロセスと作業ディレクトリの記録を読むものは `claude_print.rs` にある。
+//! テストのクレートは、このファイルを `claude` の名前で読み込み、その隣に、使うほうのファイルを
+//! 読み込む（例: `#[path = "fake_tools/claude.rs"] mod claude;` と
+//! `#[path = "fake_tools/claude_version.rs"] mod claude_version;`）。使わない手助けを読み込むと、
+//! 未使用の警告になるので、ファイルを分けている。このファイルは、ほかのファイルに頼らずに書く。
 
 use std::{
     collections::BTreeMap,
@@ -13,10 +16,6 @@ use std::{
 };
 
 use tempfile::TempDir;
-
-fn write(path: &Path, content: impl AsRef<[u8]>) {
-    fs::write(path, content).unwrap_or_else(|e| panic!("{} に書けない: {e}", path.display()));
-}
 
 /// 一時ディレクトリに置いた偽の `claude`。
 pub struct FakeClaude {
@@ -50,30 +49,22 @@ impl FakeClaude {
         &self.path
     }
 
-    /// `--version` で標準出力に書く内容。
-    pub fn set_version_stdout(&self, stdout: &str) {
-        write(&self.path.with_file_name("version-stdout"), stdout);
+    /// 実行ファイルと同じディレクトリに、出力を決めるファイル `name` を書く。
+    pub fn write_beside(&self, name: &str, content: impl AsRef<[u8]>) {
+        let path = self.path.with_file_name(name);
+        fs::write(&path, content).unwrap_or_else(|e| panic!("{} に書けない: {e}", path.display()));
     }
 
-    /// `--version` の終了コード。
-    pub fn set_version_exit_code(&self, code: i32) {
-        write(
-            &self.path.with_file_name("version-exit-code"),
-            code.to_string(),
-        );
-    }
-
-    /// `--version` で、何も書かずに、終了せずに止まる（応答しない）。
-    pub fn set_version_hang(&self) {
-        write(&self.path.with_file_name("version-hang"), "");
+    /// `number` 回目（1 から数える）の呼び出しの記録を置くディレクトリ。
+    pub fn call_dir(&self, number: usize) -> PathBuf {
+        self.path.with_file_name("calls").join(number.to_string())
     }
 
     /// これまでの呼び出しで受け取ったもの。呼び出した順に並ぶ。
     pub fn calls(&self) -> Vec<RecordedCall> {
-        let calls_dir = self.path.with_file_name("calls");
         let mut calls = Vec::new();
         for number in 1.. {
-            let dir = calls_dir.join(number.to_string());
+            let dir = self.call_dir(number);
             if !dir.is_dir() {
                 break;
             }

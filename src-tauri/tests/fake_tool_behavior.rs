@@ -7,6 +7,7 @@ use std::{
     collections::BTreeMap,
     fs,
     io::{BufRead, BufReader, Read, Write},
+    os::unix::{fs::MetadataExt, process::CommandExt},
     path::{Component, Path, PathBuf},
     process::{Child, Command, Output, Stdio},
     thread,
@@ -315,6 +316,128 @@ fn claude_can_stop_responding_after_partial_output() {
     stdout.read_line(&mut line).unwrap();
     assert_eq!(line, format!("{first_line}\n"));
     assert_still_running_then_kill(&mut child);
+}
+
+/// `-p` の呼び出しを、作業ディレクトリ `cwd` で、新しいプロセスグループで起動し、標準入力に指示文を
+/// 書いて閉じる。
+fn spawn_chat_in_group(fake: &FakeClaude, cwd: &Path) -> Child {
+    let mut child = Command::new(fake.path())
+        .args(chat_args())
+        .env_clear()
+        .envs(SIX_ENV_VARS)
+        .current_dir(cwd)
+        .process_group(0)
+        .stdin(Stdio::piped())
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .spawn()
+        .expect("偽の claude を起動できない");
+    child
+        .stdin
+        .take()
+        .unwrap()
+        .write_all(prompt().as_bytes())
+        .unwrap();
+    child
+}
+
+fn is_alive(pid: i32) -> bool {
+    // SAFETY: シグナル 0 は送らずに、プロセスがあるかだけを調べる。
+    unsafe { libc::kill(pid, 0) == 0 }
+}
+
+#[test]
+fn claude_can_write_output_in_two_parts() {
+    let fake = FakeClaude::new();
+    let first = format!(
+        "{}{}",
+        stream_json::answer_start(),
+        stream_json::fragment("所有権は、")
+    );
+    let rest = format!(
+        "{}{}",
+        stream_json::fragment("1 つだけです。"),
+        stream_json::answer_end("所有権は、1 つだけです。")
+    );
+    fake.set_stdout(&first);
+    fake.set_stdout_rest(&rest);
+    let work = tempfile::tempdir().unwrap();
+    let mut child = spawn_chat_in_group(&fake, work.path());
+
+    let mut stdout = BufReader::new(child.stdout.take().unwrap());
+    let mut received = String::new();
+    while received.len() < first.len() {
+        assert_ne!(stdout.read_line(&mut received).unwrap(), 0);
+    }
+    assert_eq!(received, first);
+    thread::sleep(Duration::from_millis(300));
+    assert!(
+        child.try_wait().unwrap().is_none(),
+        "go の前に終わってはいけない"
+    );
+
+    fake.go();
+    let mut remaining = String::new();
+    stdout.read_to_string(&mut remaining).unwrap();
+    assert_eq!(remaining, rest);
+    assert!(child.wait().unwrap().success());
+}
+
+#[test]
+fn claude_records_its_process_and_work_dir() {
+    let fake = FakeClaude::new();
+    fake.set_stdout(&stream_json::answer(&["はい。"]));
+    assert!(run_version(&fake).status.success());
+    let work = tempfile::tempdir().unwrap();
+    fs::write(work.path().join("b.txt"), "").unwrap();
+    fs::create_dir(work.path().join("a")).unwrap();
+    let child = spawn_chat_in_group(&fake, work.path());
+    let pid = i32::try_from(child.id()).unwrap();
+    assert!(child.wait_with_output().unwrap().status.success());
+
+    assert!(
+        fake.process_record(1).is_none(),
+        "--version では書き残さない"
+    );
+    let record = fake.process_record(2).expect("-p の呼び出しの記録が無い");
+    assert_eq!(record.pid, pid);
+    assert_eq!(record.pgid, pid, "新しいプロセスグループで起動した");
+    assert_eq!(record.child_pid, None);
+    assert_eq!(record.cwd_entries, ["a", "b.txt"]);
+    let metadata = fs::metadata(work.path()).unwrap();
+    assert_eq!(record.cwd_id, (metadata.dev(), metadata.ino()));
+}
+
+#[test]
+fn claude_can_ignore_sigterm_with_a_child_in_its_group() {
+    let fake = FakeClaude::new();
+    fake.set_hang();
+    fake.set_ignore_sigterm();
+    fake.set_spawn_child();
+    let work = tempfile::tempdir().unwrap();
+    let mut child = spawn_chat_in_group(&fake, work.path());
+    wait_until("標準入力を読み終える", || {
+        fake.calls()
+            .first()
+            .is_some_and(|call| call.stdin.is_some())
+    });
+    let record = fake.process_record(1).unwrap();
+    let grandchild = record.child_pid.expect("子のプロセスを作ったはず");
+    assert!(record.cwd_entries.is_empty());
+
+    // SAFETY: シグナルを送るだけである。
+    unsafe { libc::killpg(record.pgid, libc::SIGTERM) };
+    thread::sleep(Duration::from_millis(300));
+    assert!(
+        child.try_wait().unwrap().is_none(),
+        "SIGTERM で終わってはいけない"
+    );
+    assert!(is_alive(grandchild), "子も SIGTERM で終わってはいけない");
+
+    // SAFETY: シグナルを送るだけである。
+    unsafe { libc::killpg(record.pgid, libc::SIGKILL) };
+    child.wait().unwrap();
+    wait_until("子のプロセスが終わる", || !is_alive(grandchild));
 }
 
 #[test]

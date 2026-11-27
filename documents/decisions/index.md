@@ -170,6 +170,7 @@
 * [ADR 0107](0107-classify-claude-errors-from-stream-json.md) - ジョブも stream-json で呼び出し、AI 呼び出しのエラーを `is_error` と `assistant` の行の `error` の分類コードで見分ける
 * [ADR 0124](0124-pass-only-six-env-vars-to-claude.md) - アプリが `claude` を起動するときは、引き継いだ環境変数をそのまま渡さず、HOME・USER・LOGNAME・PATH・SHELL・TMPDIR の 6 つだけを渡す
 * [ADR 0257](0257-stop-claude-by-process-group.md) - `claude -p` を新しいプロセスグループで起動し、制限時間を超えたときと中断のときは、グループ全体に SIGTERM を送り、3 秒で終わらなければ SIGKILL を送る
+* [ADR 0260](0260-kill-leftover-claude-group-after-exit.md) - `claude -p` のプロセスが終わったら、同じプロセスグループに残ったプロセスを SIGKILL で止めてから、終わり方を返す
 
 # 質疑応答
 

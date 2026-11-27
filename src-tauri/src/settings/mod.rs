@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use crate::claude::is_valid_model;
 use crate::commands::error::{CommandError, ErrorCode};
 use crate::storage::{AppDataDir, StorageError};
 
@@ -136,9 +137,9 @@ impl Settings {
             ("models.chat", &self.models.chat),
             ("models.background", &self.models.background),
         ] {
-            if model.is_empty() || model.chars().any(|c| c.is_whitespace() || c.is_control()) {
+            if !is_valid_model(model) {
                 return Err(invalid_argument(format!(
-                    "{name} は、空でなく、空白を含まないモデルのエイリアスかモデル ID にしてください: {model:?}"
+                    "{name} は、空でなく、空白と制御文字を含まず、`-` で始まらない、モデルのエイリアスかモデル ID にしてください: {model:?}"
                 )));
             }
         }
@@ -257,6 +258,9 @@ mod tests {
             (vec!["video", "muted"], json!("yes")),
             (vec!["models", "chat"], json!("")),
             (vec!["models", "background"], json!("two words")),
+            (vec!["models", "chat"], json!("-p")),
+            (vec!["models", "background"], json!("--bare")),
+            (vec!["models", "chat"], json!("opus\u{7}")),
             (vec!["models", "chat"], json!(3)),
             (vec!["tool_paths", "cargo"], json!(1)),
             (vec!["first_launch_completed"], json!(null)),

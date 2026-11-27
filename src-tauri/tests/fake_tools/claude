@@ -9,6 +9,11 @@
 #   stderr     `-p` の呼び出しで標準エラー出力に書く内容。無ければ何も書かない
 #   exit-code  `-p` の呼び出しの終了コード。無ければ 0
 #   hang       あれば、`-p` の呼び出しで stdout と stderr を書いた後、終了せずに止まる（応答しない）
+#   stdout-rest  あれば、`-p` の呼び出しで stdout と stderr を書いた後、同じディレクトリに go ができるまで
+#                待ってから、この内容を標準出力に書く（出力を 2 回に分けて書く）。hang はその後に効く
+#   ignore-sigterm  あれば、`-p` の呼び出しで SIGTERM を無視する（SIGKILL でだけ止まる）
+#   spawn-child     あれば、`-p` の呼び出しで、同じプロセスグループに、終了しない子のプロセスを 1 つ作る。
+#                   子も、ignore-sigterm があれば SIGTERM を無視する
 #
 #   version-stdout     `--version` で標準出力に書く内容。無ければ `2.1.329 (Claude Code)` の行を書く
 #   version-exit-code  `--version` の終了コード。無ければ 0
@@ -19,6 +24,14 @@
 #   args   引数。1 つずつ NUL で終える
 #   env    環境変数。`名前=値` を 1 つずつ NUL で終える。名前の順に並べる
 #   stdin  標準入力。`-p` の呼び出しだけ。`--version` では標準入力を読まない
+#
+# `-p` の呼び出しでは、標準入力を読む前に、次のものも、この順に書き残す。
+#
+#   pid          このプロセスの pid
+#   pgid         このプロセスのプロセスグループの ID
+#   child-pid    spawn-child で作った子のプロセスの pid。spawn-child が無ければ書かない
+#   cwd-entries  作業ディレクトリにあったファイルの名前。1 つずつ NUL で終える（`.` と `..` は除く）
+#   cwd-id       作業ディレクトリの、デバイスの番号と inode の番号。空白で区切る
 #
 # sh ではなく perl で書くのは、sh が子のプロセスに環境変数（PWD・SHLVL・_）を足し、
 # 受け取った環境変数をそのまま書き残せないからである。perl の組み込みの機能だけを使う。
@@ -71,6 +84,27 @@ unless (grep { $_ eq '-p' } @ARGV) {
     exit 2;
 }
 
+$SIG{TERM} = 'IGNORE' if -e "$dir/ignore-sigterm";
+
+write_file("$call/pid", $$);
+write_file("$call/pgid", getpgrp());
+if (-e "$dir/spawn-child") {
+    my $child = fork();
+    die "fake claude: 子のプロセスを作れない: $!\n" unless defined $child;
+    if ($child == 0) {
+        # 親と同じプロセスグループのまま、終了せずに止まる。
+        sleep while 1;
+    }
+    write_file("$call/child-pid", $child);
+}
+
+opendir(my $cwd, '.') or die "fake claude: 作業ディレクトリを読めない: $!\n";
+my @entries = sort grep { $_ ne '.' && $_ ne '..' } readdir $cwd;
+closedir $cwd;
+write_file("$call/cwd-entries", join('', map { "$_\0" } @entries));
+my @cwd_stat = stat('.') or die "fake claude: 作業ディレクトリを調べられない: $!\n";
+write_file("$call/cwd-id", "$cwd_stat[0] $cwd_stat[1]");
+
 binmode STDIN;
 my $stdin = do { local $/; <STDIN> };
 write_file("$call/stdin", defined $stdin ? $stdin : '');
@@ -82,6 +116,13 @@ my $stdout = read_file("$dir/stdout");
 print STDOUT $stdout if defined $stdout;
 my $stderr = read_file("$dir/stderr");
 print STDERR $stderr if defined $stderr;
+
+my $stdout_rest = read_file("$dir/stdout-rest");
+if (defined $stdout_rest) {
+    # 組み込みの select で、0.02 秒ずつ待つ。
+    select(undef, undef, undef, 0.02) until -e "$dir/go";
+    print STDOUT $stdout_rest;
+}
 
 if (-e "$dir/hang") {
     # 子のプロセスを作らずに止まる。テストがこのプロセスを終了すれば、出力のパイプも閉じる。
