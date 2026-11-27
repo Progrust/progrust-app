@@ -96,6 +96,35 @@ pub enum ExerciseJudge {
     },
 }
 
+/// 学習順の中の 1 レッスン（[`ContentDir::learning_order`]）。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LessonPosition {
+    /// レッスンが属する章の ID。
+    pub chapter_id: String,
+    pub lesson_id: String,
+}
+
+/// 演習の問題文・解説・模範解答（[`ContentDir::exercise_answer`]）。質疑応答の解説表示中の入力に使う。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ExerciseAnswer {
+    pub problem_md: String,
+    pub explanation_md: String,
+    /// 模範解答（`exercise/solution/` の全ファイル）。キーは cargo パッケージのルートからの相対パス（`/` 区切り）。
+    pub solution_files: BTreeMap<String, String>,
+}
+
+/// 要素マスタ（`elements.json`）の 1 件（spec/content-format/elements-json.md）。
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct Element {
+    pub id: String,
+    /// 学習順で最初にその要素を主要素とするレッスンが属する章の ID。
+    pub chapter: String,
+    pub name: String,
+    pub description: String,
+    #[serde(default)]
+    pub deprecated: bool,
+}
+
 /// `lesson.json` の `exercise` のうち、判定に使うもの。
 #[derive(Deserialize)]
 struct RawExerciseJudge {
@@ -218,17 +247,82 @@ impl ContentDir {
     /// レッスンの `kind`（`lesson`・`video_only`・`chapter_review` など）を返す。
     /// レッスンが無いときの扱いは `get_lesson` と同じ。
     pub fn lesson_kind(&self, lesson_id: &str) -> Result<String, ContentError> {
-        let not_found = || ContentError::LessonNotFound {
-            lesson_id: lesson_id.to_string(),
-        };
+        read_lesson_kind(&self.existing_lesson_dir(lesson_id)?)
+    }
+
+    /// 学習順（spec/content-format/chapters-json.md）に並べた全レッスン。準備中のレッスンも含む。
+    pub fn learning_order(&self) -> Result<Vec<LessonPosition>, ContentError> {
+        Ok(self
+            .read_chapters_json()?
+            .into_iter()
+            .flat_map(|chapter| {
+                let chapter_id = chapter.id;
+                chapter
+                    .lessons
+                    .into_iter()
+                    .map(move |lesson_id| LessonPosition {
+                        chapter_id: chapter_id.clone(),
+                        lesson_id,
+                    })
+            })
+            .collect())
+    }
+
+    /// レッスンが準備中でない（レッスンのディレクトリがある）かどうか。`chapters.json` にあるかどうかは見ない。
+    pub fn is_prepared(&self, lesson_id: &str) -> bool {
+        !lesson_id.starts_with(GENERATED_PREFIX) && self.lesson_dir(lesson_id).is_dir()
+    }
+
+    /// `lesson.json` の内容を読む。レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn lesson_definition(&self, lesson_id: &str) -> Result<Value, ContentError> {
+        read_json(&self.existing_lesson_dir(lesson_id)?.join("lesson.json"))
+    }
+
+    /// 動画の台本（`video/script.json`）の内容を読む。レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn script(&self, lesson_id: &str) -> Result<Value, ContentError> {
+        read_json(
+            &self
+                .existing_lesson_dir(lesson_id)?
+                .join("video")
+                .join("script.json"),
+        )
+    }
+
+    /// 演習の問題文・解説・模範解答を読む。レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn exercise_answer(&self, lesson_id: &str) -> Result<ExerciseAnswer, ContentError> {
+        let dir = self.existing_lesson_dir(lesson_id)?.join("exercise");
+        Ok(ExerciseAnswer {
+            problem_md: read_text(&dir.join("problem.md"))?,
+            explanation_md: read_text(&dir.join("explanation.md"))?,
+            solution_files: read_exercise_files(&dir.join("solution"))?,
+        })
+    }
+
+    /// 要素マスタ（`elements.json`）を読む。
+    pub fn elements(&self) -> Result<Vec<Element>, ContentError> {
+        let path = self.root.join("elements.json");
+        let value = read_json(&path)?;
+        serde_json::from_value(value).map_err(|error| ContentError::Invalid {
+            path,
+            reason: error.to_string(),
+        })
+    }
+
+    /// `chapters.json` にあり、準備中でないレッスンのディレクトリ。それ以外は `LessonNotFound` にする。
+    fn existing_lesson_dir(&self, lesson_id: &str) -> Result<PathBuf, ContentError> {
+        // ID を `chapters.json` の中から探すので、パスの区切りや `..` を含む ID でディレクトリの外を読むことは無い。
         if lesson_id.starts_with(GENERATED_PREFIX) || !self.is_listed(lesson_id)? {
-            return Err(not_found());
+            return Err(ContentError::LessonNotFound {
+                lesson_id: lesson_id.to_string(),
+            });
         }
         let dir = self.lesson_dir(lesson_id);
         if !dir.is_dir() {
-            return Err(not_found());
+            return Err(ContentError::LessonNotFound {
+                lesson_id: lesson_id.to_string(),
+            });
         }
-        read_lesson_kind(&dir)
+        Ok(dir)
     }
 
     /// 演習が使う許可クレートの名前（`lesson.json` の `exercise.dependencies`）を読む。書かれていないときは空。

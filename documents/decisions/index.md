@@ -179,6 +179,7 @@
 * [ADR 0254](0254-do-not-log-chat-retry.md) - 質疑応答のエラーの後の「再試行」で送り直した質問は、試行ログの `chat` イベントに記録しない
 * [ADR 0255](0255-include-stopped-turns-in-chat-history.md) - 回答を途中で止めた往復は、止めるまでに表示した回答で会話履歴に含め、エラーになった往復は会話履歴に含めない
 * [ADR 0256](0256-start-video-chat-panel-closed.md) - 動画画面の質問のチャットパネルは、動画画面を開くたびに閉じた状態で始め、開閉の状態を保存しない
+* [ADR 0261](0261-derive-learned-elements-for-chat-from-bundled-content.md) - 質疑応答で AI に渡す既習の要素を、アプリは同梱した教材（要素マスタの `chapter`、前にある準備中でないレッスンの `primary_elements`、そのレッスンの `secondary_elements`）から求め、同じ章の前にある準備中のレッスンだけが導入する要素は含めない
 
 # 学習記録・分析
 
