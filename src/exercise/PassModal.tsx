@@ -1,12 +1,15 @@
 // 正解のモーダル（documents/spec/screens/exercise-screen.md「正解したとき」、ADR 0046、
 // design-system/progrust/components/PassModal、design-system/ui-design/Exercise.dc.html）。
-// 左に解説と「問題文」「提出したコード」のタブ、右に解説への質疑応答（M4 で作るので、いまは準備中の表示）、
+// 左に解説と「問題文」「提出したコード」のタブ、右に解説への質疑応答（チャットパネル。会話は演習画面が持つ）、
 // 下に「閉じてコードを見る」「レッスン一覧へ」「次のレッスンへ」を置く。Esc と × で閉じる。
 // 章カラーが効くように、演習画面（data-chapter の付いた main）の中に置く。
 import { ArrowRight, Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
 import type { DraftFiles } from "../commands/progress";
+import { ChatPanel } from "../chat/ChatPanel";
+import type { UseChat } from "../chat/useChat";
+import type { ClaudeStatus } from "../commands/environment";
 import { Markdown } from "../markdown/Markdown";
 import { tabOrder } from "./fileOps";
 
@@ -31,6 +34,10 @@ export type PassModalProps = {
   files: DraftFiles;
   // 「次のレッスンへ」に添える、次のレッスンの番号と名前。次のレッスンが無いときは null で、ボタンを出さない。
   nextLabel: string | null;
+  // 解説についての質疑応答の会話。モーダルを閉じても残すため、演習画面が持つ。
+  chat: UseChat;
+  // `claude` の検出の状態。読み込むまでは null。
+  claude: ClaudeStatus | null;
   // 画面を移っている途中か。途中は、移るボタンを押せない。
   leaving: boolean;
   onClose: () => void;
@@ -46,6 +53,8 @@ export function PassModal({
   problemMd,
   files,
   nextLabel,
+  chat,
+  claude,
   leaving,
   onClose,
   onLessons,
@@ -146,15 +155,16 @@ export function PassModal({
               )}
             </div>
           </div>
-          <aside className="pg-chat" aria-label="解説について質問">
-            <div className="pg-chat-head">
-              <h2>解説について質問する</h2>
-            </div>
-            <div className="pg-chat-empty">
-              <b>準備中</b>
-              <p>解説について質問する機能は、これから作ります。</p>
-            </div>
-          </aside>
+          <ChatPanel
+            chat={chat}
+            title="解説について質問する"
+            placeholder="解説や自分のコードについて質問"
+            empty={{
+              title: "解説について質問できます",
+              text: "自分のコードと模範解答の違い、より Rust らしい書き方など、気になったことを聞いてみましょう。",
+            }}
+            claude={claude}
+          />
         </div>
         <div className="pg-pass-foot">
           <button

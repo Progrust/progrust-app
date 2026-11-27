@@ -6,6 +6,7 @@
 // 提出の結果は、問題文の上の判定結果のカード（JudgeCard.tsx）に出し、正解したら正解のモーダル（PassModal.tsx）を開く。
 // 実行・テスト実行・提出・停止のキーボードショートカット（shortcuts.ts）は、エディタにフォーカスがあるときは Monaco の
 // コマンドで、エディタの外にあるときは window の keydown のキャプチャで受ける（ADR 0111、ADR 0225）。
+// 正解のモーダルの質疑応答の会話（useChat）は、ここで持つ。
 // 解説表示の状態で画面を離れるときは、`end_session` で試行セッションを終える
 // （documents/spec/learning-record-and-analysis/attempt-log.md「試行セッションのライフサイクル」）。
 import {
@@ -19,6 +20,7 @@ import {
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { findLesson, numberChapters } from "../chapterNumbers";
+import { useChat } from "../chat/useChat";
 import { getLesson, listChapters } from "../commands/content";
 import type { Chapter, Exercise, LessonDetail } from "../commands/content";
 import {
@@ -30,6 +32,7 @@ import {
 import type { DraftFiles } from "../commands/progress";
 import type { SubmitResult } from "../commands/run";
 import { getSettings } from "../commands/settings";
+import { useEnvironmentStatus } from "../environment/useEnvironmentStatus";
 import { CodeEditor, KeyCode, KeyMod } from "../editor";
 import type { EditorCommand } from "../editor";
 import { lessonRoute, nextLesson } from "../lessons/nextLesson";
@@ -458,6 +461,10 @@ function ExerciseWorkspace({
   const [passed, setPassed] = useState<Passed | null>(null);
   const [passOpen, setPassOpen] = useState(false);
   const [prevCodeOpen, setPrevCodeOpen] = useState(false);
+  // 解説についての質疑応答。会話は演習画面を開いている間だけ持ち、正解のモーダルを閉じても残す。
+  // 画面を離れる（このコンポーネントが外れる）と消え、回答中なら中断する。
+  const chat = useChat({ lessonId, context: "explanation" });
+  const claude = useEnvironmentStatus()?.claude ?? null;
   const handleSubmitFinished = (finished: SubmitFinished) => {
     setJudge((current) => nextJudgeCard(current, finished));
     const result = finished.event.submit;
@@ -827,6 +834,8 @@ function ExerciseWorkspace({
           problemMd={loaded.exercise.problem_md}
           files={passed.files}
           nextLabel={next?.label ?? null}
+          chat={chat}
+          claude={claude}
           leaving={leaving}
           onClose={() => setPassOpen(false)}
           onLessons={goLessons}
