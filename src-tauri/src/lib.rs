@@ -1,4 +1,5 @@
 pub mod attempts;
+pub mod chat;
 pub mod claude;
 pub mod commands;
 pub mod completion;

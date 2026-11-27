@@ -1,4 +1,5 @@
-//! アプリに同梱する教材（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）を確かめる。
+//! アプリに同梱する教材・許可クレートの定義・指示文（spec/architecture/data-locations.md
+//! 「アプリ同梱データ（`{app_resources}`）」）を確かめる。
 //! 同梱するファイルは、ビルドスクリプトが `build/bundled_content.rs` で選んで写す。
 
 #[path = "../build/bundled_content.rs"]
@@ -166,7 +167,7 @@ fn tauri_conf() -> Value {
     serde_json::from_str(include_str!("../tauri.conf.json")).expect("tauri.conf.json を読めない")
 }
 
-/// `bundle.resources` は、写したディレクトリだけを `{app_resources}/content/` に入れる。
+/// `bundle.resources` は、写したディレクトリだけを `{app_resources}/content/`・`runner/`・`prompts/` に入れる。
 #[test]
 fn bundle_resources_point_to_staging_dir() {
     assert_eq!(
@@ -174,6 +175,7 @@ fn bundle_resources_point_to_staging_dir() {
         json!({
             (bundled_content::STAGING_DIR): "content/",
             (bundled_content::RUNNER_STAGING_DIR): "runner/",
+            (bundled_content::PROMPTS_STAGING_DIR): "prompts/",
         })
     );
 }
@@ -237,4 +239,80 @@ fn runner_files_are_staged_and_copied_next_to_executable() {
             );
         }
     }
+}
+
+/// 同梱する指示文（spec/claude-integration/prompts.md）。
+const PROMPTS: [&str; 2] = ["chat-video.md", "chat-explanation.md"];
+
+/// `prompts/` からは、直下の `.md` のファイルだけを写す。サブディレクトリの中と、`.md` 以外のファイルと、
+/// `.` で始まる名前のファイルは写さない。前に写した、いまは無いファイルは消す。
+#[test]
+fn stages_prompt_markdown_files_only() {
+    let temp = tempfile::tempdir().unwrap();
+    let source = temp.path().join("prompts");
+    let dest = temp.path().join("staged");
+    write_files(&source, &PROMPTS);
+    write_files(
+        &source,
+        &[
+            "memo.txt",
+            ".DS_Store",
+            ".hidden.md",
+            "drafts/chat-video.md",
+            ".md",
+        ],
+    );
+    write_files(&dest, &["old.md", "drafts/old.md"]);
+
+    bundled_content::stage_prompts(&source, &dest).unwrap();
+
+    assert_eq!(list_files(&dest), strings(&PROMPTS));
+    assert!(
+        !dest.join("drafts").exists(),
+        "空になったディレクトリを消す"
+    );
+    assert_eq!(
+        fs::read_to_string(dest.join("chat-video.md")).unwrap(),
+        "chat-video.md の中身"
+    );
+}
+
+/// 写したディレクトリと、開発時の起動で実行ファイルの隣に写されたもの（本番ビルドで
+/// `{app_resources}/prompts/` に入るものと同じ）に、リポジトリの `prompts/` の
+/// `chat-video.md` と `chat-explanation.md` が入っている。
+#[test]
+fn prompt_files_are_staged_and_copied_next_to_executable() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let repository = manifest_dir.join("../prompts");
+    let profile_dir = Path::new(env!("CARGO_BIN_EXE_progrust"))
+        .parent()
+        .unwrap()
+        .to_path_buf();
+    for dir in [
+        manifest_dir.join(bundled_content::PROMPTS_STAGING_DIR),
+        profile_dir.join("prompts"),
+    ] {
+        let files = list_files(&dir);
+        for file in PROMPTS {
+            assert!(files.contains(file), "{} に {file} が無い", dir.display());
+            assert_eq!(
+                fs::read(dir.join(file)).unwrap(),
+                fs::read(repository.join(file)).unwrap(),
+                "{}",
+                dir.join(file).display()
+            );
+        }
+    }
+}
+
+/// ビルドスクリプトが、リポジトリの `prompts/` から写したものと、写したディレクトリの中身が同じである。
+#[test]
+fn prompts_staging_dir_matches_repository_prompts() {
+    let manifest_dir = Path::new(env!("CARGO_MANIFEST_DIR"));
+    let temp = tempfile::tempdir().unwrap();
+    bundled_content::stage_prompts(&manifest_dir.join("../prompts"), temp.path()).unwrap();
+    assert_eq!(
+        list_files(&manifest_dir.join(bundled_content::PROMPTS_STAGING_DIR)),
+        list_files(temp.path())
+    );
 }

@@ -34,7 +34,8 @@
     "targets": ["app"],
     "resources": {
       "gen/bundled/content/": "content/",
-      "gen/bundled/runner/": "runner/"
+      "gen/bundled/runner/": "runner/",
+      "gen/bundled/prompts/": "prompts/"
     },
     "icon": [
       "icons/32x32.png",

@@ -1,4 +1,5 @@
-//! アプリに同梱する教材を選んで写す（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）。
+//! アプリに同梱する教材・許可クレートの定義・指示文を選んで写す（spec/architecture/data-locations.md
+//! 「アプリ同梱データ（`{app_resources}`）」）。
 //!
 //! Tauri の `bundle.resources` には、ディレクトリの中の一部のファイルを除く指定が無い。
 //! そこで、ビルドスクリプト（`build.rs`）が、リポジトリの `content/` から同梱するファイルだけを
@@ -17,6 +18,10 @@ pub const STAGING_DIR: &str = "gen/bundled/content/";
 /// 許可クレートの定義（`runner/`）を写すディレクトリ。`STAGING_DIR` と同じく、`tauri.conf.json` の
 /// `bundle.resources` のキーと同じ。
 pub const RUNNER_STAGING_DIR: &str = "gen/bundled/runner/";
+
+/// 指示文（`prompts/`）を写すディレクトリ。`STAGING_DIR` と同じく、`tauri.conf.json` の
+/// `bundle.resources` のキーと同じ。
+pub const PROMPTS_STAGING_DIR: &str = "gen/bundled/prompts/";
 
 /// `runner/` から同梱するファイル。
 pub const RUNNER_FILES: [&str; 2] = ["allowed-crates.toml", "Cargo.lock"];
@@ -71,6 +76,36 @@ pub fn stage(source: &Path, dest: &Path) -> io::Result<()> {
 pub fn stage_runner(source: &Path, dest: &Path) -> io::Result<()> {
     fs::create_dir_all(dest)?;
     let files: BTreeSet<PathBuf> = RUNNER_FILES.iter().map(PathBuf::from).collect();
+    for relative in &files {
+        copy_if_changed(&source.join(relative), &dest.join(relative))?;
+    }
+    remove_unlisted(dest, Path::new(""), &files)
+}
+
+/// `prompts/` の直下のファイル名 `name` を、同梱するかどうか（spec/architecture/data-locations.md
+/// 「アプリ同梱データ（`{app_resources}`）」）。拡張子が `.md` のファイルだけを同梱する。
+/// `.` で始まる名前のファイル（`.DS_Store` など）は同梱しない。
+pub fn is_bundled_prompt(name: &str) -> bool {
+    !name.starts_with('.') && name.len() > ".md".len() && name.ends_with(".md")
+}
+
+/// `source`（リポジトリの `prompts/`）の直下の、同梱するファイル（[`is_bundled_prompt`]）だけを `dest` に写す。
+/// サブディレクトリの中は写さない。写し方は [`stage`] と同じで、`dest` にある、それ以外のファイルは消す。
+pub fn stage_prompts(source: &Path, dest: &Path) -> io::Result<()> {
+    let mut files = BTreeSet::new();
+    for entry in fs::read_dir(source)? {
+        let entry = entry?;
+        if !entry.file_type()?.is_file() {
+            continue;
+        }
+        if let Some(name) = entry.file_name().to_str()
+            && is_bundled_prompt(name)
+        {
+            files.insert(PathBuf::from(name));
+        }
+    }
+
+    fs::create_dir_all(dest)?;
     for relative in &files {
         copy_if_changed(&source.join(relative), &dest.join(relative))?;
     }

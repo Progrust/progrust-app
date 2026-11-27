@@ -19,7 +19,7 @@ progrust-app/
 ├── src/                 # フロントエンド
 │   └── video/           # 動画の共通部品（プレーヤー・タイムライン・教材用の部品。spec/content-format/video/scenes.md）
 ├── src-tauri/           # バックエンド
-│   ├── build.rs         # ビルドスクリプト。同梱する教材と許可クレートの定義（`runner/`）を選んで写す（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）
+│   ├── build.rs         # ビルドスクリプト。同梱する教材と許可クレートの定義（`runner/`）と指示文（`prompts/`）を選んで写す（spec/architecture/data-locations.md「アプリ同梱データ（`{app_resources}`）」）
 │   ├── build/           # ビルドスクリプトの部品。テストからも使う
 │   ├── src/bin/         # 教材チェックツールが使う、判定だけを行うコマンドラインのプログラム。Cargo の feature `content-check` を付けたときだけビルドする（spec/content-guidelines/check-tool.md）
 │   ├── app-icon.svg     # アプリのアイコンの元の絵（spec/screens/app-icon.md）

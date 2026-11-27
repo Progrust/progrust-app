@@ -13,7 +13,8 @@ description: "動画の再生中と解説表示中のそれぞれで AI に渡�
    - `ai_note`
    - 画面に出すコード（`code_blocks`。渡し方は「画面に出すコードの渡し方」）
 4. 質問を送信したときに再生中だった文の ID と、その文の `text`
-5. 既習の要素の一覧（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md) の定義による）
+5. 既習の要素の一覧（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md) の定義による）。要素マスタの `name`・`description` を添える
+   - アプリは章とレッスンの一覧を持たないので、要素マスタの `chapter` が学習順でそのレッスンの章より前にある要素、学習順でそのレッスンより前にある準備中でない `kind` が `lesson` のレッスンの `primary_elements`、そのレッスンの `secondary_elements` を、既習の要素とする。そのレッスンと同じ章の、前にある準備中のレッスンだけが導入する要素は含めない
 6. 会話履歴
 7. 今回の質問
 
