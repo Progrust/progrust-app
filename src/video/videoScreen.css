@@ -1,3 +1,11 @@
+/* 動画画面と、右側のチャットパネル（開いているとき）を横に並べる。 */
+.video-screen-row {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
 /* 動画画面の配置（design-system/ui-design/styles/app.css の .pgx-video-main と同じ）。
    ヘッダーの下の残りいっぱいに広がり、上に文脈の行、残りにプレーヤーを置く。 */
 .video-screen {

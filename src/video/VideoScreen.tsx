@@ -4,16 +4,19 @@
 // 再生位置は、保存のきっかけ（videoScreenLogic.ts）で `save_video_position` に保存し、
 // 音量・ミュート・再生速度・字幕は `update_settings` に保存する。
 import { loadLessonVideo } from "virtual:progrust-lesson-videos";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, MessageCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
 import { findLesson, numberChapters } from "../chapterNumbers";
+import { ChatPanel } from "../chat/ChatPanel";
+import { useChat } from "../chat/useChat";
 import { getLesson, listChapters } from "../commands/content";
 import type { Chapter, LessonDetail, LessonKind } from "../commands/content";
 import { openLesson, saveVideoPosition } from "../commands/progress";
 import type { LessonProgress } from "../commands/progress";
 import { getSettings, updateSettings } from "../commands/settings";
 import type { Settings } from "../commands/settings";
+import { useEnvironmentStatus } from "../environment/useEnvironmentStatus";
 import { lessonRoute, nextLesson } from "../lessons/nextLesson";
 import { useNavigation } from "../router";
 import { currentSentence, sentenceStarts } from "./playerMath";
@@ -216,6 +219,16 @@ function VideoScreenBody({
     sentenceId.current = loaded?.initialSentenceId;
   }, [loaded]);
 
+  // 質疑応答。会話は動画画面を開いている間だけ持つ。パネルを閉じても残す。
+  // 質問に添える文は、送信した瞬間の再生中の文（画面がいま持っている文）にする。
+  const [chatOpen, setChatOpen] = useState(false);
+  const chat = useChat({
+    lessonId,
+    context: "video",
+    getSentenceId: () => sentenceId.current ?? null,
+  });
+  const claude = useEnvironmentStatus()?.claude ?? null;
+
   const save = useCallback(
     (trigger: SaveTrigger, id?: string) => {
       const args = savePositionArgs(
@@ -320,60 +333,89 @@ function VideoScreenBody({
       : { state: "ready", video: loaded.video };
 
   return (
-    <main
-      className="video-screen"
-      data-chapter={found === null ? undefined : found.chapter.color}
-    >
-      <div className="pg-context">
-        <a className="pg-back" href="#" onClick={back}>
-          <ChevronLeft
-            className="pg-icon"
-            aria-hidden="true"
-            size={14}
-            strokeWidth={2.4}
-          />
-          レッスン一覧
-        </a>
-        {found !== null && (
-          <>
-            <span className="pg-chip">
-              <span className="pg-chip-num">{found.chapter.number}</span>
-              {found.chapter.chapter.title}
-            </span>
-            <span className="pg-context-title">
-              {found.lesson.number} {found.lesson.lesson.title}
-            </span>
-          </>
-        )}
-      </div>
-      <VideoPlayer
-        // 設定を読み込んだら（初期値が決まったら）、作り直す。
-        key={loaded === null ? "waiting" : "loaded"}
-        load={videoLoad}
-        chapterColor={found === null ? null : found.chapter.color}
-        lessonKind={kind}
-        initialFrame={loaded?.initialFrame ?? 0}
-        initialSettings={
-          loaded === null ? DEFAULT_SETTINGS : toVideoSettings(loaded.settings)
-        }
-        endAction={endAction}
-        onSentenceChange={(id) => {
-          sentenceId.current = id;
-          save("sentence_changed", id);
-        }}
-        onPause={(id) => {
-          sentenceId.current = id;
-          save("paused", id);
-        }}
-        onEnd={(id) => {
-          sentenceId.current = id;
-          reachedEndRef.current = true;
-          setReachedEnd(true);
-          save("ended", id);
-        }}
-        onSettingsChange={saveSettings}
-        onRetry={onRetry}
-      />
-    </main>
+    <div className="video-screen-row">
+      <main
+        className="video-screen"
+        data-chapter={found === null ? undefined : found.chapter.color}
+      >
+        <div className="pg-context">
+          <a className="pg-back" href="#" onClick={back}>
+            <ChevronLeft
+              className="pg-icon"
+              aria-hidden="true"
+              size={14}
+              strokeWidth={2.4}
+            />
+            レッスン一覧
+          </a>
+          {found !== null && (
+            <>
+              <span className="pg-chip">
+                <span className="pg-chip-num">{found.chapter.number}</span>
+                {found.chapter.chapter.title}
+              </span>
+              <span className="pg-context-title">
+                {found.lesson.number} {found.lesson.lesson.title}
+              </span>
+            </>
+          )}
+          {!chatOpen && (
+            <button
+              type="button"
+              className="pg-btn pg-context-end"
+              aria-expanded={false}
+              onClick={() => setChatOpen(true)}
+            >
+              <MessageCircle
+                className="pg-icon"
+                aria-hidden="true"
+                size={15}
+                strokeWidth={2.2}
+              />
+              質問する
+            </button>
+          )}
+        </div>
+        <VideoPlayer
+          // 設定を読み込んだら（初期値が決まったら）、作り直す。
+          key={loaded === null ? "waiting" : "loaded"}
+          load={videoLoad}
+          chapterColor={found === null ? null : found.chapter.color}
+          lessonKind={kind}
+          initialFrame={loaded?.initialFrame ?? 0}
+          initialSettings={
+            loaded === null
+              ? DEFAULT_SETTINGS
+              : toVideoSettings(loaded.settings)
+          }
+          endAction={endAction}
+          onSentenceChange={(id) => {
+            sentenceId.current = id;
+            save("sentence_changed", id);
+          }}
+          onPause={(id) => {
+            sentenceId.current = id;
+            save("paused", id);
+          }}
+          onEnd={(id) => {
+            sentenceId.current = id;
+            reachedEndRef.current = true;
+            setReachedEnd(true);
+            save("ended", id);
+          }}
+          onSettingsChange={saveSettings}
+          onRetry={onRetry}
+        />
+      </main>
+      {chatOpen && (
+        <ChatPanel
+          chat={chat}
+          title="質問する"
+          placeholder="この動画について質問"
+          claude={claude}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
+    </div>
   );
 }
