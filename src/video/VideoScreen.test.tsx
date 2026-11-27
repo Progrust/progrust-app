@@ -1,6 +1,8 @@
 import { clearMocks, mockConvertFileSrc, mockIPC } from "@tauri-apps/api/mocks";
+import { emit } from "@tauri-apps/api/event";
 import {
   act,
+  cleanup,
   fireEvent,
   render,
   screen,
@@ -124,47 +126,50 @@ function setup(
       : "lesson");
   const calls: Calls = [];
   let lessonFailures = options.failLesson === true ? 1 : 0;
-  mockIPC((command, args) => {
-    calls.push({ command, args });
-    switch (command) {
-      case "list_chapters":
-        return { chapters };
-      case "get_lesson":
-        if (lessonFailures > 0) {
-          lessonFailures -= 1;
-          throw new Error("読み込めない");
-        }
-        return {
-          lesson: {
-            id: lessonId,
-            // 章は、レッスンの ID の頭（ch05-01 なら ch05）。違う章を返すと、動画の表示が失敗する。
-            chapter: lessonId.split("-")[0],
-            kind,
-            title: "所有権のムーブ",
-            primary_elements: [],
-            secondary_elements: [],
-          },
-          script,
-          voice_dir: "/voice",
-          exercise: null,
-        };
-      case "open_lesson":
-        return {
-          session_id: null,
-          progress: { ...baseProgress, ...options.progress },
-          generated: null,
-          draft: null,
-        };
-      case "get_settings":
-        return baseSettings;
-      case "update_settings":
-        return (args as { settings: unknown }).settings;
-      case "save_video_position":
-        return baseProgress;
-      default:
-        return undefined;
-    }
-  });
+  mockIPC(
+    (command, args) => {
+      calls.push({ command, args });
+      switch (command) {
+        case "list_chapters":
+          return { chapters };
+        case "get_lesson":
+          if (lessonFailures > 0) {
+            lessonFailures -= 1;
+            throw new Error("読み込めない");
+          }
+          return {
+            lesson: {
+              id: lessonId,
+              // 章は、レッスンの ID の頭（ch05-01 なら ch05）。違う章を返すと、動画の表示が失敗する。
+              chapter: lessonId.split("-")[0],
+              kind,
+              title: "所有権のムーブ",
+              primary_elements: [],
+              secondary_elements: [],
+            },
+            script,
+            voice_dir: "/voice",
+            exercise: null,
+          };
+        case "open_lesson":
+          return {
+            session_id: null,
+            progress: { ...baseProgress, ...options.progress },
+            generated: null,
+            draft: null,
+          };
+        case "get_settings":
+          return baseSettings;
+        case "update_settings":
+          return (args as { settings: unknown }).settings;
+        case "save_video_position":
+          return baseProgress;
+        default:
+          return undefined;
+      }
+    },
+    { shouldMockEvents: true },
+  );
   const navigate = vi.fn<(route: Route) => void>();
   const view = render(
     <NavigationContext value={{ route: { name: "video", lessonId }, navigate }}>
@@ -192,6 +197,8 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  // 部品を外してから（チャットの受け取りをやめてから）、モックを外す。
+  cleanup();
   clearMocks();
   vi.unstubAllEnvs();
   vi.restoreAllMocks();
@@ -433,5 +440,140 @@ describe("設定の保存", () => {
         video: { ...baseSettings.video, captions: false, playback_rate: 2 },
       },
     });
+  });
+});
+
+describe("質問のチャットパネル", () => {
+  const input = () =>
+    screen.getByRole("textbox", { name: "この動画について質問" });
+
+  // 質問を入力して、Cmd+Enter で送信する。
+  async function ask(text: string) {
+    fireEvent.change(input(), { target: { value: text } });
+    fireEvent.keyDown(input(), { key: "Enter", metaKey: true });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+  }
+
+  it("開いたときは閉じていて、「質問する」で開き、閉じるボタンで閉じる", async () => {
+    setup("ch04-02");
+    await ready();
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    expect(screen.getByRole("complementary")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "質問する" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "質問パネルを閉じる" }));
+    expect(screen.queryByRole("complementary")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "質問する" })).toBeVisible();
+  });
+
+  it("一時停止中に質問でき、再生と一時停止は変わらない", async () => {
+    const { calls } = setup("ch04-02", {
+      progress: { last_sentence_id: "a2" },
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    await ask("二つ目について教えて");
+    expect(commands(calls, "send_chat")).toEqual([
+      expect.objectContaining({
+        lesson_id: "ch04-02",
+        context: "video",
+        sentence_id: "a2",
+        question: "二つ目について教えて",
+      }),
+    ]);
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(HTMLMediaElement.prototype.pause).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "再生" })).toBeVisible();
+  });
+
+  it("再生中に質問しても、動画は止まらない", async () => {
+    setup("ch04-02");
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "再生" }));
+    await screen.findByRole("button", { name: "一時停止" });
+    const pauses = vi.mocked(HTMLMediaElement.prototype.pause).mock.calls
+      .length;
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    await ask("いまの話は？");
+    expect(screen.getByRole("button", { name: "一時停止" })).toBeVisible();
+    expect(vi.mocked(HTMLMediaElement.prototype.pause).mock.calls).toHaveLength(
+      pauses,
+    );
+  });
+
+  it("再生位置を移した後の質問には、移した先の文の ID を送る", async () => {
+    const { calls, container } = setup("ch04-02", {
+      progress: { last_sentence_id: "a1" },
+    });
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    await ask("最初の質問");
+    fireEvent.click(screen.getByRole("button", { name: /5 ?秒進む/ }));
+    await waitFor(() =>
+      expect(container.querySelector(".pg-captions")).toHaveTextContent(
+        "三つ目",
+      ),
+    );
+    // 回答中は次の質問を送れないので、回答を終わらせる。
+    const first = commands(calls, "send_chat")[0] as { request_id: string };
+    await act(async () => {
+      await emit("chat_finished", {
+        request_id: first.request_id,
+        status: "completed",
+        error: null,
+      });
+    });
+    await ask("移した先の質問");
+    const sent = commands(calls, "send_chat");
+    expect(sent).toHaveLength(2);
+    expect(sent[0]).toMatchObject({ sentence_id: "a1" });
+    expect(sent[1]).toMatchObject({ sentence_id: "a3" });
+  });
+
+  it("画面を離れて開き直すと、会話は消えている", async () => {
+    const first = setup("ch04-02");
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    await ask("消える質問");
+    expect(screen.getByText("消える質問")).toBeVisible();
+    first.unmount();
+    setup("ch04-02");
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    expect(screen.queryByText("消える質問")).not.toBeInTheDocument();
+  });
+
+  it("パネルを閉じても、会話は残る", async () => {
+    setup("ch04-02");
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    await ask("残る質問");
+    fireEvent.click(screen.getByRole("button", { name: "質問パネルを閉じる" }));
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    expect(screen.getByText("残る質問")).toBeVisible();
+  });
+
+  it("チャットの入力欄では、Space で再生と一時停止を切り替えない", async () => {
+    setup("ch04-02");
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    fireEvent.keyDown(input(), { code: "Space", key: " " });
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    fireEvent.keyDown(window, { code: "Space", key: " " });
+    await waitFor(() =>
+      expect(HTMLMediaElement.prototype.play).toHaveBeenCalled(),
+    );
+  });
+
+  it("動画のみのレッスンでも質問できる", async () => {
+    const { calls } = setup("ch04-01");
+    await ready();
+    fireEvent.click(screen.getByRole("button", { name: "質問する" }));
+    await ask("質問です");
+    expect(commands(calls, "send_chat")).toHaveLength(1);
   });
 });
