@@ -6,9 +6,9 @@
 // 出力は、出力が届くたびに描き直すので、問題文とエディタを描き直さないように、この部品の中に持つ。
 import { LoaderCircle } from "lucide-react";
 import { useEffect, useReducer, useRef, useState } from "react";
+import { commandErrorMessage } from "../commands/error";
 import {
   closeStdin,
-  commandErrorMessage,
   listenRunEvents,
   runCode,
   sendStdin,
