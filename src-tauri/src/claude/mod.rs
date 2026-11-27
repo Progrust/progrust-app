@@ -2,12 +2,29 @@
 //!
 //! アプリが `claude` を起動するときは、検出のための `claude --version` も `claude -p` の呼び出しも、
 //! [`ClaudeEnv::command`] でプロセスを作る。渡す環境変数を、ここの 1 か所で決める。
+//! `claude -p` を 1 回呼ぶ部品は [`call`] にある。
+
+pub mod call;
+mod stream;
+
+pub use call::{Canceller, ClaudeCall, ClaudeOutcome, ClaudeRequest};
+pub use stream::{ClaudeError, ErrorCategory};
 
 use std::{
     ffi::{OsStr, OsString},
     path::Path,
     process::Command,
 };
+
+/// AI のモデルの値（`settings.json` の `models.chat`・`models.background`）として使えるか。
+/// 空でなく、空白と制御文字を含まず、`-` で始まらない文字列だけを使える
+/// （spec/screens/settings-screen.md「settings.json」、ADR 0258）。`update_settings` の検査と、
+/// `claude -p` を起動する前の検査の両方が、これを使う。
+pub fn is_valid_model(model: &str) -> bool {
+    !model.is_empty()
+        && !model.starts_with('-')
+        && !model.chars().any(|c| c.is_whitespace() || c.is_control())
+}
 
 /// `claude` に渡す環境変数の名前（spec/claude-integration/invocation.md「環境変数」）。
 /// ほかの環境変数は渡さない。
@@ -66,6 +83,34 @@ impl ClaudeEnv {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn model_values() {
+        for model in [
+            "opus",
+            "sonnet",
+            "haiku",
+            "claude-opus-4-1",
+            "claude-haiku-5-5[1m]",
+            "a-",
+        ] {
+            assert!(is_valid_model(model), "{model:?}");
+        }
+        for model in [
+            "",
+            "-",
+            "-p",
+            "--bare",
+            "two words",
+            " opus",
+            "opus\n",
+            "op\tus",
+            "opus\u{7f}",
+            "opus\u{3000}",
+        ] {
+            assert!(!is_valid_model(model), "{model:?}");
+        }
+    }
 
     fn names(env: &ClaudeEnv) -> Vec<&str> {
         env.vars()

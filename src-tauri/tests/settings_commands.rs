@@ -112,6 +112,13 @@ fn invalid_settings_are_invalid_argument_and_leave_the_file_unchanged() {
             json!({ "volume": 1.0, "muted": false, "playback_rate": 3.0, "captions": false }),
         ),
         ("models", json!({ "chat": "", "background": "opus" })),
+        // `-` で始まる値と、空白を含む値（ADR 0258）。
+        ("models", json!({ "chat": "--bare", "background": "opus" })),
+        ("models", json!({ "chat": "sonnet", "background": "-p" })),
+        (
+            "models",
+            json!({ "chat": "sonnet", "background": "claude opus" }),
+        ),
     ];
     for (key, value) in invalid {
         let mut settings = settings_json();

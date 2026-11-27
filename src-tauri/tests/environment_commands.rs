@@ -2,9 +2,11 @@
 //! イベント（spec/architecture/commands/environment.md）を、偽の `cargo`・`rustc`・`claude` とモックの
 //! 実行環境で確かめる。
 
-mod common;
 #[path = "fake_tools/claude.rs"]
-mod fake_claude;
+mod claude;
+#[path = "fake_tools/claude_version.rs"]
+mod claude_version;
+mod common;
 #[path = "fake_tools/rust.rs"]
 mod fake_rust;
 
@@ -18,8 +20,8 @@ use std::{
     time::Duration,
 };
 
+use claude::FakeClaude;
 use common::{LOCAL_URL, app, invoke};
-use fake_claude::FakeClaude;
 use fake_rust::FakeRust;
 use progrust_lib::claude::{ClaudeEnv, ENV_VAR_NAMES};
 use progrust_lib::commands::error::ErrorCode;

@@ -34,13 +34,16 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 # 学習者データのファイルを退避するときの名前に付ける日時（現地時刻）。
 chrono = { version = "0.4.45", default-features = false, features = ["clock"] }
-# 学習者のプログラムのプロセスグループを止める（killpg）、刈り取らずに終わりを待つ（waitid）
-# （spec/exercise-runner/run.md「停止」）。
+# 学習者のプログラムと claude のプロセスグループを止める（killpg）、刈り取らずに終わりを待つ（waitid）
+# （spec/exercise-runner/run.md「停止」、spec/claude-integration/invocation.md「プロセスの止め方」）。
 libc = "0.2.191"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 # 初回準備の記録（prepared.json）の crates_hash（spec/exercise-runner/crates-and-workspace.md「初回準備」）。
 sha2 = "0.11.1"
+# claude -p の呼び出しごとの作業ディレクトリ（spec/claude-integration/invocation.md）。テストごとの一時ディレクトリ
+# （spec/non-functional/testing.md「自動テストで確かめるもの」）にも使う。
+tempfile = "3.27.0"
 # 許可クレートの一覧（runner/allowed-crates.toml）を読む（spec/exercise-runner/project-assembly.md）。
 toml = "1.2.2"
 # `protocol-asset`: 動画の音声をアセットプロトコル（asset://）で読む（spec/architecture/tauri-permissions.md）。
@@ -52,8 +55,6 @@ tauri-plugin-opener = "~2.7.3"
 [dev-dependencies]
 # Tauri のモックの実行環境（`tauri::test`）でコマンドを確かめる。
 tauri = { version = "~2.12.7", features = ["test"] }
-# テストごとの一時ディレクトリ（spec/non-functional/testing.md「自動テストで確かめるもの」）。
-tempfile = "3.27.0"
 
 # Tauri の資料の推奨に合わせる: https://tauri.app/concept/size/#cargo-configuration
 [profile.release]
