@@ -1,6 +1,6 @@
 // 設定画面。画面の配置は design-system/ui-design/Settings.dc.html、
 // 決まりは documents/spec/screens/settings-screen.md。
-// このマイルストーンでは「表示」「動画」「環境」「アプリ」の区分だけを作る。
+// 作ってある区分は「表示」「動画」「AI」「環境」「アプリ」。「学習データ」の区分は、学習データを扱う処理と一緒に作る。
 import { ChevronDown, Volume2, VolumeX } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { CSSProperties, KeyboardEvent, PointerEvent } from "react";
@@ -12,6 +12,7 @@ import {
 } from "../commands/settings";
 import type { PlaybackRate, Settings, Theme } from "../commands/settings";
 import { applyTheme } from "../theme";
+import { AiSection } from "./AiSection";
 import { EnvironmentSection } from "./EnvironmentSection";
 import { Row, Section } from "./SettingsParts";
 import "./settings.css";
@@ -131,12 +132,39 @@ export function SettingsView({
     return run;
   };
 
+  // モデルを保存する。保存は設定の保存の順番に並べ、保存できなかったときは保存前の値に戻して reject する。
+  const saveModel = (
+    key: keyof Settings["models"],
+    model: string,
+  ): Promise<void> => {
+    const run = queue.current.then(async () => {
+      const before = latest.current.models;
+      const next = {
+        ...latest.current,
+        models: { ...before, [key]: model },
+      };
+      latest.current = next;
+      try {
+        await updateSettings(next);
+      } catch (error: unknown) {
+        // 保存できなかった値は、画面にも、次の保存にも残さない。
+        latest.current = { ...latest.current, models: before };
+        throw error;
+      }
+      setSettings((current) => ({ ...current, models: next.models }));
+    });
+    queue.current = run.catch((error: unknown) => {
+      console.error("モデルの保存に失敗した", error);
+    });
+    return run;
+  };
+
   return (
     <main className="settings-wrap">
       <div className="settings-head">
         <div>
           <h1>設定</h1>
-          <p>表示・動画・環境の設定です。変更はすぐに保存されます。</p>
+          <p>表示・動画・AI・環境の設定です。変更はすぐに保存されます。</p>
         </div>
       </div>
       {saveFailed && <p role="alert">設定を保存できませんでした。</p>}
@@ -264,6 +292,8 @@ export function SettingsView({
           </label>
         </Row>
       </Section>
+
+      <AiSection models={settings.models} onSave={saveModel} />
 
       <EnvironmentSection
         toolPaths={settings.tool_paths}
