@@ -32,14 +32,22 @@ export function StackScene() {
   const { at } = useCues();
   const { lessonNumber, lessonTitle } = useLesson();
 
-  // 合図（文の開始からの秒は、音声を作ったあとで言葉に合わせ直す）。
-  const mainStart = at("k1", 2.62); // 「main のスタックフレームが積まれます」
-  const call = at("k2", 1.55); // 「その上に add のフレームが積まれ」
-  const args = at("k2", 3.81); // 「引数の a と b が置かれます」
-  const ret = at("k3", 1.14); // 「add から戻ると」
-  const result = at("k3", 3.2); // 「戻り値の 3 が y に入ります」
-  const note = at("k4", 0.24);
+  // 合図（文の開始からの秒）。
+  const headingIn = at("k1", 0.05); // 「まず」
+  const codeIn = at("k2", 0.05); // 「左のコードは」
+  const mainMark = at("k3", 0.05); // 「メインが始まると」
+  const stackIn = at("k3", 1.31); // 「右の図のスタックに」
+  const mainStart = at("k3", 2.7); // 「メインのスタックフレームが積まれます」
+  const callMark = at("k4", 0.3); // 「六行目でアドを呼ぶと」
+  const call = at("k4", 3.29); // 「アドのフレームが積まれ」
+  const args = at("k4", 5.2); // 「引数のエーとビーに」
+  const ret = at("k5", 1.02); // 「アドから戻ると」
+  const result = at("k5", 3.16); // 「もどりちのさんが、ワイに入ります」
+  const note = at("k7", 0.05); // 「そのため、スタックの確保と解放は」
 
+  const heading = enter(frame, headingIn, { rise: 14 });
+  const code = enter(frame, codeIn);
+  const stackArea = progress(frame, stackIn, 12, easeOut);
   const mainIn = enter(frame, mainStart, { duration: 14, rise: 10 });
   const addIn = enter(frame, call, { duration: 14, rise: 10 });
   const addOut = exit(frame, ret, { duration: 12 });
@@ -88,20 +96,36 @@ export function StackScene() {
         data-lesson-label={`${lessonNumber} ${lessonTitle}`}
         style={{ opacity: sceneOpacity(frame, durationInFrames) }}
       >
-        <h1>関数を呼ぶと、スタックフレームが積まれる</h1>
-        <div style={{ position: "absolute", left: 72, top: 149, width: 480 }}>
+        <h1
+          style={{
+            opacity: heading.opacity,
+            transform: `translateY(${heading.translateY}px)`,
+          }}
+        >
+          関数を呼ぶと、スタックフレームが積まれる
+        </h1>
+        <div
+          style={{
+            position: "absolute",
+            left: 72,
+            top: 149,
+            width: 480,
+            opacity: code.opacity,
+            transform: `translateY(${code.translateY}px)`,
+          }}
+        >
           <CodeBlock
             block="stack"
             marks={[
               {
                 line: 5,
                 text: "main",
-                progress: markAt(frame, at("k1", 0.11), at("k2")),
+                progress: markAt(frame, mainMark, callMark),
               },
               {
                 line: 6,
                 text: "add(1, 2)",
-                progress: markAt(frame, at("k2", 0.48), ret),
+                progress: markAt(frame, callMark, ret),
               },
               { line: 6, text: "y", progress: markAt(frame, result) },
             ]}
@@ -118,18 +142,21 @@ export function StackScene() {
             role="img"
             aria-label="スタックの上に、main のフレームと、その上に積まれた add のフレームがある図。add から戻ると add のフレームが消え、main のフレームの y に 3 が入る"
           >
-            <rect
-              className="fill-muted"
-              x={0}
-              y={0}
-              width={492}
-              height={280}
-              rx={20}
-              stroke="none"
-            />
-            <text className="fill-muted" x={28} y={40} fontSize={18}>
-              スタック
-            </text>
+            {/* スタックの領域。ナレーションが触れるときに出す */}
+            <g opacity={stackArea}>
+              <rect
+                className="fill-muted"
+                x={0}
+                y={0}
+                width={492}
+                height={280}
+                rx={20}
+                stroke="none"
+              />
+              <text className="fill-muted" x={28} y={40} fontSize={18}>
+                スタック
+              </text>
+            </g>
 
             {/* main のフレーム。実行中は主役、add を実行しているあいだは補助の色 */}
             <g
