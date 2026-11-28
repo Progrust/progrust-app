@@ -7,7 +7,7 @@ use std::fs;
 use std::path::Path;
 
 use common::{LOCAL_URL, app, invoke};
-use progrust_lib::content::ContentDir;
+use progrust_lib::content::{ContentDir, ContentError, Language};
 use serde_json::{Value, json};
 use tauri::test::MockRuntime;
 use tauri::{App, Manager, WebviewWindow};
@@ -326,6 +326,34 @@ fn get_lesson_returns_the_language_and_the_chapter_number() {
         let response = get_lesson(&window, lesson_id).unwrap();
         assert_eq!(response["language"], language, "{lesson_id}");
         assert_eq!(response["chapter_number"], number, "{lesson_id}");
+    }
+}
+
+#[test]
+fn lesson_language_is_the_language_of_the_chapter() {
+    let content = make_mixed_content();
+    let dir = ContentDir::new(content.path());
+    for (lesson_id, language) in [
+        ("c01-01", Language::C),
+        ("c02-01", Language::C),
+        ("ch01-01", Language::Rust),
+        ("ch02-01", Language::Rust),
+    ] {
+        assert_eq!(
+            dir.lesson_language(lesson_id).unwrap(),
+            language,
+            "{lesson_id}"
+        );
+    }
+    // レッスンが無いときの扱いは get_lesson と同じ。
+    for lesson_id in ["none", "gen-20261031T130000", "../c01-01"] {
+        assert!(
+            matches!(
+                dir.lesson_language(lesson_id),
+                Err(ContentError::LessonNotFound { .. })
+            ),
+            "{lesson_id}"
+        );
     }
 }
 

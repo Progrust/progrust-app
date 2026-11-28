@@ -1229,3 +1229,132 @@ fn completion_commands_for_a_missing_lesson_return_not_found() {
         );
     }
 }
+
+// ---- C の演習の下書き（spec/lesson-flow/drafts.md「C の演習」） ----
+
+const C_STARTER: &str = "int main(void) {\n    // ここに書く\n    return 0;\n}\n";
+
+/// C の章 c01 に、C の演習 ce がある教材。
+fn make_c_exercise_content() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(
+        root,
+        "chapters.json",
+        &json!([
+            { "id": "c01", "title": "C の第1章", "description": "", "language": "c", "lessons": ["ce"] },
+        ])
+        .to_string(),
+    );
+    write(
+        root,
+        "lessons/ce/lesson.json",
+        &json!({ "id": "ce", "kind": "lesson", "title": "ce" }).to_string(),
+    );
+    write(root, "lessons/ce/exercise/starter/main.c", C_STARTER);
+    dir
+}
+
+/// 強制終了しても、保存した `main.c` の下書きを、開き直したときに読み込める。
+#[test]
+fn a_c_draft_of_main_c_is_saved_and_returned_by_open_lesson() {
+    let content = make_c_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let files = json!({ "main.c": "int main(void) {\n    return 1;\n}\n" });
+    {
+        let (_app, window) = app_with(content.path(), data.path());
+        open_lesson(&window, "ce").unwrap();
+        assert_eq!(
+            save_draft(&window, "ce", files.clone()).unwrap(),
+            Value::Null
+        );
+    }
+    // アプリを作り直す（開き直す）と、保存した下書きが返る。
+    let (_app, window) = app_with(content.path(), data.path());
+    let draft = open_lesson(&window, "ce").unwrap()["draft"].clone();
+    assert_eq!(draft["schema_version"], 1);
+    assert_eq!(draft["lesson_id"], "ce");
+    assert_eq!(draft["files"], files);
+
+    // 「初期コードに戻す」は、初期コードの main.c で上書きする。
+    assert_eq!(
+        reset_draft(&window, "ce").unwrap()["files"],
+        json!({ "main.c": C_STARTER })
+    );
+}
+
+#[test]
+fn save_draft_of_a_c_exercise_rejects_paths_other_than_main_c_and_writes_nothing() {
+    let content = make_c_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    for files in [
+        json!({ "main.c": "", "../x.c": "// 外" }),
+        json!({ "main.c": "", "/tmp/progrust-draft-test.c": "// 外" }),
+        json!({ "main.c": "", "main.h": "" }),
+        json!({ "src/main.rs": "fn main() {}\n" }),
+        json!({}),
+    ] {
+        assert_eq!(
+            save_draft(&window, "ce", files.clone()).unwrap_err()["code"],
+            "invalid_argument",
+            "{files}"
+        );
+    }
+    assert!(!data.path().join("drafts").exists());
+    assert!(!data.path().join("x.c").exists());
+    assert!(!Path::new("/tmp/progrust-draft-test.c").exists());
+
+    // Rust の演習は、これまでどおり main.c を受け付けない。
+    let rust = make_exercise_content();
+    let (_app, window) = app_with(rust.path(), data.path());
+    assert_eq!(
+        save_draft(&window, "e", json!({ "main.c": "" })).unwrap_err()["code"],
+        "invalid_argument"
+    );
+    assert!(!data.path().join("drafts").exists());
+}
+
+/// 正解した後に開くと初期コードから始まり、「前回の正解コードを見る」で正解時の main.c が返る。
+#[test]
+fn after_passing_a_c_exercise_the_passed_main_c_is_returned() {
+    let content = make_c_exercise_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    open_lesson(&window, "ce").unwrap();
+    const RIGHT: &str =
+        "#include <stdio.h>\nint main(void) {\n    puts(\"正解\");\n    return 0;\n}\n";
+    save_draft(&window, "ce", json!({ "main.c": RIGHT })).unwrap();
+    let dir = AppDataDir::new(data.path());
+    let files = std::collections::BTreeMap::from([("main.c".to_string(), RIGHT.to_string())]);
+    let session_id = dir
+        .append_submit(
+            "ce",
+            SessionKind::Lesson,
+            SubmitRecord {
+                at: "2026-11-28T10:00:00+09:00".into(),
+                files,
+                status: SubmitStatus::Passed,
+                error_codes: Vec::new(),
+                passed: 2,
+                total: 2,
+                failed_cases: Vec::new(),
+                build: BuildOutput::default(),
+                program_stderr: String::new(),
+            },
+        )
+        .unwrap();
+    dir.record_pass("ce", &session_id, "2026-11-28T10:00:00+09:00")
+        .unwrap();
+    end_session(&window, "ce").unwrap();
+
+    assert_eq!(open_lesson(&window, "ce").unwrap()["draft"], Value::Null);
+    assert_eq!(
+        get_passed_code(&window, "ce").unwrap(),
+        json!({
+            "session_id": session_id,
+            "submitted_at": "2026-11-28T10:00:00+09:00",
+            "files": { "main.c": RIGHT },
+        })
+    );
+}

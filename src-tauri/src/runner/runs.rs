@@ -1,13 +1,13 @@
 //! 学習者による実行・テスト実行・提出を、同時に 1 つだけ行うための状態
-//! （spec/exercise-runner/overview.md、spec/architecture/commands/run.md）。
+//! （spec/exercise-runner/overview.md、spec/architecture/commands/run.md）。C の演習と Rust の演習で共通である。
 //!
 //! - [`Runs`] は、動いている要求（[`ActiveRun`]）を 1 つだけ持つ。アプリでは Tauri の状態として `manage` で置く。
 //!   [`Runs::begin`] で要求を始め、終わったら [`Runs::release`] で外す。動いているものがあるときは `busy`、
 //!   動いている要求と同じ `request_id` は `invalid_argument` にする。
 //! - [`ActiveRun`] は、いまの段階（準備中・ビルド中・プログラムの実行中・提出の判定中・終わり）と、止める操作の受け付け、
 //!   標準入力の書き込みと閉じる操作、学習者が入力した標準入力の記録を持つ。
-//! - 止める操作が、止める相手（ビルドの cargo、プログラム）を起動する前に来ても失わないように、止める指示を覚えておき、
-//!   相手を起動して登録したときに、すぐに止める。
+//! - 止める操作が、止める相手（ビルドの cargo・`clang`、プログラム）を起動する前に来ても失わないように、止める指示を
+//!   覚えておき、相手を起動して登録したときに、すぐに止める。
 //! - [`Runs::stop_lesson_run_and_wait`] は、レッスンの実行・テスト実行を止め、要求が外れるまで待つ（`end_session`）。
 //!   実行・テスト実行のタスクは、試行ログに追記してから要求を外すので、外れたときには追記が終わっている。
 
@@ -15,6 +15,7 @@ use std::sync::{Arc, Condvar, Mutex, MutexGuard, PoisonError};
 use std::time::Duration;
 
 use super::build::{BUILD_TIME_LIMIT, BuildHandle};
+use super::c_build::CBuildHandle;
 use super::process::{ProcessHandle, Stopper};
 use crate::commands::error::{CommandError, ErrorCode};
 
@@ -213,8 +214,8 @@ enum Phase {
     /// ビルドを始める前（`project/` の組み立てなど）。
     #[default]
     Preparing,
-    /// ビルド中。
-    Building(BuildHandle),
+    /// ビルド中（Rust の演習の cargo か、C の演習の `clang`）。
+    Building(BuildingHandle),
     /// 学習者のプログラム（テスト実行では `cargo test`）の実行中。
     Running {
         process: ProcessHandle,
@@ -224,6 +225,37 @@ enum Phase {
     Judging(Stopper),
     /// プログラムが終わった後（提出では、判定が終わった後）。
     Finished,
+}
+
+/// ビルド中の、止める操作の相手。C の演習と Rust の演習の実行・提出を、同じ状態で 1 つだけ行う
+/// （spec/exercise-runner/overview.md）。
+pub enum BuildingHandle {
+    /// Rust の演習の cargo。
+    Cargo(BuildHandle),
+    /// C の演習の `clang`。
+    Clang(CBuildHandle),
+}
+
+impl BuildingHandle {
+    /// ビルドのプロセスグループ全体を止める。
+    fn stop(&self) {
+        match self {
+            Self::Cargo(build) => build.stop(),
+            Self::Clang(build) => build.stop(),
+        }
+    }
+}
+
+impl From<BuildHandle> for BuildingHandle {
+    fn from(build: BuildHandle) -> Self {
+        Self::Cargo(build)
+    }
+}
+
+impl From<CBuildHandle> for BuildingHandle {
+    fn from(build: CBuildHandle) -> Self {
+        Self::Clang(build)
+    }
 }
 
 /// 実行中のプログラムの標準入力。
@@ -281,7 +313,8 @@ impl ActiveRun {
     }
 
     /// ビルドを始めたときに、止める操作の相手として登録する。既に止める指示があれば、すぐに止める。
-    pub fn set_building(&self, build: BuildHandle) {
+    pub fn set_building(&self, build: impl Into<BuildingHandle>) {
+        let build = build.into();
         let mut state = self.state();
         if state.stop.is_some() {
             build.stop();
