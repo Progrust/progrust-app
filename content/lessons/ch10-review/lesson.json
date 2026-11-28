@@ -3,7 +3,7 @@
   "chapter": "ch10",
   "kind": "chapter_review",
   "title": "章末復習",
-  "summary": "サイコロを振るモジュールを作り、rand クレートと pub・use を組み合わせて使う",
+  "summary": "再試行の待ち時間にばらつきを付けるモジュールを作り、rand クレートと pub・use を組み合わせて使う",
   "primary_elements": [
     "module.basic",
     "module.visibility",
@@ -27,12 +27,12 @@
     "dependencies": ["rand"],
     "readonly_files": [],
     "case_labels": {
-      "roll_stays_in_range": "dice::roll: 1 以上 sides 以下に収まる",
-      "roll_one_sided_die": "dice::roll: 1 面のサイコロは必ず 1",
-      "roll_all_returns_count_values": "game::roll_all: count 個の値を返す",
-      "roll_all_zero_count": "game::roll_all: 0 個のとき",
-      "roll_all_values_stay_in_range": "game::roll_all: すべての値が範囲に収まる",
-      "roll_all_one_sided_die": "game::roll_all: 1 面のサイコロはすべて 1"
+      "delay_stays_in_range": "jitter::delay_ms: 0 以上 max_ms 以下に収まる",
+      "delay_zero_max": "jitter::delay_ms: 上限が 0 のときは必ず 0",
+      "plan_delays_returns_count_values": "retry::plan_delays: count 個の値を返す",
+      "plan_delays_zero_count": "retry::plan_delays: 0 個のとき",
+      "plan_delays_values_stay_in_range": "retry::plan_delays: すべての値が範囲に収まる",
+      "plan_delays_zero_max": "retry::plan_delays: 上限が 0 のときはすべて 0"
     }
   }
 }

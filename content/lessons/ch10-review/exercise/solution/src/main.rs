@@ -1,22 +1,22 @@
-mod dice {
-    pub fn roll(sides: u32) -> u32 {
-        rand::random_range(1..=sides)
+mod jitter {
+    pub fn delay_ms(max_ms: u32) -> u32 {
+        rand::random_range(0..=max_ms)
     }
 }
 
-mod game {
-    use crate::dice;
+mod retry {
+    use crate::jitter;
 
-    pub fn roll_all(sides: u32, count: usize) -> Vec<u32> {
-        let mut results = Vec::new();
+    pub fn plan_delays(max_ms: u32, count: usize) -> Vec<u32> {
+        let mut delays = Vec::new();
         for _ in 0..count {
-            results.push(dice::roll(sides));
+            delays.push(jitter::delay_ms(max_ms));
         }
-        results
+        delays
     }
 }
 
 fn main() {
-    let rolls = game::roll_all(6, 5);
-    println!("{rolls:?}");
+    let delays = retry::plan_delays(500, 5);
+    println!("{delays:?}");
 }
