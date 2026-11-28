@@ -148,6 +148,7 @@ function setup(
     );
   }
   writeFileSync(join(contentDir, "elements.json"), JSON.stringify(masters));
+  writeFileSync(join(contentDir, "terms.json"), "[]");
   for (const [id, lesson] of Object.entries(lessons)) {
     mkdirSync(join(contentDir, "lessons", id), { recursive: true });
     writeFileSync(
@@ -1710,5 +1711,66 @@ describe("コマンドの終了コード", () => {
     );
     expect(result.stdout).toContain("エラー 0 件");
     expect(result.status).toBe(0);
+  });
+});
+
+describe("訳語の表", () => {
+  function termsFindings(content: string | undefined): Finding[] {
+    const { contentDir, curriculumDir } = setup(chapters, elements);
+    if (content === undefined) rmSync(join(contentDir, "terms.json"));
+    else writeFileSync(join(contentDir, "terms.json"), content);
+    return only(runChecks({ contentDir, curriculumDir }), "訳語の表");
+  }
+
+  it("正しい表は、エラーにならない", () => {
+    expect(
+      termsFindings(
+        JSON.stringify([
+          { term: "共有参照", code: "&T", avoid: ["不変参照"], note: "補足" },
+          { term: "束縛", avoid: [] },
+        ]),
+      ),
+    ).toEqual([]);
+  });
+
+  it("ファイルが無いと、エラーになる", () => {
+    expect(termsFindings(undefined)).toEqual([
+      expect.objectContaining({ severity: "error", file: "terms.json" }),
+    ]);
+  });
+
+  it("JSON として読めないと、エラーになる", () => {
+    expect(termsFindings("{")).toHaveLength(1);
+  });
+
+  it("配列でないと、エラーになる", () => {
+    expect(termsFindings("{}")).toHaveLength(1);
+  });
+
+  it("形式に合わない項目は、エラーになる", () => {
+    for (const item of [
+      "1",
+      { avoid: [] },
+      { term: "", avoid: [] },
+      { term: "a" },
+      { term: "a", avoid: "b" },
+      { term: "a", avoid: [1] },
+      { term: "a", avoid: [], code: 1 },
+      { term: "a", avoid: [], note: null },
+      { term: "a", avoid: [], extra: "x" },
+    ]) {
+      expect(termsFindings(JSON.stringify([item]))).toHaveLength(1);
+    }
+  });
+
+  it("term が重複していると、エラーになる", () => {
+    const findings = termsFindings(
+      JSON.stringify([
+        { term: "a", avoid: [] },
+        { term: "a", avoid: [] },
+      ]),
+    );
+    expect(findings).toHaveLength(1);
+    expect(findings[0].message).toContain("重複");
   });
 });

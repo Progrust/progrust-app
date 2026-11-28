@@ -14,6 +14,7 @@ import { lintCheck } from "./lint.ts";
 import { checkRender } from "./render.ts";
 import { scriptCheck } from "./script.ts";
 import { structureCheck } from "./structure.ts";
+import { termsCheck } from "./terms.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
 import { warningsCheck } from "./warnings.ts";
 
@@ -25,6 +26,7 @@ export const checks: Check[] = [
   masterElementsUsedCheck,
   elementsCheck,
   reviewPrimaryElementsCheck,
+  termsCheck,
   scriptCheck,
   audioCheck,
   lintCheck,
