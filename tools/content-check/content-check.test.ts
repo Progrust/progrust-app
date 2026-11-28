@@ -16,6 +16,7 @@ interface Chapter {
   id: string;
   title: string;
   description: string;
+  language?: string;
   lessons: string[];
 }
 
@@ -58,6 +59,27 @@ const elements: Element[] = chapters.flatMap((c) =>
 );
 
 function chapterFile(chapter: Chapter): string {
+  if (chapter.language === "c") {
+    // C の章の表には「主要素」の列が無い。
+    return [
+      "---",
+      "type: Specification",
+      `title: "${chapter.id} ${chapter.title}"`,
+      'description: "説明"',
+      "---",
+      "",
+      chapter.description,
+      "",
+      "| ID | タイトル | 主に扱う内容 |",
+      "| --- | --- | --- |",
+      ...chapter.lessons.map((id) =>
+        id.endsWith("-review")
+          ? `| ${id} | 章末復習 | |`
+          : `| ${id} | タイトル${id} | 内容 |`,
+      ),
+      "",
+    ].join("\n");
+  }
   const rows = chapter.lessons.map((id) =>
     id.endsWith("-review")
       ? `| ${id} | 章末復習 | | |`
@@ -99,6 +121,7 @@ function setup(
   actual: unknown = chapters,
   masters: unknown = elements,
   lessons: Record<string, unknown> = {},
+  listed: Chapter[] = chapters,
 ) {
   const dir = mkdtempSync(join(tmpdir(), "progrust-content-check-"));
   dirs.push(dir);
@@ -111,11 +134,11 @@ function setup(
     [
       "# 章とレッスンの一覧",
       "",
-      ...chapters.map((c) => `* [${c.id} ${c.title}](${c.id}-x.md) - 説明`),
+      ...listed.map((c) => `* [${c.id} ${c.title}](${c.id}-x.md) - 説明`),
       "",
     ].join("\n"),
   );
-  for (const c of chapters) {
+  for (const c of listed) {
     writeFileSync(join(curriculumDir, `${c.id}-x.md`), chapterFile(c));
   }
   if (actual !== MISSING) {
@@ -242,6 +265,71 @@ describe("chapters.json と一覧の照合", () => {
     const findings = check(modified((c) => c[1].lessons.push("ch02-09")));
     expect(findings).toHaveLength(1);
     expect(findings[0]).toMatchObject({ lesson: "ch02-09" });
+  });
+
+  describe("C の章", () => {
+    const cChapter: Chapter = {
+      id: "c01",
+      title: "C の基本",
+      description: "C の章の説明",
+      language: "c",
+      lessons: ["c01-01", "c01-review"],
+    };
+    const withC = [cChapter, ...chapters];
+    // 一覧は C の章を含み、chapters.json は actual にする。
+    const checkC = (actual: unknown, lessons = {}): Finding[] =>
+      runChecks(setup(actual, elements, lessons, withC)).filter(
+        (f) => f.check === "カリキュラム",
+      );
+    const modifiedC = (change: (copy: Chapter[]) => void): Chapter[] => {
+      const copy = structuredClone(withC);
+      change(copy);
+      return copy;
+    };
+
+    it("C の章が Rust の章より前にあり、language が合っていれば、エラーにならない", () => {
+      expect(checkC(withC)).toEqual([]);
+    });
+
+    it("C の章が Rust の章より後にあると、エラーになる", () => {
+      const messages = checkC(modifiedC((c) => c.push(c.shift()!))).map(
+        (f) => f.message,
+      );
+      expect(messages).toContain("C の章 c01 が Rust の章 ch01 より後にある");
+    });
+
+    it("C の章の language が無い（rust になる）と、エラーになる", () => {
+      const findings = checkC(modifiedC((c) => delete c[0].language));
+      expect(findings).toHaveLength(1);
+      expect(findings[0].message).toContain(
+        "章 c01 の language が章 ID の形と合わない",
+      );
+    });
+
+    it("Rust の章の language が c だと、エラーになる", () => {
+      const findings = checkC(modifiedC((c) => (c[1].language = "c")));
+      expect(findings).toHaveLength(1);
+      expect(findings[0].message).toContain(
+        "章 ch01 の language が章 ID の形と合わない",
+      );
+    });
+
+    it("Rust の章の language が rust でも、エラーにならない", () => {
+      expect(checkC(modifiedC((c) => (c[1].language = "rust")))).toEqual([]);
+    });
+
+    it("C のレッスンの lesson.json は、primary_elements を照合しない", () => {
+      expect(
+        checkC(withC, {
+          "c01-01": {
+            id: "c01-01",
+            kind: "lesson",
+            title: "タイトルc01-01",
+            primary_elements: [],
+          },
+        }),
+      ).toEqual([]);
+    });
   });
 
   it("準備中のレッスン（ディレクトリが無いレッスン）があっても、載っていればエラーにならない", () => {
