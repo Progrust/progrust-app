@@ -3,6 +3,11 @@
 //! 読み込めないファイルは `{元の名前}.broken-{YYYYMMDDTHHMMSS}`（現地時刻）に退避する。`settings.json` などは
 //! 初期状態で作り直し（[`AppDataDir::read_versioned_json`]）、下書き・試行ログは作り直さずに、無いものとして扱う
 //! （[`AppDataDir::read_optional_versioned_json`]）。同じ秒に 2 回退避するときは、後のほうの名前の最後に `-2`、`-3`… を付け、前に退避したファイルを上書きしない。
+//!
+//! 古い版のファイルは、ファイルごとの変換の関数（[`Migration`]）を渡して読むと
+//! （[`AppDataDir::read_migrated_json`]）、いまの版に変換して書き直す。変換前のファイルは
+//! `{元の名前}.v{旧バージョン}.bak` として残す（spec/non-functional/data-compatibility.md）。同じ名前のファイルが
+//! 既にあるときは、退避と同じく、名前の最後に `-2`、`-3`… を付け、既にあるファイルを上書きしない。
 
 use std::fs;
 use std::io::ErrorKind;
@@ -15,6 +20,17 @@ use serde_json::Value;
 
 use super::write::{to_json_bytes, write_atomic};
 use super::{AppDataDir, StorageError};
+
+/// 古い版の JSON を、1 つ新しい版の形にする変換（spec/non-functional/data-compatibility.md）。
+/// ファイルごとに、変換する版の数だけ用意して [`AppDataDir::read_migrated_json`] に渡す。
+#[derive(Debug, Clone, Copy)]
+pub struct Migration {
+    /// 変換する前の版。変換した後の版は `from + 1` である。
+    pub from: u64,
+    /// 版 `from` の JSON を、版 `from + 1` の形にする。`schema_version` は書き換えなくてよい（読む側が
+    /// `from + 1` にする）。形が合わず変換できないときは `None` を返す（読み込めないファイルとして退避する）。
+    pub migrate: fn(Value) -> Option<Value>,
+}
 
 /// [`AppDataDir::read_versioned_json`] で読んだ値。
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -45,6 +61,31 @@ impl AppDataDir {
         self.read_versioned_json_at(
             relative,
             schema_version,
+            &[],
+            initial,
+            Local::now().naive_local(),
+        )
+    }
+
+    /// [`AppDataDir::read_versioned_json`] と同じく読み、`schema_version` が古い版のファイルは、`migrations` で
+    /// いまの版 `schema_version` に変換する。
+    ///
+    /// - 版 `n` のファイルは、`from` が `n`、`n + 1`、… の変換を順に通して、いまの版にする。変換して `T` の形に
+    ///   合ったときは、変換前のファイルを `{元の名前}.v{n}.bak` として残し（既にあるファイルは上書きしない）、
+    ///   変換後の内容を書く。変換前のファイルは、書き換える前に残すので、途中で止まっても元の内容は失われない。
+    /// - 変換が無い版、変換できなかったとき、変換した後に `T` の形に合わないときは、読み込めないファイルとして
+    ///   退避し、初期状態で作り直す（`.v{n}.bak` は残さない）。
+    pub fn read_migrated_json<T: Serialize + DeserializeOwned>(
+        &self,
+        relative: impl AsRef<Path>,
+        schema_version: u64,
+        migrations: &[Migration],
+        initial: impl FnOnce() -> T,
+    ) -> Result<Loaded<T>, StorageError> {
+        self.read_versioned_json_at(
+            relative,
+            schema_version,
+            migrations,
             initial,
             Local::now().naive_local(),
         )
@@ -101,11 +142,12 @@ impl AppDataDir {
         })
     }
 
-    /// [`AppDataDir::read_versioned_json`] の、退避の名前に付ける日時 `now` を渡せるもの。
+    /// [`AppDataDir::read_migrated_json`] の、退避の名前に付ける日時 `now` を渡せるもの。
     fn read_versioned_json_at<T: Serialize + DeserializeOwned>(
         &self,
         relative: impl AsRef<Path>,
         schema_version: u64,
+        migrations: &[Migration],
         initial: impl FnOnce() -> T,
         now: NaiveDateTime,
     ) -> Result<Loaded<T>, StorageError> {
@@ -126,11 +168,24 @@ impl AppDataDir {
             }
             Err(error) => return Err(StorageError::io(&path, error)),
         };
-        if let Some(value) = parse_versioned_json(&bytes, schema_version) {
-            return Ok(Loaded {
-                value,
-                broken_backup: None,
-            });
+        match parse_or_migrate(&bytes, schema_version, migrations) {
+            Parsed::Current(value) => {
+                return Ok(Loaded {
+                    value,
+                    broken_backup: None,
+                });
+            }
+            Parsed::Migrated { value, from } => {
+                let migrated_bytes = to_json_bytes(&path, &value)?;
+                let backup = free_path(&path, &format!("v{from}.bak"))?;
+                write_atomic(&backup, &bytes)?;
+                write_atomic(&path, &migrated_bytes)?;
+                return Ok(Loaded {
+                    value,
+                    broken_backup: None,
+                });
+            }
+            Parsed::Unreadable => {}
         }
 
         let value = initial();
@@ -155,6 +210,56 @@ pub fn parse_versioned_json<T: DeserializeOwned>(bytes: &[u8], schema_version: u
     serde_json::from_value(json).ok()
 }
 
+/// [`parse_or_migrate`] の結果。
+enum Parsed<T> {
+    /// いまの版として読めた。
+    Current(T),
+    /// 古い版 `from` を、いまの版に変換して読めた。
+    Migrated { value: T, from: u64 },
+    /// 読み込めない（[`parse_versioned_json`] の条件か、変換できない）。
+    Unreadable,
+}
+
+/// ファイルの内容 `bytes` を、いまの版 `schema_version` として読む。古い版なら `migrations` で変換してから読む。
+fn parse_or_migrate<T: DeserializeOwned>(
+    bytes: &[u8],
+    schema_version: u64,
+    migrations: &[Migration],
+) -> Parsed<T> {
+    let Ok(mut json) = serde_json::from_slice::<Value>(bytes) else {
+        return Parsed::Unreadable;
+    };
+    let Some(from) = json.get("schema_version").and_then(Value::as_u64) else {
+        return Parsed::Unreadable;
+    };
+    if from > schema_version {
+        return Parsed::Unreadable;
+    }
+    let mut version = from;
+    while version < schema_version {
+        let Some(migration) = migrations
+            .iter()
+            .find(|migration| migration.from == version)
+        else {
+            return Parsed::Unreadable;
+        };
+        let Some(mut next) = (migration.migrate)(json) else {
+            return Parsed::Unreadable;
+        };
+        version += 1;
+        let Some(fields) = next.as_object_mut() else {
+            return Parsed::Unreadable;
+        };
+        fields.insert("schema_version".into(), version.into());
+        json = next;
+    }
+    match serde_json::from_value(json) {
+        Ok(value) if from == schema_version => Parsed::Current(value),
+        Ok(value) => Parsed::Migrated { value, from },
+        Err(_) => Parsed::Unreadable,
+    }
+}
+
 /// 初期状態の値を、書き込む JSON にする。`schema_version` を持つことを確かめる。
 fn initial_json<T: Serialize>(
     path: &Path,
@@ -174,12 +279,8 @@ fn initial_json<T: Serialize>(
     to_json_bytes(path, &json)
 }
 
-/// 退避先のパス。まだ無い名前を選ぶ。
+/// 読み込めないファイルの退避先のパス。まだ無い名前を選ぶ。
 fn broken_path(path: &Path, now: NaiveDateTime) -> Result<PathBuf, StorageError> {
-    let name = path
-        .file_name()
-        .map(|name| name.to_string_lossy().into_owned())
-        .unwrap_or_default();
     let stamp = format!(
         "{:04}{:02}{:02}T{:02}{:02}{:02}",
         now.year(),
@@ -189,12 +290,22 @@ fn broken_path(path: &Path, now: NaiveDateTime) -> Result<PathBuf, StorageError>
         now.minute(),
         now.second()
     );
+    free_path(path, &format!("broken-{stamp}"))
+}
+
+/// `path` の名前の後ろに `.{suffix}` を付けたパス。その名前のファイルが既にあるときは、最後に `-2`、`-3`… を付け、
+/// まだ無い名前を選ぶ。
+fn free_path(path: &Path, suffix: &str) -> Result<PathBuf, StorageError> {
+    let name = path
+        .file_name()
+        .map(|name| name.to_string_lossy().into_owned())
+        .unwrap_or_default();
     let mut number = 1;
     loop {
         let candidate = if number == 1 {
-            path.with_file_name(format!("{name}.broken-{stamp}"))
+            path.with_file_name(format!("{name}.{suffix}"))
         } else {
-            path.with_file_name(format!("{name}.broken-{stamp}-{number}"))
+            path.with_file_name(format!("{name}.{suffix}-{number}"))
         };
         let taken = candidate
             .try_exists()
@@ -239,7 +350,7 @@ mod tests {
         let dir = AppDataDir::new(temp.path());
         dir.write_text("progress.json", "{").unwrap();
         let loaded = dir
-            .read_versioned_json_at("progress.json", 1, initial, at(9, 5, 7))
+            .read_versioned_json_at("progress.json", 1, &[], initial, at(9, 5, 7))
             .unwrap();
         assert_eq!(
             loaded.broken_backup,
@@ -256,7 +367,7 @@ mod tests {
         for (index, contents) in ["壊れた 1", "壊れた 2", "壊れた 3"].iter().enumerate() {
             dir.write_text("progress.json", contents).unwrap();
             let loaded = dir
-                .read_versioned_json_at("progress.json", 1, initial, now)
+                .read_versioned_json_at("progress.json", 1, &[], initial, now)
                 .unwrap();
             let expected = match index {
                 0 => "progress.json.broken-20261123T142500".to_string(),
@@ -370,5 +481,208 @@ mod tests {
             fs::read_to_string(temp.path().join("progress.json")).unwrap(),
             "{"
         );
+    }
+
+    // ---- 古い版の変換 ----
+
+    /// 版 3 の形。版 1 は `lessons` だけ、版 2 で `done` が、版 3 で `note` が加わったとする。
+    #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Current {
+        schema_version: u64,
+        lessons: Vec<String>,
+        done: bool,
+        note: Option<String>,
+    }
+
+    fn current_initial() -> Current {
+        Current {
+            schema_version: 3,
+            lessons: Vec::new(),
+            done: false,
+            note: None,
+        }
+    }
+
+    fn add_field(name: &'static str, value: Value) -> impl Fn(Value) -> Option<Value> {
+        move |mut json| {
+            json.as_object_mut()?.insert(name.into(), value.clone());
+            Some(json)
+        }
+    }
+
+    fn add_done(json: Value) -> Option<Value> {
+        add_field("done", Value::Bool(false))(json)
+    }
+
+    fn add_note(json: Value) -> Option<Value> {
+        add_field("note", Value::Null)(json)
+    }
+
+    const MIGRATIONS: [Migration; 2] = [
+        Migration {
+            from: 1,
+            migrate: add_done,
+        },
+        Migration {
+            from: 2,
+            migrate: add_note,
+        },
+    ];
+
+    fn read_current(dir: &AppDataDir, migrations: &[Migration]) -> Loaded<Current> {
+        dir.read_versioned_json_at(
+            "progress.json",
+            3,
+            migrations,
+            current_initial,
+            at(14, 25, 0),
+        )
+        .unwrap()
+    }
+
+    /// 古い版のファイルは、変換を順に通していまの版にし、書き直す。変換前のファイルは `.v{版}.bak` に残す。
+    #[test]
+    fn an_old_version_is_migrated_and_the_original_is_kept_as_a_bak() {
+        for (from, contents) in [
+            (1, r#"{"schema_version": 1, "lessons": ["a"]}"#),
+            (
+                2,
+                r#"{"schema_version": 2, "lessons": ["a"], "done": false}"#,
+            ),
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let dir = AppDataDir::new(temp.path());
+            dir.write_text("progress.json", contents).unwrap();
+            let loaded = read_current(&dir, &MIGRATIONS);
+            let expected = Current {
+                schema_version: 3,
+                lessons: vec!["a".into()],
+                done: false,
+                note: None,
+            };
+            assert_eq!(loaded.value, expected, "{contents}");
+            assert_eq!(loaded.broken_backup, None, "{contents}");
+            let written: Current = serde_json::from_str(
+                &fs::read_to_string(temp.path().join("progress.json")).unwrap(),
+            )
+            .unwrap();
+            assert_eq!(written, expected, "{contents}");
+            assert_eq!(
+                fs::read_to_string(temp.path().join(format!("progress.json.v{from}.bak"))).unwrap(),
+                contents
+            );
+            // 次に読むときは、もう変換しない。
+            let again = read_current(&dir, &MIGRATIONS);
+            assert_eq!(again.value, expected);
+            let names: Vec<_> = fs::read_dir(temp.path())
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+                .collect();
+            assert_eq!(names.len(), 2, "{names:?}");
+        }
+    }
+
+    /// いまの版のファイルは、書き直さず、`.bak` も作らない。
+    #[test]
+    fn the_current_version_is_read_as_it_is() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = AppDataDir::new(temp.path());
+        let contents = r#"{"schema_version": 3, "lessons": [], "done": true, "note": "x"}"#;
+        dir.write_text("progress.json", contents).unwrap();
+        let loaded = read_current(&dir, &MIGRATIONS);
+        assert!(loaded.value.done);
+        assert_eq!(
+            fs::read_to_string(temp.path().join("progress.json")).unwrap(),
+            contents
+        );
+        assert_eq!(fs::read_dir(temp.path()).unwrap().count(), 1);
+    }
+
+    /// `.v{版}.bak` が既にあるときは、上書きせずに、名前の最後に `-2`、`-3`… を付ける。
+    #[test]
+    fn an_existing_bak_is_not_overwritten() {
+        let temp = tempfile::tempdir().unwrap();
+        let dir = AppDataDir::new(temp.path());
+        dir.write_text("progress.json.v1.bak", "前の 1").unwrap();
+        dir.write_text("progress.json.v1.bak-2", "前の 2").unwrap();
+        let contents = r#"{"schema_version": 1, "lessons": []}"#;
+        dir.write_text("progress.json", contents).unwrap();
+        read_current(&dir, &MIGRATIONS);
+        for (name, expected) in [
+            ("progress.json.v1.bak", "前の 1"),
+            ("progress.json.v1.bak-2", "前の 2"),
+            ("progress.json.v1.bak-3", contents),
+        ] {
+            assert_eq!(
+                fs::read_to_string(temp.path().join(name)).unwrap(),
+                expected
+            );
+        }
+    }
+
+    /// 変換が無い版、新しい版、変換できないもの、変換した後に形が合わないものは、読み込めないファイルとして退避し、
+    /// 初期状態で作り直す。`.bak` は残さない。
+    #[test]
+    fn a_file_that_cannot_be_migrated_is_moved_aside() {
+        for (migrations, contents) in [
+            // 版 1 の変換が無い。
+            (&MIGRATIONS[1..], r#"{"schema_version": 1, "lessons": []}"#),
+            // 版 0 の変換は無い。
+            (&MIGRATIONS[..], r#"{"schema_version": 0, "lessons": []}"#),
+            // いまより新しい版。
+            (
+                &MIGRATIONS[..],
+                r#"{"schema_version": 4, "lessons": [], "done": false, "note": null}"#,
+            ),
+            // 変換した後も、形が合わない。
+            (&MIGRATIONS[..], r#"{"schema_version": 1, "lessons": 3}"#),
+            (
+                &MIGRATIONS[..],
+                r#"{"schema_version": 2, "lessons": [], "done": "yes"}"#,
+            ),
+            (&MIGRATIONS[..], r#"{"schema_version": 1}"#),
+        ] {
+            let temp = tempfile::tempdir().unwrap();
+            let dir = AppDataDir::new(temp.path());
+            dir.write_text("progress.json", contents).unwrap();
+            let loaded = read_current(&dir, migrations);
+            let backup = temp.path().join("progress.json.broken-20261123T142500");
+            assert_eq!(loaded.value, current_initial(), "{contents}");
+            assert_eq!(loaded.broken_backup, Some(backup.clone()), "{contents}");
+            assert_eq!(fs::read_to_string(&backup).unwrap(), contents);
+            let names: Vec<_> = fs::read_dir(temp.path())
+                .unwrap()
+                .map(|entry| entry.unwrap().file_name().into_string().unwrap())
+                .collect();
+            assert!(
+                names.iter().all(|name| !name.contains(".bak")),
+                "{contents}: {names:?}"
+            );
+        }
+    }
+
+    /// 変換の関数が `None` を返したときと、オブジェクトでない値を返したときも、読み込めないファイルとして扱う。
+    #[test]
+    fn a_failed_migration_makes_the_file_unreadable() {
+        fn fail(_: Value) -> Option<Value> {
+            None
+        }
+        fn to_array(_: Value) -> Option<Value> {
+            Some(Value::Array(Vec::new()))
+        }
+        for migrate in [fail as fn(Value) -> Option<Value>, to_array] {
+            let temp = tempfile::tempdir().unwrap();
+            let dir = AppDataDir::new(temp.path());
+            dir.write_text(
+                "progress.json",
+                r#"{"schema_version": 2, "lessons": [], "done": false}"#,
+            )
+            .unwrap();
+            let loaded = read_current(&dir, &[Migration { from: 2, migrate }]);
+            assert_eq!(loaded.value, current_initial());
+            assert!(loaded.broken_backup.is_some());
+            assert!(!temp.path().join("progress.json.v2.bak").exists());
+        }
     }
 }

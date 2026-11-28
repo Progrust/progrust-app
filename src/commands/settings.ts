@@ -32,7 +32,11 @@ export type Settings = {
   // opus / sonnet / haiku のエイリアスか、モデル ID。
   models: { chat: string; background: string };
   // null は自動検出。
-  tool_paths: { cargo: string | null; claude: string | null };
+  tool_paths: {
+    cargo: string | null;
+    claude: string | null;
+    clang: string | null;
+  };
   first_launch_completed: boolean;
 };
 

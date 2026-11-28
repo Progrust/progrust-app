@@ -6,13 +6,28 @@ use serde_json::Value;
 
 use crate::claude::is_valid_model;
 use crate::commands::error::{CommandError, ErrorCode};
-use crate::storage::{AppDataDir, StorageError};
+use crate::storage::{AppDataDir, Migration, StorageError};
 
 /// `settings.json` の、`{app_data_dir}` からの相対パス。
 const SETTINGS_FILE: &str = "settings.json";
 
 /// `settings.json` の `schema_version`。
-pub const SCHEMA_VERSION: u64 = 1;
+pub const SCHEMA_VERSION: u64 = 2;
+
+/// 古い版の `settings.json` の変換（spec/screens/settings-screen.md「settings.json」）。
+const MIGRATIONS: [Migration; 1] = [Migration {
+    from: 1,
+    migrate: add_clang_path,
+}];
+
+/// 版 1 を版 2 にする。版 1 は `tool_paths` に `clang` を持たないので、`tool_paths.clang` を `null`（自動検出）に
+/// する。ほかの値はそのまま残す。`tool_paths` がオブジェクトでないときは変換できない。
+fn add_clang_path(mut json: Value) -> Option<Value> {
+    json.get_mut("tool_paths")?
+        .as_object_mut()?
+        .insert("clang".into(), Value::Null);
+    Some(json)
+}
 
 /// エディタの文字サイズ（px）の範囲。
 const EDITOR_FONT_SIZE_RANGE: std::ops::RangeInclusive<u32> = 12..=24;
@@ -51,11 +66,18 @@ pub struct ModelSettings {
 }
 
 /// ツールのパスの手動指定。`None`（JSON では `null`）は自動検出。
+///
+/// どのキーも省けない（`null` を書く）。serde は、`Option` の項目が無いと `None` として読むので、
+/// `deserialize_with` を付けて、無いときは形に合わないものにする。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct ToolPaths {
+    #[serde(deserialize_with = "Option::deserialize")]
     pub cargo: Option<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
     pub claude: Option<String>,
+    #[serde(deserialize_with = "Option::deserialize")]
+    pub clang: Option<String>,
 }
 
 /// `settings.json` の全体。
@@ -91,6 +113,7 @@ impl Default for Settings {
             tool_paths: ToolPaths {
                 cargo: None,
                 claude: None,
+                clang: None,
             },
             first_launch_completed: false,
         }
@@ -157,10 +180,16 @@ fn invalid_argument(detail: impl Into<String>) -> CommandError {
 
 impl AppDataDir {
     /// 設定を読む。ファイルが無いときは初期値を返す（ファイルは作らない）。
+    /// 古い版のファイルは、いまの版に変換して書き直し、変換前のファイルを `settings.json.v{旧バージョン}.bak` に残す。
     /// 読み込めないときは、退避して初期値で作り直す。
     pub fn read_settings(&self) -> Result<Settings, StorageError> {
         Ok(self
-            .read_versioned_json(SETTINGS_FILE, SCHEMA_VERSION, Settings::default)?
+            .read_migrated_json(
+                SETTINGS_FILE,
+                SCHEMA_VERSION,
+                &MIGRATIONS,
+                Settings::default,
+            )?
             .value)
     }
 
@@ -182,7 +211,7 @@ mod tests {
             "editor_font_size": 16,
             "video": { "volume": 0.5, "muted": true, "playback_rate": 1.5, "captions": true },
             "models": { "chat": "haiku", "background": "claude-opus-4-1" },
-            "tool_paths": { "cargo": "/opt/cargo", "claude": null },
+            "tool_paths": { "cargo": "/opt/cargo", "claude": null, "clang": "/usr/bin/clang" },
             "first_launch_completed": true
         })
     }
@@ -202,12 +231,12 @@ mod tests {
         assert_eq!(
             serde_json::to_value(Settings::default()).unwrap(),
             json!({
-                "schema_version": 1,
+                "schema_version": 2,
                 "theme": "system",
                 "editor_font_size": 14,
                 "video": { "volume": 1.0, "muted": false, "playback_rate": 1.0, "captions": false },
                 "models": { "chat": "sonnet", "background": "opus" },
-                "tool_paths": { "cargo": null, "claude": null },
+                "tool_paths": { "cargo": null, "claude": null, "clang": null },
                 "first_launch_completed": false
             })
         );
@@ -217,8 +246,9 @@ mod tests {
     #[test]
     fn a_valid_argument_gets_the_backend_schema_version() {
         let settings = Settings::from_argument(argument()).unwrap();
-        assert_eq!(settings.schema_version, 1);
+        assert_eq!(settings.schema_version, 2);
         assert_eq!(settings.theme, Theme::Dark);
+        assert_eq!(settings.tool_paths.clang.as_deref(), Some("/usr/bin/clang"));
         // 渡された schema_version は使わない。
         let mut with_version = argument();
         with_version["schema_version"] = json!(99);
@@ -263,6 +293,8 @@ mod tests {
             (vec!["models", "chat"], json!("opus\u{7}")),
             (vec!["models", "chat"], json!(3)),
             (vec!["tool_paths", "cargo"], json!(1)),
+            (vec!["tool_paths", "clang"], json!(1)),
+            (vec!["tool_paths", "clang"], json!(false)),
             (vec!["first_launch_completed"], json!(null)),
         ] {
             let error = Settings::from_argument(with(&path, value.clone())).unwrap_err();
@@ -274,9 +306,16 @@ mod tests {
     fn missing_fields_and_non_objects_are_invalid_argument() {
         let mut missing = argument();
         missing.as_object_mut().unwrap().remove("video");
-        for value in [missing, json!(null), json!([]), json!({})] {
-            let error = Settings::from_argument(value).unwrap_err();
-            assert_eq!(error.code, ErrorCode::InvalidArgument);
+        let mut values = vec![missing, json!(null), json!([]), json!({})];
+        // `tool_paths` のキーも省けない。
+        for key in ["cargo", "claude", "clang"] {
+            let mut without = argument();
+            without["tool_paths"].as_object_mut().unwrap().remove(key);
+            values.push(without);
+        }
+        for value in values {
+            let error = Settings::from_argument(value.clone()).unwrap_err();
+            assert_eq!(error.code, ErrorCode::InvalidArgument, "{value}");
         }
     }
 }

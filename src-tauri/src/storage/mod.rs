@@ -3,7 +3,8 @@
 //! - 書き込みは、同じディレクトリの一時ファイルに書いてからリネームする（[`write`]）。
 //! - 同じファイルへの読み書きは、[`AppDataDir`] ごとのファイル単位のロックで直列化する。
 //! - `schema_version` を持つ JSON は [`AppDataDir::read_versioned_json`] で読む。読み込めないときは
-//!   `.broken-{日時}` を付けて退避し、初期状態で作り直す（[`versioned`]）。
+//!   `.broken-{日時}` を付けて退避し、初期状態で作り直す（[`versioned`]）。古い版を変換するファイルは、
+//!   変換の関数を渡して [`AppDataDir::read_migrated_json`] で読む。
 //! - 下書き・試行ログのように、無い状態が初期状態であるファイルは [`AppDataDir::read_optional_versioned_json`]
 //!   で読む。読み込めないときは退避し、作り直さずに、無いものとして扱う。
 //! - `{app_data_dir}` の外にもありうるファイル（作業領域の `prepared.json` など）は、パスを渡して
@@ -20,7 +21,7 @@ use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
 use tauri::{AppHandle, Manager, Runtime};
 
 pub use error::StorageError;
-pub use versioned::{Loaded, parse_versioned_json};
+pub use versioned::{Loaded, Migration, parse_versioned_json};
 pub use write::write_json_file;
 
 /// 学習者データのディレクトリ。ファイルの読み書きは、すべてこれを通して行う。
