@@ -9,7 +9,7 @@ description: "AI セッション、記録セッション、分析セッション
 | AI セッション | AI session | `claude -p` の 1 回の呼び出し |
 | 記録セッション | record session | 試行ログから学習記録を作る AI セッション |
 | 分析セッション | analysis session | 学習記録から分析ファイルを更新する AI セッション |
-| 学習記録 | learning record | 試行セッションごとに AI が作る Markdown ファイル |
+| 学習記録 | learning record | Rust のレッスンと生成問題の試行セッションごとに AI が作る Markdown ファイル。C のレッスンの試行セッションからは作らない |
 | 分析ファイル | analysis file | 学習者全体の傾向を表す、常に最新に保たれる Markdown ファイル |
 | 習熟レベル | level | 要素ごとの理解度（0〜4） |
 | ジョブ | job | バックグラウンドで実行する AI 処理の単位（記録・分析・再構築・問題生成） |

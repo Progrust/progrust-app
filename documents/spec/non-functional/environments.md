@@ -10,5 +10,5 @@ description: "対応環境を作者の Mac（macOS、Apple Silicon）だけと�
 
 - 対応環境は、アプリの作者が使っている Mac（作者の Mac）だけとする。アプリは、この Mac で動けばよい。
 - macOS の他のバージョン、Intel の Mac、Windows などの他の OS は、開発で考慮しない。
-- 学習者の環境に必要なもの: Rust ツールチェーン（rustc 1.100.0 以上）、Claude Code（AI 機能を使う場合）。検出方法は [外部ツール（cargo・claude）への依存](../architecture/external-tools.md)。
+- 学習者の環境に必要なもの: Rust ツールチェーン（rustc 1.100.0 以上）、Xcode Command Line Tools（`clang`。C の演習を実行・提出する場合）、Claude Code（AI 機能を使う場合）。検出方法は [外部ツール（cargo・claude）への依存](../architecture/external-tools.md) と [C のツール（clang）への依存](../architecture/c-toolchain.md)。
 - rustc の最低バージョンは、アプリのリリースに合わせては上げない。上げるときは作者が決める。

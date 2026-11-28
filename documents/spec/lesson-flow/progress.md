@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "進捗（progress.json）"
-description: "`progress.json` の形式と各フィールドの意味、動画の再生位置（`last_sentence_id`、`video_watched`）の保存と復元のしかた、動画のみのレッスンを完了にするときの値を定める。"
+description: "`progress.json` の形式と各フィールドの意味、動画の再生位置（`last_sentence_id`、`video_watched`）の保存と復元のしかた、動画のみのレッスンを完了にするときの値、C のレッスンの進捗も同じ形で記録することを定める。"
 ---
 
 ```json
@@ -39,5 +39,6 @@ description: "`progress.json` の形式と各フィールドの意味、動画�
 - レッスン検索のモーダル（[レッスン検索](../screens/lesson-search.md)）での再生は、`last_sentence_id` と `video_watched` に記録しない。
 - 章末復習レッスンでは、`last_sentence_id` は `null`、`video_watched` は `false` のままとする。
 - 動画のみのレッスンでは、`video_watched` を初めて `true` にしたときに、`status` を `completed` にし、`first_completed_at`・`last_completed_at`・`completion_count` を記録する。その後に再生し直しても、これらは変えない。`last_passed_session_id` は `null` のままとする。
+- C のレッスンの進捗も、Rust のレッスンと同じく `progress.json` に、同じ形とフィールドで記録する。
 - 生成問題の進捗は `progress.json` ではなく、生成問題のメタデータに記録する（[生成問題の保存](../exercise-generation/storage.md)）。
 - 完了済みのレッスンをやり直して途中でやめても、`status` は `completed` のままとする。

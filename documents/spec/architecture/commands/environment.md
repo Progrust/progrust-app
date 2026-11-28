@@ -1,10 +1,10 @@
 ---
 type: Specification
 title: "環境のコマンドとイベント"
-description: "`cargo`・`claude` の検出結果と初回準備の状態を表す環境の状態の形と、`get_environment_status`・`redetect_tools`・`retry_crate_preparation` の引数と戻り値、`environment_updated` の内容を定める。"
+description: "`cargo`・`claude`・`clang` の検出結果と初回準備の状態を表す環境の状態の形と、`get_environment_status`・`redetect_tools`・`retry_crate_preparation` の引数と戻り値、`environment_updated` の内容を定める。"
 ---
 
-動作は [外部ツール（cargo・claude）への依存](../external-tools.md) と [許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「初回準備」に従う。共通の決まりは [コマンドとイベントの共通の決まり](conventions.md) に従う。
+動作は [外部ツール（cargo・claude）への依存](../external-tools.md)、[C のツール（clang）への依存](../c-toolchain.md)、[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「初回準備」に従う。共通の決まりは [コマンドとイベントの共通の決まり](conventions.md) に従う。
 
 ## 環境の状態
 
@@ -23,6 +23,11 @@ description: "`cargo`・`claude` の検出結果と初回準備の状態を表�
     "status": "found",
     "path": "/Users/me/.local/bin/claude",
     "version": "2.1.329"
+  },
+  "clang": {
+    "status": "found",
+    "path": "/usr/bin/clang",
+    "version": "21.0.0"
   },
   "crates": { "status": "ready", "prepared_at": "2026-11-24T19:02:00+09:00", "error": null }
 }
@@ -44,6 +49,14 @@ description: "`cargo`・`claude` の検出結果と初回準備の状態を表�
 | `status` | `"found" \| "not_found"` | `claude --version` が成功したら `found` |
 | `path` | `string \| null` | 見つかった `claude` の絶対パス。見つからないときは `null` |
 | `version` | `string \| null` | `claude --version` から取り出したバージョン。見つからないときは `null` |
+
+**`clang`**
+
+| 項目 | 型 | 内容 |
+|---|---|---|
+| `status` | `"found" \| "not_found"` | `clang --version` が成功したら `found`（[C のツール（clang）への依存](../c-toolchain.md)「検出」） |
+| `path` | `string \| null` | 見つかった `clang` の絶対パス。見つからないときは `null` |
+| `version` | `string \| null` | `clang --version` から取り出したバージョン（例: `21.0.0`）。見つからないときと、取り出せないときは `null` |
 
 **`crates`**（初回準備）
 
@@ -67,7 +80,7 @@ description: "`cargo`・`claude` の検出結果と初回準備の状態を表�
 
 - 引数: なし。
 - 戻り値: 検出し直した後の環境の状態。
-- 検出の方法は [外部ツール（cargo・claude）への依存](../external-tools.md)「検出」に従い、設定の `tool_paths`（[設定画面と settings.json](../../screens/settings-screen.md)「settings.json」）を使う。検出し直したら、`environment_updated` も送る。
+- 検出の方法は [外部ツール（cargo・claude）への依存](../external-tools.md)「検出」と [C のツール（clang）への依存](../c-toolchain.md)「検出」に従い、設定の `tool_paths`（[設定画面と settings.json](../../screens/settings-screen.md)「settings.json」）を使う。検出し直したら、`environment_updated` も送る。
 - 検出し直した後、初回準備を始めるかどうかを判定する（[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「初回準備」）。始めたときは、戻り値の初回準備の状態は `preparing` になる。
 
 **`retry_crate_preparation`**

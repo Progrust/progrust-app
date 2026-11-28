@@ -27,10 +27,12 @@ content/
         └── exercise/               # 演習（spec/content-format/exercise.md）。動画のみのレッスンにはない
             ├── problem.md
             ├── explanation.md
-            ├── starter/            # 初期コード
-            ├── solution/           # 模範解答
-            ├── cases.json          # judge.mode = stdout の場合
-            └── judge_tests.rs      # judge.mode = test の場合
+            ├── starter/            # 初期コード（C のレッスンは starter/main.c だけ）
+            ├── solution/           # 模範解答（C のレッスンは solution/main.c だけ）
+            ├── cases.json          # judge.mode = stdout の場合（C のレッスンは常にこれ）
+            └── judge_tests.rs      # judge.mode = test の場合（C のレッスンにはない）
 ```
+
+- C のレッスンの演習のファイルは [演習のファイル形式](exercise.md)「C の演習」に定める。
 
 - 動画の共通部品（[動画のシーンの書き方](video/scenes.md)）と音声を作るツール（[動画の音声](video/voice.md)）は `content/` の外に置く（[リポジトリ構成](../architecture/repository.md)）。

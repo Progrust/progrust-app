@@ -41,7 +41,7 @@ description: "進捗のコマンド `get_progress`（進捗と推奨レッスン
 
 - 引数: `lesson_id`（`string`）。
 - 戻り値: `null`。
-- そのレッスンの試行セッションに `passed_at` があり `ended_at` が無いときに、セッションを終了する（`ended_at` の記録、記録ジョブの登録、下書きの削除（[演習コードの下書き](../../lesson-flow/drafts.md)））。それ以外のときは何もしない。
+- そのレッスンの試行セッションに `passed_at` があり `ended_at` が無いときに、セッションを終了する（`ended_at` の記録、記録ジョブの登録、下書きの削除（[演習コードの下書き](../../lesson-flow/drafts.md)））。それ以外のときは何もしない。C のレッスンの試行セッションを終了するときは、記録ジョブを登録しない（[試行ログ（attempts/*.json）](../../learning-record-and-analysis/attempt-log.md)「試行セッションのライフサイクル」）。
 - そのレッスンの実行・テスト実行が動いているときは、それを止め（[コードの実行（run）](../../exercise-runner/run.md)「停止」）、`stopped` の `run` イベントを試行ログに追記し終えてから、セッションを終了する（[実行・提出の試行ログへの記録](../../exercise-runner/attempt-log.md)）。フロントエンドが `stop_run` と `end_session` をどの順で呼んでも、止めた実行は、終了する前のセッションに記録される。
 - アプリの終了と、起動時の救済による終了は、バックエンドが自分で行う。
 
@@ -56,7 +56,7 @@ description: "進捗のコマンド `get_progress`（進捗と推奨レッスン
 
 - 戻り値: `null`。`updated_at` はバックエンドが付ける。
 - 保存するときは [演習コードの下書き](../../lesson-flow/drafts.md) に従う。実行・提出の直前の保存は、`run_code`・`submit_code` が行う（[実行のコマンドとイベント](run.md)）。
-- エラー: ファイルパスが [実行・提出時のプロジェクトの組み立て](../../exercise-runner/project-assembly.md) の条件を満たさないときは `invalid_argument`。下書きは書かない。演習の無いレッスンのときも `invalid_argument`。
+- エラー: ファイルパスが [実行・提出時のプロジェクトの組み立て](../../exercise-runner/project-assembly.md) の条件（C の演習では [C の演習の作業領域とビルド](../../exercise-runner/c-project-assembly.md)「作業領域」の条件）を満たさないときは `invalid_argument`。下書きは書かない。演習の無いレッスンのときも `invalid_argument`。
 
 ## reset_draft
 

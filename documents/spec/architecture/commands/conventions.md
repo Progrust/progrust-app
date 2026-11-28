@@ -57,6 +57,7 @@ description: "フロントエンドとバックエンドの間のコマンド（
 | `invalid_state` | いまの状態では、その操作ができない（各コマンドの文書に書いた場合） |
 | `busy` | 同時に 1 つだけ行う処理（実行・提出、質疑応答）が、既に動いている |
 | `cargo_unavailable` | `cargo` が見つからない（[外部ツール（cargo・claude）への依存](../external-tools.md)「見つからない場合」） |
+| `clang_unavailable` | C の演習で、`clang` が見つからない（[C のツール（clang）への依存](../c-toolchain.md)「見つからない場合」） |
 | `claude_unavailable` | `claude` が見つからない（[claude が使えない場合の動作](../../claude-integration/unavailable.md)） |
 | `crates_not_ready` | 許可クレートを使う演習で、初回準備の状態が `ready` でない（[許可クレートと作業領域](../../exercise-runner/crates-and-workspace.md)「初回準備の状態」） |
 | `io_error` | ファイルの読み書きに失敗した |

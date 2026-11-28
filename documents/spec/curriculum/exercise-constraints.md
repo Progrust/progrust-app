@@ -1,10 +1,10 @@
 ---
 type: Specification
 title: "レッスンの演習を作るときの注意"
-description: "判定方式から来る制約で注意が必要な箇所（ch01〜ch02、ch03〜ch08 の標準入力、ch09-01 の panic、main から Err を返す演習、HashMap・HashSet の走査の順序、ch10-06 の rand、パッケージ名 `progrust_exercise`、ch20・ch21 の出力の順序、ch11 の学習者のテスト）ごとに、制約と対応を定める。"
+description: "判定方式から来る制約で注意が必要な箇所（ch01〜ch02、ch03〜ch08 の標準入力、ch09-01 の panic、main から Err を返す演習、HashMap・HashSet の走査の順序、ch10-06 の rand、パッケージ名 `progrust_exercise`、ch20・ch21 の出力の順序、ch11 の学習者のテスト）ごとに、制約と対応を定め、C の演習を作るときの注意の参照先を示す。"
 ---
 
-レッスンごとに演習を作るときに、判定方式（[コード実行・判定](../exercise-runner/index.md)）から来る制約で注意が必要な箇所。
+レッスンごとに演習を作るときに、判定方式（[コード実行・判定](../exercise-runner/index.md)）から来る制約で注意が必要な箇所。Rust の章のレッスンについて定める。C の演習を作るときの注意は [C の章の教材の作成ルール](../content-guidelines/c-lessons.md) に定める。
 
 | 箇所 | 制約 | 対応 |
 | --- | --- | --- |

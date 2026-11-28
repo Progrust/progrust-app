@@ -1,8 +1,10 @@
 ---
 type: Specification
 title: "コードの提出（submit）"
-description: "提出を学習者が途中で止められないこと、`stdout` 方式と `test` 方式それぞれの判定手順とテストケースの結果の決め方（`stdout` 方式で出力が一致しても終了コード 0 以外なら `runtime_error`、`test` 方式で隠しテストの入ったテスト実行ファイルの選び方）、`test` 方式で学習者が書いたテストを判定する手順、出力の正規化、判定結果の項目（`status`、`passed`、`total`、`cases[]`）と `detail` の形と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）と途中で止めた提出（`stopped`）の扱いを定める。"
+description: "Rust の演習の提出について、提出を学習者が途中で止められないこと、`stdout` 方式と `test` 方式それぞれの判定手順とテストケースの結果の決め方（`stdout` 方式で出力が一致しても終了コード 0 以外なら `runtime_error`、`test` 方式で隠しテストの入ったテスト実行ファイルの選び方）、`test` 方式で学習者が書いたテストを判定する手順、C の演習と共通の出力の正規化・判定結果の項目（`status`、`passed`、`total`、`cases[]`）と `detail` の形と画面に表示する内容、判定をしなかった提出（`crates_unavailable`）と途中で止めた提出（`stopped`）の扱いを定める。"
 ---
+
+この文書は、Rust の演習（レッスンの演習のうち Rust のレッスンのものと、生成問題）の提出の手順である。C の演習は [C のコードの提出（submit）](c-submit.md) に従う。C の演習も、この文書の冒頭の決まり、「stdout 方式」の正規化、「判定結果」、「途中で止めた提出」を使う（[C のコードの提出（submit）](c-submit.md)）。
 
 提出中はコンソールにビルドの出力（[コードの実行（run）](run.md)「ビルドの出力の表示」）と判定の進み具合だけを表示し、プログラムの出力は表示しない。
 
@@ -82,6 +84,7 @@ description: "提出を学習者が途中で止められないこと、`stdout` 
 | `cases[]` | テストケースごとの `name`（表示名）・`status`（`pass` / `fail` / `timeout` / `runtime_error`）・`detail` |
 
 - `compile_error` の提出は、テストケースを 1 件も実行していない。`passed` と `total` は 0、`cases[]` は空にする。
+- C の演習の判定結果では、`cases[].status` に `memory_error` があり、その `detail` はオブジェクトになる（[C のコードの提出（submit）](c-submit.md)「判定結果」）。
 
 `detail` の内容:
 

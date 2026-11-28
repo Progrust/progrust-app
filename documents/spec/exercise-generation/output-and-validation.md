@@ -42,7 +42,7 @@ JSON オブジェクト 1 つを出力させる（コードフェンスで囲ま
 8. 初期コードが判定で正解にならず、`compile_error` にもならない（`test` 方式では、隠しテストと合わせてビルドが通る）。
 9. `layout` が `multi` のとき、学習者が ch10-04（モジュールをファイルに分ける）を完了している。
 
-7・8 の判定は [コード実行・判定](../exercise-runner/index.md) の判定処理を使い、`workspace/validate/` で行う（[実行・提出時のプロジェクトの組み立て](../exercise-runner/project-assembly.md)「生成問題の検証（validate/）」）。
+7・8 の判定は [コード実行・判定](../exercise-runner/index.md) の Rust の演習の判定処理を使い、`workspace/validate/` で行う（[実行・提出時のプロジェクトの組み立て](../exercise-runner/project-assembly.md)「生成問題の検証（validate/）」）。
 
 ## 検証に失敗した場合
 

@@ -1,7 +1,7 @@
 ---
 type: Decision
 title: "ADR 0174"
-description: "画面と動画に出す章とレッスンの番号を `chapters.json` の並び順から決め、章カラーも章の番号で決める"
+description: "画面と動画に出す章とレッスンの番号を `chapters.json` の並び順から決め、章カラーも章の番号で決める（ADR 0264 で章の番号の数え方を変えた）"
 ---
 
 - 日付: 2026-11-23

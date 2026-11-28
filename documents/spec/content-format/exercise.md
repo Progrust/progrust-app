@@ -1,10 +1,12 @@
 ---
 type: Specification
 title: "演習のファイル形式"
-description: "演習のファイル（`problem.md`・`explanation.md`・`starter/`・`solution/`）、問題文と解説に持たせる見出し、`stdout` 方式の `cases.json` と `test` 方式の `judge_tests.rs` の書き方を定める。"
+description: "演習のファイル（`problem.md`・`explanation.md`・`starter/`・`solution/`）、問題文と解説に持たせる見出し、`stdout` 方式の `cases.json` と `test` 方式の `judge_tests.rs` の書き方、C の演習のファイル（`main.c` と `cases.json` だけ）を定める。"
 ---
 
 ## ファイル
+
+この節の表は、Rust の演習のファイルである。C の演習は「C の演習」に定める。
 
 | ファイル | 内容 |
 |---|---|
@@ -40,6 +42,8 @@ description: "演習のファイル（`problem.md`・`explanation.md`・`starter
 
 ## 判定方式
 
+この節は、Rust の演習の判定方式である。C の演習は「C の演習」に定める。
+
 **`stdout` 方式**: プログラムに標準入力を与えて実行し、標準出力を期待値と比較する。
 
 ```json
@@ -72,3 +76,18 @@ fn empty_input() {
 - 比較方法・組み込み方法・制限時間は [コードの提出（submit）](../exercise-runner/submit.md) に定める。
 - `lesson.json` の `exercise.judge.min_learner_tests` を書いた演習では、隠しテストに加えて、学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）がすべて通り、その件数が指定以上であることも判定する（[コードの提出（submit）](../exercise-runner/submit.md)「学習者のテストの判定」）。
 - 統合テストとドキュメントテストを書かせる演習では、`starter/` に `src/lib.rs` を含め、`judge.target` を `src/lib.rs` にする。統合テストのファイルは `tests/` に置き、`progrust_exercise` クレートとして `src/lib.rs` の公開アイテムを使う。
+
+## C の演習
+
+C のレッスンの演習（[レッスン定義の形式（lesson.json）](lesson-json.md)「C のレッスン」）のファイルは、次のとおりである。
+
+| ファイル | 内容 |
+|---|---|
+| `problem.md` | 問題文。見出しは Rust の演習と同じ |
+| `explanation.md` | 解説。見出しは Rust の演習と同じ |
+| `starter/main.c` | 初期コード。パッケージを作らないので、`src/` も `Cargo.toml` も無い |
+| `solution/main.c` | 模範解答 |
+| `cases.json` | テストケース。書き方は `stdout` 方式と同じ |
+
+- ファイルは `main.c` の 1 つだけである。`judge_tests.rs` は置かない。
+- 判定は `stdout` 方式だけで、テストケースごとに標準入力を与えて標準出力を期待値と比較する。提出の手順（ビルド、メモリの検査、`memory_error` の判定を含む）は [C のコードの提出（submit）](../exercise-runner/c-submit.md) に従う。

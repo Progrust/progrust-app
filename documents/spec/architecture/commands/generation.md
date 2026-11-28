@@ -47,7 +47,7 @@ description: "問題生成のコマンド `list_generated`（生成問題一覧�
 
 | 項目 | 型 | 内容 |
 |---|---|---|
-| `chapters` | `object[]` | 要素を章ごとにまとめたもの。章の並びは学習順（[章とレッスンの並びの形式（chapters.json）](../../content-format/chapters-json.md)） |
+| `chapters` | `object[]` | 要素を章ごとにまとめたもの。章の並びは学習順（[章とレッスンの並びの形式（chapters.json）](../../content-format/chapters-json.md)）。C の章は含めない |
 | `chapters[].id` / `title` | `string` | 章の ID とタイトル |
 | `chapters[].elements` | `object[]` | 要素マスタ（[要素マスタの形式（elements.json）](../../content-format/elements-json.md)）のうち、`chapter` がその章の要素 |
 | `elements[].id` / `name` / `description` | `string` | 要素マスタの同名の項目 |

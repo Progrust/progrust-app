@@ -21,7 +21,7 @@ description: "フロントエンドがファイルシステムや子プロセス
 
 | 分類 | コマンド | 形 | 担当仕様 |
 |---|---|---|---|
-| 環境 | `get_environment_status`（cargo・claude の検出結果、初回準備の状態）、`redetect_tools`、`retry_crate_preparation`（初回準備の再試行） | [環境のコマンドとイベント](commands/environment.md) | 本書 [外部ツール（cargo・claude）への依存](external-tools.md)、[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md) |
+| 環境 | `get_environment_status`（cargo・claude・clang の検出結果、初回準備の状態）、`redetect_tools`、`retry_crate_preparation`（初回準備の再試行） | [環境のコマンドとイベント](commands/environment.md) | 本書 [外部ツール（cargo・claude）への依存](external-tools.md)、[C のツール（clang）への依存](c-toolchain.md)、[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md) |
 | 教材 | `list_chapters`、`get_lesson`（台本と、音声のディレクトリのパスを含む）、`search_lessons` | [教材のコマンド](commands/content.md) | [教材データ形式](../content-format/index.md)、[画面仕様](../screens/index.md) |
 | 進捗 | `get_progress`、`open_lesson`、`end_session`（画面の操作による試行セッションの終了）、`save_draft`、`reset_draft`、`get_passed_code`、`save_video_position` | [進捗のコマンド](commands/progress.md) | [レッスン進行・進捗管理](../lesson-flow/index.md)、[学習記録・分析](../learning-record-and-analysis/index.md) |
 | 実行 | `run_code`（実行とテスト実行）、`send_stdin`、`close_stdin`、`stop_run`、`submit_code` | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
@@ -41,4 +41,4 @@ description: "フロントエンドがファイルシステムや子プロセス
 | `run_finished` | 実行・提出の結果 | [実行のコマンドとイベント](commands/run.md) | [コード実行・判定](../exercise-runner/index.md) |
 | `chat_delta` / `chat_finished` | 質疑応答の回答（ストリーミング） | [質疑応答のコマンドとイベント](commands/chat.md) | [質疑応答](../qa-chat/index.md) |
 | `job_updated` | ジョブの状態変化 | [ジョブのコマンドとイベント](commands/jobs.md) | [Claude Code 連携](../claude-integration/index.md) |
-| `environment_updated` | ツール検出結果・初回準備の状態変化 | [環境のコマンドとイベント](commands/environment.md) | 本書 [外部ツール（cargo・claude）への依存](external-tools.md)、[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md) |
+| `environment_updated` | ツール検出結果・初回準備の状態変化 | [環境のコマンドとイベント](commands/environment.md) | 本書 [外部ツール（cargo・claude）への依存](external-tools.md)、[C のツール（clang）への依存](c-toolchain.md)、[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md) |

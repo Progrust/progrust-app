@@ -1,8 +1,10 @@
 ---
 type: Specification
 title: "実行・提出時のプロジェクトの組み立て"
-description: "実行・提出のたびに作る `project/`（と生成問題の検証の `validate/`）の `Cargo.toml`・`Cargo.lock`・`src/**`・`tests/**` の内容と、受け付けるファイルパスの条件、`--offline` やビルド先などのビルド条件を定める。"
+description: "Rust の演習の実行・提出のたびに作る `project/`（と生成問題の検証の `validate/`）の `Cargo.toml`・`Cargo.lock`・`src/**`・`tests/**` の内容と、受け付けるファイルパスの条件、`--offline` やビルド先などのビルド条件を定める。"
 ---
+
+この文書は、Rust の演習（レッスンの演習のうち Rust のレッスンのものと、生成問題）の手順である。C の演習は [C の演習の作業領域とビルド](c-project-assembly.md) に従う。
 
 実行・提出のたびに `project/` を空にしてから、以下を作る。
 

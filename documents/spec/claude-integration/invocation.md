@@ -37,7 +37,7 @@ HOME USER LOGNAME PATH SHELL TMPDIR
 
 - 値は、アプリが受け取ったものをそのまま渡す。アプリが受け取っていない変数は渡さない。
 - `claude -p` の呼び出しだけでなく、アプリが `claude` を起動するすべての場合に同じにする。検出のための `claude --version`（[外部ツール（cargo・claude）への依存](../architecture/external-tools.md)「検出」）と、接続テスト（[claude が使えない場合の動作](unavailable.md)）を含む。
-- cargo と学習者のプログラムの起動には、この決まりを当てはめない。
+- cargo、`clang`（[C のツール（clang）への依存](../architecture/c-toolchain.md)。検出のための `clang --version` を含む）と、学習者のプログラムの起動（C の演習の提出で、メモリリークの検査のライブラリを差し込む起動を含む。[C のコードの提出（submit）](../exercise-runner/c-submit.md)「メモリリークの検査」）には、この決まりを当てはめない。
 
 ## 認証
 

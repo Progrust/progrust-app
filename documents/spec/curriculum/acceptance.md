@@ -1,13 +1,15 @@
 ---
 type: Acceptance Criteria
 title: "カリキュラムの受け入れ条件"
-description: "`content/chapters.json` と各レッスンの `lesson.json` の `title`・`primary_elements` が章とレッスンの一覧と一致すること、動画のみのレッスンが一覧の定めと一致すること、一覧の主要素と要素マスタが食い違わないこと、扱わない内容を主要素とするレッスンがないことを、カリキュラムの仕様を満たしたと判断する条件として定める。"
+description: "`content/chapters.json`（章の `language` と C の章の並びを含む）と各レッスンの `lesson.json` の `title`・`primary_elements` が章とレッスンの一覧と一致すること、C のレッスンが要素を持たないこと、動画のみのレッスンが一覧の定めと一致すること、一覧の主要素と要素マスタが食い違わないこと、扱わない内容を主要素とするレッスンがないことを、カリキュラムの仕様を満たしたと判断する条件として定める。"
 ---
 
 - `content/chapters.json` の章の並び、各章の ID・タイトル・説明、各章のレッスンの並びが [章とレッスンの一覧](chapters/index.md) と一致する（教材チェックツールで検証する: [教材チェックツール](../content-guidelines/check-tool.md)）。
 - 章末復習レッスンと準備中のレッスン（[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)「準備中のレッスン」）以外の各レッスンの `lesson.json` の `title` が [章とレッスンの一覧](chapters/index.md) のタイトルと一致する（同上）。
-- 準備中のレッスンを除き、`kind` が `lesson` の各レッスンの `lesson.json` の `primary_elements` が [章とレッスンの一覧](chapters/index.md) の「主要素」と一致する（同上）。
+- 準備中のレッスンを除き、Rust の章の、`kind` が `lesson` の各レッスンの `lesson.json` の `primary_elements` が [章とレッスンの一覧](chapters/index.md) の「主要素」と一致する（同上）。
 - [章とレッスンの一覧](chapters/index.md) の「主要素」の要素 ID がすべて要素マスタ（`content/elements.json`）にあり、要素マスタの `deprecated` でない要素が、すべて一覧のいずれかのレッスンの「主要素」になっている（同上）。
 - 準備中のレッスンを除き、`lesson.json` の `kind` が `video_only` のレッスンが、[章とレッスンの一覧](chapters/index.md) で動画のみのレッスンと定めたレッスンと一致する（同上）。
 - 準備中のレッスンがあっても、`content/chapters.json` には [章とレッスンの一覧](chapters/index.md) のすべてのレッスンが載っている（同上）。
+- `content/chapters.json` の各章の `language` が、章 ID の形から決まる言語（[章とレッスンの一覧の読み方](chapters/how-to-read.md)）と一致し、C の章が、すべての Rust の章より前に並んでいる（同上）。
+- 準備中のレッスンを除き、C のレッスンの `lesson.json` の `primary_elements` と `secondary_elements` が空の配列である（同上）。
 - [カリキュラムで扱わない内容](out-of-scope.md) の内容を主要素とするレッスンがない。

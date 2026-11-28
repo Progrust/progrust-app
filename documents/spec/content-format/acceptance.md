@@ -1,23 +1,29 @@
 ---
 type: Acceptance Criteria
 title: "教材データ形式の受け入れ条件"
-description: "教材データ形式の仕様を満たしたと判断する条件（教材チェックツールで検出するエラー、動画の色・行番号・音声・合図の振る舞い）を定める。"
+description: "教材データ形式の仕様を満たしたと判断する条件（教材チェックツールで検出するエラー、C のレッスンの `lesson.json` と演習、動画の色・行番号・音声・合図の振る舞い）を定める。"
 ---
 
 - `chapters.json` に載っているレッスンのうち準備中のレッスンを除くすべてについて、`lesson.json` と必要なファイルが揃っていることを教材チェックツールで確認できる。
 - レッスンのディレクトリが無いレッスンは準備中のレッスンとして扱われ、教材チェックツールでエラーにならない。ディレクトリがあり `lesson.json` が無いレッスンは、教材チェックツールでエラーになる。
-- 準備中のレッスンが無いとき、どのレッスンの `primary_elements` にも含まれない要素（`deprecated` を除く）は、教材チェックツールでエラーになる。準備中のレッスンが 1 つでもあるときは、エラーにならない。
+- 準備中のレッスンが無いとき、どの Rust のレッスンの `primary_elements` にも含まれない要素（`deprecated` を除く）は、教材チェックツールでエラーになる。準備中のレッスンが 1 つでもあるときは、エラーにならない。
 - [章とレッスンの一覧](../curriculum/chapters/index.md) のどのレッスンの「主要素」にも無い要素（`deprecated` を除く）が要素マスタにあると、準備中のレッスンがあっても、教材チェックツールでエラーになる。
-- `kind` が `lesson` で、`primary_elements` が [章とレッスンの一覧](../curriculum/chapters/index.md) の「主要素」と違う `lesson.json` は、教材チェックツールでエラーになる。
-- `kind` が `chapter_review` で、`primary_elements` が 1 件の `lesson.json` と、ほかの章のレッスンの主要素を `primary_elements` に含む `lesson.json` は、教材チェックツールでエラーになる。
+- `kind` が `lesson` の Rust のレッスンで、`primary_elements` が [章とレッスンの一覧](../curriculum/chapters/index.md) の「主要素」と違う `lesson.json` は、教材チェックツールでエラーになる。
+- `kind` が `chapter_review` の Rust のレッスンで、`primary_elements` が 1 件の `lesson.json` と、ほかの章のレッスンの主要素を `primary_elements` に含む `lesson.json` は、教材チェックツールでエラーになる。
 - `kind` が `lesson`・`video_only` で `tags` のない `lesson.json` は、教材チェックツールでエラーになる。
 - `kind` が `video_only` で、`exercise` を持つか、`primary_elements`・`secondary_elements` が空でない `lesson.json` は、教材チェックツールでエラーになる。
-- テストケースが 1 件の ch01・ch02 のレッスンの演習は、教材チェックツールでエラーにならない。テストケースが 2 件の ch03 のレッスンの演習は、教材チェックツールでエラーになる。
+- テストケースが 1 件の ch01・ch02 の Rust のレッスンの演習は、教材チェックツールでエラーにならない。テストケースが 2 件の ch03 の Rust のレッスンの演習は、教材チェックツールでエラーになる。
+- `primary_elements`・`secondary_elements` が空の C のレッスンの `lesson.json` は、教材チェックツールでエラーにならない。どちらかが空でない C のレッスンの `lesson.json` は、エラーになる。
+- C のレッスンの `lesson.json` の `exercise` が、`judge.mode` が `test`・`layout` が `multi`・`judge.target` が `main.c` 以外・`min_learner_tests` を持つ、のどれかのとき、教材チェックツールでエラーになる。
+- `chapters.json` で C の章が Rust の章より後にある、または章の `language` が章 ID（`c{NN}`・`ch{NN}`）と合わないとき、教材チェックツールでエラーになる。
+- C のレッスンの演習に `judge_tests.rs` や `starter/src/main.rs` があると、教材チェックツールでエラーになる。
+- `chapters.json` の C の第1章の 4 番目のレッスンの番号は `C1-4` と表示され、Rust の第4章の 4 番目のレッスンの番号は `4-4` と表示される。C の第1章と Rust の第1章は、同じ章カラーで表示される。
 - 色を 16 進表記で直接指定した動画のコードと、`@tauri-apps/` で始まるモジュールを import した動画のコードは、教材チェックツールでエラーになる。
 - ダークモードに切り替えたとき、動画の中の文字・図の色がすべてテーマに合わせて変わる。
 - 第4章の動画では `c-primary` が第4章の章カラーで表示され、同じ動画を第2章に移すと第2章の章カラーで表示される。`c-ok`・`c-ng`・`callout`・マーカー（`mark`）は、どの章でも同じ色で表示される。
 - `start_line` が 118 のコードブロックは、行番号が 118 から表示される。
 - `diff` が `true` のコードブロックでは、削除行に行番号が表示されず、ほかの行は変更後のファイルの行番号で表示される。
+- `language` が `c` のコードブロックは、`rust` のコードブロックと同じようにシンタックスハイライトされる。
 - `language` が `text` のコードブロックには行番号が表示されない。
 - 範囲の一部だけが重なる `scopes` を指定した動画は、教材チェックツールでエラーになる。
 - 台本にない文の ID を合図で指した動画は、教材チェックツールでエラーになる。

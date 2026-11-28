@@ -13,7 +13,7 @@ description: "アプリの開発に要るもの（Node.js、npm、Rust ツール
 | Node.js | 25.9 系 | フロントエンドのビルド、Node.js で動く開発用ツール |
 | npm | 11.12 系 | パッケージマネージャー（「パッケージマネージャー」） |
 | Rust ツールチェーン（rustup の stable） | 学習者の環境に必要な rustc の最低バージョン以上（[対応環境](../non-functional/environments.md)） | バックエンドのビルドとテスト |
-| Xcode Command Line Tools | 作者の Mac の macOS で入るもの | Tauri のビルド |
+| Xcode Command Line Tools | 作者の Mac の macOS で入るもの | Tauri のビルド。C の演習のビルドと判定を確かめるテストと、教材チェックツールの C のレッスンの判定（`clang`。[C のツール（clang）への依存](c-toolchain.md)） |
 | gitleaks | 8.30.1 | 秘密の情報の検査（「秘密の情報の検査」） |
 
 - バックエンドのビルドには、学習者のプログラムのビルドに使うもの（[外部ツール（cargo・claude）への依存](external-tools.md)）と同じ Rust ツールチェーンを使う。リポジトリに、ツールチェーンの版を固定するファイル（`rust-toolchain.toml`）を置かない。`src-tauri/Cargo.toml` の `rust-version` には、学習者の環境に必要な rustc の最低バージョンを書く。

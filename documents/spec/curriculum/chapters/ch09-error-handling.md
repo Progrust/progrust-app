@@ -8,7 +8,7 @@ description: "ch09 エラー処理の章の説明と、panic と表明、Result 
 
 | ID | タイトル | 主に扱う内容 | 主要素 |
 | --- | --- | --- | --- |
-| ch09-01 | panic と表明 | `panic!`、panic が起きる場面、`assert!`・`assert_eq!`・`unreachable!`・`todo!` | `error.panic` |
+| ch09-01 | panic と表明 | `panic!`、panic が起きる場面、未定義動作との違い（誤りを見つけて必ず止まる。c03-01）、`assert!`・`assert_eq!`・`unreachable!`・`todo!` | `error.panic` |
 | ch09-02 | Result 型と unwrap・expect | `Ok`・`Err`、`match` によるエラーの処理、失敗したら panic する取り出し方と使ってよい場面 | `error.result` |
 | ch09-03 | ? 演算子 | エラーを呼び出し元に返す、`Option` での `?`、`ok_or` で `Option` を `Result` にする | `error.question_mark` |
 | ch09-04 | 文字列を数値に変換する | `parse`、型の指定（ターボフィッシュ `::<>`）、変換の失敗 | `string.parse` |

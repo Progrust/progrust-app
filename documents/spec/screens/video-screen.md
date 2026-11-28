@@ -21,6 +21,7 @@ description: "動画画面の配置、プレーヤーの操作（シークバー
 
 - 動画は表示領域に収まる最大のサイズで、16:9 を保って表示する。動画の描画方法は [レッスンの動画の形式（video/）](../content-format/video/index.md) に従う。
 - 動画は、そのレッスンが属する章を指定して再生する（[動画を構成するファイル](../content-format/video/structure.md)）。
+- 左上の章の番号は、[章とレッスンの並びの形式（chapters.json）](../content-format/chapters-json.md)「章とレッスンの番号」の表示の形で表示する（Rust のレッスンは「第4章」、C のレッスンは「C 第1章」の形）。
 - 動画の下にプレーヤーの操作を置く。
 - チャットパネルの動作は [質疑応答の画面](../qa-chat/screen.md) に従う。
 

@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "実行・提出の試行ログへの記録"
-description: "実行（テスト実行を含む）・提出が終わるたびに試行ログへ `run` / `submit` イベントを追記するときの、追記しない場合（`crates_unavailable`、途中で止めた提出、アプリの終了で止めた実行）と、`error_codes`、`stdout`、`stderr`、`stdin` の記録のしかたを定める。"
+description: "実行（テスト実行を含む）・提出が終わるたびに試行ログへ `run` / `submit` イベントを追記するときの、追記しない場合（`crates_unavailable`、途中で止めた提出、アプリの終了で止めた実行）と、`error_codes`、`stdout`、`stderr`、`stdin` の記録のしかたと、C の演習の記録（`files` のキーが `main.c`、`error_codes` が空、`stderr` に入れるもの、`memory_error` のテストケースの扱い）を定める。"
 ---
 
 実行・提出が終わるたびに、試行ログに `run` / `submit` イベントを追記する。テスト実行（[コードの実行（run）](run.md)「テスト実行」）も `run` イベントとして記録し、`mode` を `test` にする。スキーマは [試行ログ（attempts/*.json）](../learning-record-and-analysis/attempt-log.md)「スキーマ」 に従う。
@@ -15,3 +15,15 @@ description: "実行（テスト実行を含む）・提出が終わるたびに
 - `stdout` / `stderr` はそれぞれ先頭 20,000 文字までを保存する。`stderr` には、ビルドのコンパイラの診断と、ビルドの cargo 自身の標準エラー出力（[コードの実行（run）](run.md)「ビルドの出力の表示」）と、プログラムの標準エラー出力を、この順に連結して保存する。ビルドの出力は、ANSI エスケープを除去したものにする。
   - `submit` イベントの「プログラムの標準エラー出力」は、判定結果が `timeout`・`runtime_error` のテストケースの `detail`（標準エラー出力の先頭。[コードの提出（submit）](submit.md)「判定結果」）を、`cases[]` の順に連結したものとする。空のものは除き、改行で終わらないものには改行を足す。ほかのテストケースの標準エラー出力は保存しない。
 - `run` イベントの `stdin` には、学習者が入力した内容をそのまま連結して保存する。テスト実行では空の文字列にする。
+
+## C の演習
+
+C の演習（[C のコードの実行（run）](c-run.md)、[C のコードの提出（submit）](c-submit.md)）の実行・提出も、上と同じく `run` / `submit` イベントを追記する。上の決まりと違うのは、次のところである。
+
+- `files` のキーは `main.c` だけになる。
+- `run` イベントの `mode` は、常に `main` である。
+- `error_codes` は、常に空の配列にする。
+- `run` イベントの `stderr` には、ビルドの出力（`clang` の出力。[C の演習の作業領域とビルド](c-project-assembly.md)「ビルドの出力の表示」）と、プログラムの標準エラー出力を、この順に連結して保存する。ビルドの出力は、ANSI エスケープを除去したものにする。シグナルで終わったときの 1 行（[C のコードの実行（run）](c-run.md)「シグナルで終わったとき」）は保存しない。
+- `submit` イベントの `stderr` には、提出で表示したビルドの出力（[C のコードの提出（submit）](c-submit.md)「手順」の 1。ANSI エスケープを除去したもの）と、プログラムの標準エラー出力を、この順に連結して保存する。「プログラムの標準エラー出力」は、判定結果が `timeout`・`runtime_error` のテストケースの `detail`（シグナルで終わった `runtime_error` では、`detail` に続けたシグナルの 1 行を含む）と、`memory_error` のテストケースの `detail` の `report` を、`cases[]` の順に連結したものとする。空のものは除き、改行で終わらないものには改行を足す。
+- `submit` イベントの `failed_cases` には、`memory_error` のテストケースの表示名も入れる。
+- `stdout` / `stderr` の保存の上限と、`stdin` の記録のしかたは、上と同じである。

@@ -1,8 +1,10 @@
 ---
 type: Specification
 title: "コードの実行（run）"
-description: "実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、ビルドの出力（コンパイラの診断と cargo 自身の標準エラー出力）の表示と送るとき、出力の送り方、停止のしかた、対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`、`crates_unavailable`）を定める。"
+description: "Rust の演習の実行の手順、学習者が書いたテストを `cargo test` で動かすテスト実行の手順、ビルドの出力（コンパイラの診断と cargo 自身の標準エラー出力）の表示と送るとき、C の演習と共通の出力の送り方・停止のしかた・対話的な標準入力の扱い、結果の状態（`success`、`compile_error`、`runtime_error`、`timeout`、`stopped`、`crates_unavailable`）を定める。"
 ---
+
+「手順」「テスト実行」「ビルドの出力の表示」「結果の状態」は、Rust の演習（レッスンの演習のうち Rust のレッスンのものと、生成問題）の手順である。C の演習は [C のコードの実行（run）](c-run.md) に従う。「出力の送り方」「停止」「対話的な標準入力」は、C の演習でも使う。
 
 ## 手順
 
@@ -18,7 +20,7 @@ description: "実行の手順、学習者が書いたテストを `cargo test` �
 
 ## テスト実行
 
-学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）を、演習画面の「テスト」ボタンで実行する。どの演習でも使える。隠しテストは組み込まない。
+学習者が書いたテスト（単体テスト、`tests/` の統合テスト、ドキュメントテスト）を、演習画面の「テスト」ボタンで実行する。Rust の演習ならどの演習でも使える。C の演習には無い（[C のコードの実行（run）](c-run.md)「テスト実行が無いこと」）。隠しテストは組み込まない。
 
 1. `cargo test --offline --quiet --no-run --message-format=json-diagnostic-rendered-ansi` を、新しいプロセスグループで起動してビルドする。
 2. ビルドに失敗したら、実行の手順の 2 と同じく終了する（`compile_error` または `crates_unavailable`）。

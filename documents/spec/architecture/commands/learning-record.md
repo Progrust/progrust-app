@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "学習記録・分析のコマンド"
-description: "学習記録・分析のコマンド `get_dashboard`（トップページの次にやるべきレッスン・完了数・章ごとの完了率・分析の要約と分析の状態 `none`・`ok`・`unreadable`）、`list_unreadable_records`、`rebuild_analysis`、`reset_analysis`、`reset_all` の引数と戻り値を定める。"
+description: "学習記録・分析のコマンド `get_dashboard`（トップページの次にやるべきレッスン・C のレッスンを含む完了数・章ごとの完了率と章の言語と番号・分析の要約と分析の状態 `none`・`ok`・`unreadable`）、`list_unreadable_records`、`rebuild_analysis`、`reset_analysis`、`reset_all` の引数と戻り値を定める。"
 ---
 
 動作は [学習記録・分析](../../learning-record-and-analysis/index.md) と、[トップページ（ダッシュボード）](../../screens/top-page.md)・[設定画面と settings.json](../../screens/settings-screen.md) に従う。共通の決まりは [コマンドとイベントの共通の決まり](conventions.md) に従う。
@@ -16,11 +16,11 @@ description: "学習記録・分析のコマンド `get_dashboard`（トップ�
 ```json
 {
   "next_lesson": {
-    "lesson_id": "ch04-04", "chapter_id": "ch04", "chapter_title": "所有権",
+    "lesson_id": "ch04-04", "chapter_id": "ch04", "chapter_title": "所有権", "language": "rust", "chapter_number": 4,
     "title": "所有権のムーブ", "summary": "代入や関数呼び出しで所有権が移動する仕組みを学ぶ", "started": true
   },
   "lesson_counts": { "completed": 18, "total": 120 },
-  "chapters": [ { "id": "ch02", "title": "変数と型", "completed": 6, "total": 6 } ],
+  "chapters": [ { "id": "ch02", "title": "変数と型", "language": "rust", "number": 2, "completed": 6, "total": 6 } ],
   "analysis": {
     "state": "ok",
     "weak_elements": [ { "id": "ownership.move", "name": "所有権のムーブ", "level": 1, "provisional": false } ],
@@ -37,9 +37,10 @@ description: "学習記録・分析のコマンド `get_dashboard`（トップ�
 | `next_lesson` | `object \| null` | 次にやるべきレッスン（[レッスンの受講順](../../lesson-flow/order.md)）。すべて完了していて無いときは `null` |
 | `next_lesson.lesson_id` / `title` / `summary` | `string` | レッスン ID と、`lesson.json` の `title`・`summary` |
 | `next_lesson.chapter_id` / `chapter_title` | `string` | レッスンが属する章の ID とタイトル |
+| `next_lesson.language` / `chapter_number` | `"c" \| "rust"` / `number`（整数） | レッスンの言語と、属する章の番号（[教材のコマンド](content.md) の `get_lesson` の同名の項目） |
 | `next_lesson.started` | `boolean` | 進捗（[進捗（progress.json）](../../lesson-flow/progress.md)）があれば `true`。`false` は未着手（「始める」） |
-| `lesson_counts` | `{ completed: number, total: number }` | 完了したレッスンの数と、全レッスンの数。どちらも準備中のレッスンを数えない（[トップページ（ダッシュボード）](../../screens/top-page.md)） |
-| `chapters` | `{ id: string, title: string, completed: number, total: number }[]` | 章ごとの完了率に表示する章（[トップページ（ダッシュボード）](../../screens/top-page.md) の決まりで選んだ 9 章まで）。学習順に並べる |
+| `lesson_counts` | `{ completed: number, total: number }` | 完了したレッスンの数と、全レッスンの数。どちらも C のレッスンを含み、準備中のレッスンを数えない（[トップページ（ダッシュボード）](../../screens/top-page.md)） |
+| `chapters` | `{ id: string, title: string, language: "c" \| "rust", number: number, completed: number, total: number }[]` | 章ごとの完了率に表示する章（[トップページ（ダッシュボード）](../../screens/top-page.md) の決まりで選んだ 9 章まで。C の章を含む）。学習順に並べる。`language`・`number` は、[教材のコマンド](content.md) の `list_chapters` の `chapters[]` の同名の項目 |
 | `analysis` | `object` | 分析に関する項目 |
 | `analysis.state` | `"none" \| "ok" \| "unreadable"` | `none` は学習記録がまだない、`unreadable` は `analysis.md` を解析できない（[学習記録・分析ファイルの手動編集への対応](../../learning-record-and-analysis/manual-edit.md)）、`ok` はそれ以外 |
 | `analysis.weak_elements` | 要素の要約 `[]` | 苦手分野。[トップページ（ダッシュボード）](../../screens/top-page.md) の決まりで選んで並べたもの |

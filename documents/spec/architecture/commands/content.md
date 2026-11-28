@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "教材のコマンド"
-description: "教材のコマンド `list_chapters`（章とレッスンの一覧と、レッスンごとの `in_preparation`）、`get_lesson`（レッスン定義・台本・音声のディレクトリ・演習の内容。生成問題は `gen-{generation_id}` で開く）、`search_lessons`（検索の結果と強調する位置）の引数と戻り値を定める。"
+description: "教材のコマンド `list_chapters`（章とレッスンの一覧と、章の言語 `language` と番号 `number`、レッスンごとの `in_preparation`）、`get_lesson`（レッスン定義・台本・音声のディレクトリ・演習の内容と、レッスンの言語と章の番号。生成問題は `gen-{generation_id}` で開く）、`search_lessons`（検索の結果と強調する位置）の引数と戻り値を定める。"
 ---
 
 教材の形式は [教材データ形式](../../content-format/index.md) に、画面での使い方は [画面仕様](../../screens/index.md) に従う。共通の決まりは [コマンドとイベントの共通の決まり](conventions.md) に従う。
@@ -20,6 +20,8 @@ description: "教材のコマンド `list_chapters`（章とレッスンの一�
       "id": "ch04",
       "title": "所有権",
       "description": "Rust のメモリ管理の中心となる所有権の仕組みを学ぶ",
+      "language": "rust",
+      "number": 4,
       "lessons": [
         {
           "id": "ch04-04",
@@ -39,11 +41,14 @@ description: "教材のコマンド `list_chapters`（章とレッスンの一�
 |---|---|---|
 | `chapters` | `object[]` | 章。並びは [章とレッスンの並びの形式（chapters.json）](../../content-format/chapters-json.md) の学習順 |
 | `chapters[].id` / `title` / `description` | `string` | `chapters.json` の同名の項目 |
+| `chapters[].language` | `"c" \| "rust"` | 章の言語（`chapters.json` の `language`。省略されていれば `rust`） |
+| `chapters[].number` | `number`（整数） | 章の番号（同じ言語の章の中での位置。[章とレッスンの並びの形式（chapters.json）](../../content-format/chapters-json.md)「章とレッスンの番号」） |
 | `chapters[].lessons` | `object[]` | 章のレッスン。並びは `chapters.json` の `lessons` の順 |
 | `lessons[].id` / `kind` / `title` / `summary` / `estimated_minutes` | | [レッスン定義の形式（lesson.json）](../../content-format/lesson-json.md) の同名の項目 |
 | `lessons[].in_preparation` | `boolean` | 準備中のレッスンなら `true`（[章とレッスンの並びの形式（chapters.json）](../../content-format/chapters-json.md)「準備中のレッスン」） |
 
 - 準備中のレッスンには `lesson.json` が無いので、`kind`・`title`・`summary`・`estimated_minutes` を `null` にする。
+- 章とレッスンの番号の表示（Rust の章は「第4章」「4-4」、C の章は「C 第1章」「C1-4」）は、`language` と `number` と `lessons` での位置から、フロントエンドが [章とレッスンの並びの形式（chapters.json）](../../content-format/chapters-json.md)「章とレッスンの番号」に従って作る。
 
 
 ## get_lesson
@@ -61,6 +66,8 @@ description: "教材のコマンド `list_chapters`（章とレッスンの一�
 ```json
 {
   "lesson": { "id": "ch04-04", "chapter": "ch04", "kind": "lesson", "title": "所有権のムーブ" },
+  "language": "rust",
+  "chapter_number": 4,
   "script": { "scenes": [], "sentences": [] },
   "voice_dir": "/Applications/Progrust.app/Contents/Resources/content/lessons/ch04-04/video/voice",
   "exercise": {
@@ -74,14 +81,16 @@ description: "教材のコマンド `list_chapters`（章とレッスンの一�
 | 項目 | 型 | 内容 |
 |---|---|---|
 | `lesson` | [レッスン定義の形式（lesson.json）](../../content-format/lesson-json.md) | レッスン定義。生成問題では `generated/{generation_id}/lesson.json` |
+| `language` | `"c" \| "rust"` | レッスンの言語（属する章の言語）。生成問題では `rust` |
+| `chapter_number` | `number`（整数）`\| null` | レッスンが属する章の番号（`list_chapters` の `chapters[].number`）。生成問題では `null` |
 | `script` | [動画の台本（script.json）](../../content-format/video/script-json.md) `\| null` | 台本。動画の無いレッスン（章末復習レッスン・生成問題）では `null` |
 | `voice_dir` | `string \| null` | 音声のディレクトリの絶対パス（[フロントエンドとバックエンドの役割分担](../responsibilities.md)）。動画の無いレッスンでは `null` |
 | `exercise` | `object \| null` | 演習の内容。演習の無いレッスン（動画のみのレッスン）では `null` |
 | `exercise.problem_md` | `string` | 問題文（[演習のファイル形式](../../content-format/exercise.md)「ファイル」の `problem.md`） |
 | `exercise.explanation_md` | `string` | 解説（同じく `explanation.md`） |
-| `exercise.starter_files` | `{ [path: string]: string }` | 初期コード。キーは cargo パッケージのルートからの相対パス（例: `src/main.rs`）、値はファイルの内容 |
+| `exercise.starter_files` | `{ [path: string]: string }` | 初期コード。キーは cargo パッケージのルートからの相対パス（例: `src/main.rs`）、値はファイルの内容。C の演習では、キーは `main.c` だけ（[演習のファイル形式](../../content-format/exercise.md)「C の演習」） |
 
-- 判定に使うファイル（`cases.json`・`judge_tests.rs`）と `solution/` のファイルは返さない。判定はバックエンドが行う（[コード実行・判定](../../exercise-runner/index.md)）。模範解答のコードは、解説の `## 模範解答`（[演習のファイル形式](../../content-format/exercise.md)「解説（explanation.md）」）に入っている。
+- 判定に使うファイル（`cases.json`・`judge_tests.rs`。C の演習では `cases.json` だけ）と `solution/` のファイルは返さない。判定はバックエンドが行う（[コード実行・判定](../../exercise-runner/index.md)）。模範解答のコードは、解説の `## 模範解答`（[演習のファイル形式](../../content-format/exercise.md)「解説（explanation.md）」）に入っている。
 - エラー: レッスンが無いとき、準備中のレッスンのときと、生成問題の `meta.json` の `status` が `ready` でないときは `not_found`。
 
 ## search_lessons
@@ -103,6 +112,8 @@ description: "教材のコマンド `list_chapters`（章とレッスンの一�
       "lesson_id": "ch04-04",
       "chapter_id": "ch04",
       "chapter_title": "所有権",
+      "language": "rust",
+      "chapter_number": 4,
       "title": "所有権のムーブ",
       "title_highlights": [{ "start": 3, "end": 6 }],
       "matched_tags": [{ "tag": "ムーブ", "highlights": [{ "start": 0, "end": 3 }] }]
@@ -116,6 +127,7 @@ description: "教材のコマンド `list_chapters`（章とレッスンの一�
 | `results` | `object[]` | 検索の結果。件数の上限と並び順は [レッスン検索](../../screens/lesson-search.md) に従う |
 | `lesson_id` / `title` | `string` | レッスン ID とタイトル |
 | `chapter_id` / `chapter_title` | `string` | レッスンが属する章の ID とタイトル |
+| `language` / `chapter_number` | `"c" \| "rust"` / `number`（整数） | レッスンの言語と、属する章の番号（`get_lesson` の同名の項目） |
 | `title_highlights` | `{ start: number, end: number }[]` | タイトルの中で、検索の語に一致した範囲 |
 | `matched_tags` | `{ tag: string, highlights: { start: number, end: number }[] }[]` | 一致した検索ワード（`lesson.json` の `tags`）と、その中で一致した範囲 |
 

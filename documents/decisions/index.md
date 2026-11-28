@@ -24,7 +24,7 @@
 * [ADR 0209](0209-regenerate-runner-lock-with-npm-script.md) - runner/Cargo.lock は、一時ディレクトリに allcrates/ と同じ形のライブラリを作って cargo generate-lockfile で生成する npm のスクリプト（npm run runner:lock）で作り直し、runner/ の 2 つのファイルは、教材と同じ仕組みで src-tauri/gen/bundled/runner/ に写して同梱する
 * [ADR 0210](0210-find-rustc-next-to-cargo-and-use-first-usable-place.md) - cargo と rustc は探索順の場所ごとに同じディレクトリの組で調べ、設定のパスは cargo の実行ファイルの絶対パスとし、使えない場所は飛ばして、rustc --version が成功した最初の場所を、バージョンが足りなくても使う
 * [ADR 0211](0211-draft-commands-reject-lessons-without-exercise.md) - 演習の無いレッスン（動画のみのレッスン）に `save_draft`・`reset_draft` を呼んだときは、下書きを書かずに `invalid_argument` を返す
-* [ADR 0225](0225-lean-monaco-entry-rust-tokens-and-theme-from-css-variables.md) - Monaco Editor を、既定の入口から全言語の定義・言語機能・LSP を除いた自前の入口で読み込み、Rust の字句の定義に関数・マクロ・型の区分を足して自分で登録し、エディタの配色をデザインシステムの CSS 変数の値から実行時に作り、ショートカットを addCommand ではなく addAction で登録する
+* [ADR 0225](0225-lean-monaco-entry-rust-tokens-and-theme-from-css-variables.md) - Monaco Editor を、既定の入口から全言語の定義・言語機能・LSP を除いた自前の入口で読み込み、Rust の字句の定義に関数・マクロ・型の区分を足して自分で登録し、エディタの配色をデザインシステムの CSS 変数の値から実行時に作り、ショートカットを addCommand ではなく addAction で登録する（ADR 0270 でエディタが色分けする言語の範囲を変えた）
 * [ADR 0228](0228-render-content-markdown-with-react-markdown.md) - 教材の Markdown（問題文など）を、react-markdown で HTML の文字列を経ずに React の要素にして表示し、生の HTML は捨て、リンクは文字だけを表示する
 * [ADR 0230](0230-show-monaco-messages-in-japanese.md) - コードエディタの中に出る Monaco Editor の文言（右クリックのメニュー、検索・置換の欄、読み取り専用の知らせなど）を、monaco-editor に同梱された日本語の翻訳で日本語にし、翻訳は Monaco の入口で他の Monaco のモジュールより先に読み込む
 * [ADR 0232](0232-scan-only-app-index-html-for-dev-deps.md) - 開発時の起動で Vite が前もってまとめる依存を探す入口（optimizeDeps.entries）を、アプリの index.html だけにし、React の重複を確かめる自動テストを、塊の数ではなく全部の塊の中の React の本体の数で数えるようにする
@@ -67,33 +67,39 @@
 * [ADR 0127](0127-encode-narration-with-ffmpeg-aac-and-measure-with-ffprobe.md) - 文の音声を ffmpeg に組み込みの AAC エンコーダーで .m4a に変換し、durations.json の seconds と cue-reference.json の長さを ffprobe の format の duration で測る
 * [ADR 0145](0145-show-unprepared-lessons-as-in-preparation.md) - `chapters.json` には全レッスンを載せたまま、レッスンのディレクトリがまだ無いレッスンを準備中のレッスンとし、レッスン一覧に「準備中」と出して開けないようにする
 * [ADR 0158](0158-chapter-review-has-two-to-five-primary-elements.md) - 章末復習レッスンの主要素を、その章のレッスンの主要素から選ぶ 2〜5 件とし、ほかのレッスンは 1〜2 件のままにする
-* [ADR 0174](0174-number-chapters-and-lessons-by-position.md) - 画面と動画に出す章とレッスンの番号を `chapters.json` の並び順から決め、章カラーも章の番号で決める
+* [ADR 0174](0174-number-chapters-and-lessons-by-position.md) - 画面と動画に出す章とレッスンの番号を `chapters.json` の並び順から決め、章カラーも章の番号で決める（ADR 0264 で章の番号の数え方を変えた）
 * [ADR 0176](0176-pass-theme-and-chapter-to-video-by-ancestor-attributes.md) - 再生するときのテーマと章カラーを、動画を描く要素の祖先の `data-theme`・`data-chapter` と CSS 変数の継承で動画に渡し、`useLesson()` の材料になる章とレッスン定義は Player の `inputProps` で渡す
 * [ADR 0178](0178-do-not-use-player-built-in-controls.md) - Remotion の Player の組み込みの操作（操作の表示、Space キー、クリック、ダブルクリックでの全画面）を使わず、末尾で先頭に戻さず繰り返さない設定にして、再生の操作をすべてアプリの部品で行う
 * [ADR 0180](0180-derive-introducing-lesson-from-curriculum-list.md) - 要素の導入レッスンを、各レッスンの `lesson.json` ではなく、章とレッスンの一覧の「主要素」から求め、準備中のレッスンが導入する要素も決まるようにする
 * [ADR 0186](0186-round-cue-offsets-to-whole-frames.md) - 合図の関数 `at`・`endOf` が返す位置を整数のフレーム数にし、指定した秒をフレーム数に四捨五入してから足す
-* [ADR 0188](0188-write-rust-highlighter-by-hand.md) - 動画のコードの字句の色分けを、ライブラリを使わず、Rust の字句を分ける自作の走査で行う
+* [ADR 0188](0188-write-rust-highlighter-by-hand.md) - 動画のコードの字句の色分けを、ライブラリを使わず、Rust の字句を分ける自作の走査で行う（ADR 0270 で色付けする言語と出力の範囲を変えた）
 * [ADR 0190](0190-ignore-lint-disable-comments-in-video-code.md) - 動画のコードの lint では、コードの中の lint を止めるための指定（eslint-disable・stylelint-disable などのコメント）に従わない
 * [ADR 0198](0198-find-comma-pauses-by-matching-silences-to-punctuation.md) - 「、」にあたる無音を、−50dBFS より小さい音が 0.2 秒以上続く無音と、say の文の途中の句読点を前から順に対応づけて見つけ、数が合わない文はエラーにする
+* [ADR 0264](0264-number-chapters-per-language-and-c-chapter-ids.md) - C の章の ID を `c{NN}` にし、章の番号と章カラーを同じ言語の章の中での位置で決め、レッスン一覧を「C 言語編」「Rust 編」に区切る
+* [ADR 0265](0265-c-lessons-without-elements-records-and-generation.md) - C のレッスンに要素を持たせず、学習記録・分析・演習問題生成の対象にしないが、試行セッションは作って試行ログを残す
+* [ADR 0270](0270-highlight-c-code-in-editor-videos-and-chat.md) - エディタ・動画・質疑応答の回答で C のコードも色分けし、動画では clang の診断とメモリの検査の報告も色付けし、字句の区分と色をデザインシステムに足すことは未決事項に残す
 
 # カリキュラム
 
 * [ADR 0077](0077-curriculum-uses-trpl-as-coverage-guide.md) - カリキュラムを、TRPL を網羅の目安にして独自の章立てで組み立てる（ADR 0131 で個々のレッスンの理由を記録しない範囲を変えた）
 * [ADR 0078](0078-curriculum-spec-as-source-of-chapters-json.md) - カリキュラムの唯一の定義を `curriculum.md` とし、`chapters.json` をそのデータ形式とする
 * [ADR 0104](0104-teach-flush-after-print.md) - print! で出したプロンプトを入力の前に表示するための flush を、ch09-05 で教える
-* [ADR 0118](0118-teach-background-knowledge-hidden-by-gc-languages.md) - ガベージコレクションのある言語では意識しなくてよいが Rust では必要になる周辺知識を既知とせず、TRPL が扱っていないものもカリキュラムで扱う
+* [ADR 0118](0118-teach-background-knowledge-hidden-by-gc-languages.md) - ガベージコレクションのある言語では意識しなくてよいが Rust では必要になる周辺知識を既知とせず、TRPL が扱っていないものもカリキュラムで扱う（ADR 0262 でメモリの仕組みの扱い方を、ADR 0268 で ch04-01 の内容と ch05-04 の前提を変えた）
 * [ADR 0131](0131-record-reasons-for-later-lesson-changes.md) - カリキュラムを組み立てた後に、個々のレッスンを足す・移す・残すなどの変更をしたときは、その理由を ADR に記録する
 * [ADR 0157](0157-define-primary-elements-in-curriculum-list.md) - 各レッスンの主要素を章とレッスンの一覧に定めて唯一の定義とし、`lesson.json` の `primary_elements` をそれに合わせ、副要素はレッスンを作るときに決める
+* [ADR 0262](0262-teach-c-chapters-before-rust.md) - カリキュラムの最初に C 言語の章を置き、メモリの仕組みを演習で体験させてから Rust を教え、最初のレッスンを C から学ぶ理由を説明する動画のみのレッスンにする
+* [ADR 0263](0263-c-chapters-scope-three-chapters.md) - C の章を、C の基本・ポインタとメモリ・メモリの誤りの 3 章（27 レッスンと章末復習レッスン 3 つ）にし、扱う範囲を、レッスンの数ではなく、メモリを学ぶのに十分かどうかで決める
+* [ADR 0268](0268-contrast-rust-lessons-with-c-chapters.md) - Rust のレッスンのうち C の章で体験した内容に対応するものを、C と対比して説明する内容に書き直し、ch04-01 を C の章の振り返りと Rust の仕組みの予告のレッスンにする
 
 # 教材作成ガイドライン
 
 * [ADR 0001](0001-learners-solve-on-their-own.md) - 学習者に演習を自力で解かせることを、機能を設計するうえでの原則とする
-* [ADR 0002](0002-target-experienced-programmers.md) - 想定する学習者を他のプログラミング言語の経験者とする（ADR 0118 で既知とする概念の範囲を変えた）
+* [ADR 0002](0002-target-experienced-programmers.md) - 想定する学習者を他のプログラミング言語の経験者とする（ADR 0118 で既知とする概念の範囲を、ADR 0262 で集中して教える内容を変えた）
 * [ADR 0058](0058-do-not-explain-errors-by-code-only.md) - エラーをエラーコードだけで説明しない（ADR 0076 で動画に引き継いだ）
 * [ADR 0059](0059-plain-style-in-slide-headings.md) - スライドの見出し・箇条書き・図の語句に、常体と体言止めを許す（ADR 0076 で動画に引き継いだ）
 * [ADR 0069](0069-video-and-sentence-length-as-guidelines.md) - 動画の長さと 1 文の長さを目安とし、超えてよいことにする
 * [ADR 0095](0095-render-check-all-lessons-in-ci.md) - CI で、描画のチェックを毎回すべてのレッスンに行い、描画のチェックで見つかるのは描画したフレームのエラーだけだと仕様に書く（ADR 0145 で準備中のレッスンを描画の対象から外した）
-* [ADR 0146](0146-one-test-case-allowed-in-ch01-and-ch02.md) - ch01・ch02 のレッスン（章末復習レッスンを含む）の演習は、テストケースを 1 件以上でよいとし、ほかのレッスンは 3 件以上のままにする
+* [ADR 0146](0146-one-test-case-allowed-in-ch01-and-ch02.md) - ch01・ch02 のレッスン（章末復習レッスンを含む）の演習は、テストケースを 1 件以上でよいとし、ほかのレッスンは 3 件以上のままにする（ADR 0269 でテストケースを 1 件以上でよいとするレッスンの範囲を変えた）
 * [ADR 0156](0156-define-all-elements-before-lessons-one-per-lesson.md) - 要素マスタの要素をレッスンを作る前にすべて決め、1 レッスン 1 要素を基本にして 145 件を定め、要素 ID の分類を Rust の機能のまとまりで付ける
 * [ADR 0191](0191-count-lesson-title-on-rendered-frames.md) - 教材チェックツールの検査「表紙」で、最初のシーンの描画したフレームごとに、表示している `LessonTitle` を、`LessonTitle` 自身が知らせる数で数え、どのフレームでも表示していないときと、2 つ以上表示しているフレームがあるときをエラーにする
 * [ADR 0192](0192-report-browser-console-errors-in-render-check.md) - 教材チェックツールの描画のチェックで、描画時の例外に加えて、ブラウザの console に出たエラーもエラーにし、console の警告はエラーにしない
@@ -101,6 +107,7 @@
 * [ADR 0222](0222-build-judge-cli-only-with-content-check-feature.md) - 教材チェックツールが使う判定だけを行うプログラム（`progrust-judge`）を、Cargo の feature `content-check` を付けたときだけビルドしてアプリの `.app` に入れず、判定結果の JSON にビルドの出力を足し、判定できなかったレッスンをエラーにし、許可クレートを使う演習はまだ判定しない（ADR 0242 で許可クレートを使う演習の扱いを変えた）
 * [ADR 0242](0242-content-check-prepares-crates-before-judging.md) - 教材チェックツールは、許可クレートを使う演習の模範解答と初期コードも判定し、判定の前に progrust-judge が判定の作業領域で初回準備をする
 * [ADR 0245](0245-content-check-prepares-again-on-lost-crates.md) - 教材チェックツールの判定のビルドが、初回準備のやり直しが要る失敗になったときは、progrust-judge が判定の作業領域の prepared.json の status を failed にし、初回準備をやり直してから 1 回だけ判定し直し、また同じ失敗になったら判定結果を返さずに 0 以外の終了コードで終わる
+* [ADR 0269](0269-c-lesson-content-rules.md) - C の章の教材は、説明を短くまとめず、既習の C の内容だけを使い、Rust のコードを c01-01 の動画以外に登場させず、演習の出力を実行のたびに同じになるものにし、模範解答をメモリの検査で誤りが出ないものにし、c01-02〜c01-04 の演習はテストケースを 1 件以上でよいとする
 
 # コード実行・判定
 
@@ -117,7 +124,7 @@
 * [ADR 0101](0101-run-each-hidden-test-in-own-process.md) - test 方式の隠しテストを、テストごとに別のプロセスで実行し、終了コードと結果の行で判定する
 * [ADR 0102](0102-stop-learner-process-group-and-batch-output.md) - 学習者のプログラムをプロセスグループごとに止め、実行中の出力を一定時間ごとにまとめて画面に送る
 * [ADR 0105](0105-detect-lost-crates-from-offline-build-errors.md) - 演習の --offline のビルドの失敗の文から、許可クレートのソースやビルド結果が失われたことを判定し、初回準備を自動でやり直す。cargo の自動削除への対策として、アプリ専用の CARGO_HOME は使わない（ADR 0137 で E0786 を探す出力を変えた）
-* [ADR 0112](0112-run-learner-tests-with-test-button.md) - 演習画面に、学習者が書いたテストを cargo test で動かす「テスト」ボタンをどの演習でも置き、cargo の出力をそのまま表示する
+* [ADR 0112](0112-run-learner-tests-with-test-button.md) - 演習画面に、学習者が書いたテストを cargo test で動かす「テスト」ボタンをどの演習でも置き、cargo の出力をそのまま表示する（ADR 0266 で「テスト」ボタンを置く演習の範囲を変えた）
 * [ADR 0113](0113-judge-learner-tests-by-count-and-pass.md) - 学習者が書いたテストを、演習ごとに指定した件数以上あってすべて通ることで判定し、テストが実装の誤りを見つけられるかまでは判定しない
 * [ADR 0114](0114-allow-integration-and-doc-tests.md) - 学習者が tests/ の統合テストを書けるようにし、ドキュメントテストも実行して、ch11-05 と ch11-06 のレッスンを残す
 * [ADR 0125](0125-crates-unavailable-status-without-attempt-log.md) - ビルドが初回準備のやり直しが要る失敗になった実行・提出の結果を、新しい状態 `crates_unavailable` とし、試行ログに記録せず、準備の後に自動ではやり直さない
@@ -148,13 +155,14 @@
 * [ADR 0236](0236-stop-preparation-on-app-exit.md) - アプリを終了するときに初回準備が動いていたら、初回準備の cargo を止め、prepared.json を書かずに、次回の起動でやり直す
 * [ADR 0238](0238-call-allowed-crates-external-crates-on-screen.md) - 画面の文言では、許可クレートを「外部クレート」と呼び、初回準備の案内を「外部クレートを準備しています」などにする
 * [ADR 0244](0244-remove-exercise-builds-in-both-cargo-layouts.md) - 初回準備で target-validate/ から学習者の project/ のビルド結果を消すときは、cargo の版で変わるビルド先の配置によらず、パッケージ progrust_exercise の途中の成果物と fingerprint を、cargo 1.100.0 の置き場所（build/progrust_exercise/）と cargo 1.99.1 の置き場所（deps/・.fingerprint/）の両方から消す
+* [ADR 0266](0266-build-c-exercises-with-clang-and-check-memory-on-submit.md) - C の演習を学習者の Mac の clang でビルドし、実行はメモリの検査なしで動かし、提出は AddressSanitizer・UndefinedBehaviorSanitizer と、確保と解放を数えるライブラリによるメモリの検査つきで判定する
 
 # レッスン進行・進捗管理
 
 * [ADR 0018](0018-no-lesson-order-lock.md) - レッスンの受講順を制限せず、推奨レッスンを示す（ADR 0145 で準備中のレッスンを開けないことにした）
 * [ADR 0019](0019-autosave-drafts.md) - 編集中のコードを自動保存し、正解した後は初期コードから始める
 * [ADR 0071](0071-save-playback-position-by-sentence.md) - 動画の再生位置を文の単位で保存し、開き直したら続きから見られるようにする（ADR 0169 で最後の文まで再生したあとに開き直したときの表示位置を変えた）
-* [ADR 0119](0119-video-only-lessons-for-background-knowledge.md) - 周辺知識だけを扱うレッスンを演習のない動画のみのレッスンにし、動画を最後まで再生したら完了とする（ADR 0143 で、動画画面に「レッスン一覧へ」を表示しないことにした）
+* [ADR 0119](0119-video-only-lessons-for-background-knowledge.md) - 周辺知識だけを扱うレッスンを演習のない動画のみのレッスンにし、動画を最後まで再生したら完了とする（ADR 0143 で、動画画面に「レッスン一覧へ」を表示しないことにした、ADR 0265 で学習記録がないときのトップページの文言を変えた）
 * [ADR 0169](0169-show-video-from-start-after-watching-to-end.md) - 動画を最後の文まで再生したあとに開き直したときは、最後の文の頭ではなく、動画の先頭から表示する
 * [ADR 0170](0170-write-undecided-progress-fields-as-null.md) - `progress.json` で、完了していないレッスンの完了のときに決まるフィールドを、省かずに `null`（`completion_count` は 0）で書く
 * [ADR 0213](0213-passed-code-is-first-passed-submit.md) - 「前回の正解コードを見る」では、最後に正解した試行セッションの最初に正解した `submit` イベントを返し、正解した `submit` イベントが無い試行ログでは `not_found` にする
@@ -180,6 +188,7 @@
 * [ADR 0255](0255-include-stopped-turns-in-chat-history.md) - 回答を途中で止めた往復は、止めるまでに表示した回答で会話履歴に含め、エラーになった往復は会話履歴に含めない
 * [ADR 0256](0256-start-video-chat-panel-closed.md) - 動画画面の質問のチャットパネルは、動画画面を開くたびに閉じた状態で始め、開閉の状態を保存しない
 * [ADR 0261](0261-derive-learned-elements-for-chat-from-bundled-content.md) - 質疑応答で AI に渡す既習の要素を、アプリは同梱した教材（要素マスタの `chapter`、前にある準備中でないレッスンの `primary_elements`、そのレッスンの `secondary_elements`）から求め、同じ章の前にある準備中のレッスンだけが導入する要素は含めない
+* [ADR 0267](0267-pass-c-lesson-titles-and-summaries-to-chat.md) - 質疑応答で、C のレッスンには既習の C のレッスンのタイトルと概要を渡し、Rust のレッスンにも C の章で学んだ内容として同じものを渡し、指示文のファイルは言語で分けない
 
 # 学習記録・分析
 
