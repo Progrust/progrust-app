@@ -21,16 +21,9 @@ const VIEW = { x: 22, y: 0, scale: 1.16 };
 const CELLS = ["h", "e", "l", "l", "o"];
 const cellX = (i: number) => 520 + 72 * i;
 
-// 見出しを入れ替える。前の見出しが消え始めてから 6 フレーム後に、次の見出しが現れ始める。
-function headingStyle(
-  frame: number,
-  inAt: number | null,
-  outAt: number | null,
-) {
-  const shown =
-    inAt === null
-      ? { opacity: 1, translateY: 0 }
-      : enter(frame, inAt, { rise: 14 });
+// 見出しを出す・入れ替える。前の見出しが消え始めてから 6 フレーム後に、次の見出しが現れ始める。
+function headingStyle(frame: number, inAt: number, outAt: number | null) {
+  const shown = enter(frame, inAt, { rise: 14 });
   const hidden =
     outAt === null ? 0 : progress(frame, outAt, FRAMES.exit, easeOut);
   return {
@@ -72,17 +65,23 @@ export function HeapScene() {
   const { at } = useCues();
   const { lessonNumber, lessonTitle } = useLesson();
 
-  // 合図（文の開始からの秒は、音声を作ったあとで言葉に合わせ直す）。
-  const dataIn = at("h1", 3.39); // 「ヒープという領域に置きます」
-  const ptrIn = at("h2", 0.31); // 「スタックには」
-  const arrowIn = at("h2", 2.51); // 「どこにあるかを指す値」
-  const freed = at("h3", 2.32); // 「解放して」
-  const gcNote = at("h4", 0.2);
-  const noGc = at("h4", 3.66); // 「ガベージコレクションがありません」
-  const doubleFree = at("h5", 4.84); // 「二重解放が起こりえます」
-  const useAfterFree = at("h6", 2.79); // 「解放後の使用も起こりえます」
-  const harmful = at("h6", 5.3); // 「どちらも、プログラムを壊す深刻な不具合です」
+  // 合図（文の開始からの秒）。
+  const headingIn = at("h1", 0.05); // 「いっぽう」
+  const heapIn = at("h1", 3.38); // 「ヒープという領域に置きます」
+  const dataIn = at("h3", 1.79); // 「ハローの五文字を」
+  const stackIn = at("h4", 1.32); // 「スタックにある」
+  const ptrIn = at("h4", 2.34); // 「ピーティーアールの箱は」
+  const arrowIn = at("h4", 3.76); // 「ヒープのデータの場所を指すあたい」
+  const freed = at("h5", 2.09); // 「解放して」
+  const gcNote = at("h7", 0.7); // 「ラストには」
+  const noGc = at("h7", 1.52); // 「ガベージコレクションがありません」
+  const mistakes = at("h8", 0.05); // 「シーのように手で解放する言語では」
+  const doubleFree = at("h9", 0.79); // 「同じ領域を二回解放してしまう」
+  const useAfterFree = at("h10", 0.98); // 「解放したあとの領域を使ってしまう」
+  const harmful = at("h11", 0.05); // 「どちらも」
 
+  const heapArea = progress(frame, heapIn, 12, easeOut);
+  const stackArea = progress(frame, stackIn, 12, easeOut);
   const ptr = enter(frame, ptrIn, { duration: 14, rise: 10 });
   const drawn = progress(frame, arrowIn, FRAMES.lineDraw, easeInOut);
   const freedP = progress(frame, freed, 14, easeOut);
@@ -111,10 +110,10 @@ export function HeapScene() {
         data-lesson-label={`${lessonNumber} ${lessonTitle}`}
         style={{ opacity: sceneOpacity(frame, durationInFrames) }}
       >
-        <h1 style={headingStyle(frame, null, at("h5"))}>
+        <h1 style={headingStyle(frame, headingIn, mistakes)}>
           大きさが決まらないデータは、ヒープに置く
         </h1>
-        <h1 style={headingStyle(frame, at("h5") + 6, null)}>
+        <h1 style={headingStyle(frame, mistakes + 6, null)}>
           手で解放すると、誤りが起こりうる
         </h1>
         <figure
@@ -128,30 +127,35 @@ export function HeapScene() {
             role="img"
             aria-label="スタックの ptr が、ヒープ上のデータの場所を指す図。解放したあとのデータをもう一度解放する二重解放と、解放したあとのデータを指して使う解放後の使用を、× で示す"
           >
-            <rect
-              className="fill-muted"
-              x={0}
-              y={0}
-              width={300}
-              height={300}
-              rx={20}
-              stroke="none"
-            />
-            <rect
-              className="fill-muted"
-              x={460}
-              y={0}
-              width={540}
-              height={300}
-              rx={20}
-              stroke="none"
-            />
-            <text className="fill-muted" x={28} y={40} fontSize={18}>
-              スタック
-            </text>
-            <text className="fill-muted" x={488} y={40} fontSize={18}>
-              ヒープ
-            </text>
+            {/* スタックとヒープの領域。ナレーションが触れるときに出す */}
+            <g opacity={stackArea}>
+              <rect
+                className="fill-muted"
+                x={0}
+                y={0}
+                width={300}
+                height={300}
+                rx={20}
+                stroke="none"
+              />
+              <text className="fill-muted" x={28} y={40} fontSize={18}>
+                スタック
+              </text>
+            </g>
+            <g opacity={heapArea}>
+              <rect
+                className="fill-muted"
+                x={460}
+                y={0}
+                width={540}
+                height={300}
+                rx={20}
+                stroke="none"
+              />
+              <text className="fill-muted" x={488} y={40} fontSize={18}>
+                ヒープ
+              </text>
+            </g>
 
             {/* ヒープ上のデータ。解放すると破線のセルに入れ替わる */}
             {CELLS.map((ch, i) => {

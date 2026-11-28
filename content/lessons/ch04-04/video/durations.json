@@ -1,7 +1,23 @@
 {
   "t1": {
-    "seconds": 4.713417,
-    "say": "このレッスンでは、代入で所有権が移る、ムーブの仕組みを学びます。",
+    "seconds": 3.193479,
+    "say": "このレッスンでは、所有権のムーブを学びます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "t2": {
+    "seconds": 7.843458,
+    "say": "変数を別の変数に代入すると、あたいの所有権が移ります。その仕組みを、コードと図で見ていきます。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -16,8 +32,8 @@
     }
   },
   "m1": {
-    "seconds": 3.627708,
-    "say": "二行目で、変数エスワンにストリングのあたいを入れます。",
+    "seconds": 7.523458,
+    "say": "左のコードは、ストリングのあたいを作って変数に入れ、別の変数に代入してから表示する、メイン関数です。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -32,8 +48,8 @@
     }
   },
   "m2": {
-    "seconds": 5.695021,
-    "say": "ラストの変数は、あたいそのものを持ち、エスワンは、このあたいの所有者になります。",
+    "seconds": 4.284958,
+    "say": "二行目で、ストリングのあたいを作り、変数エスワンに入れます。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -48,8 +64,8 @@
     }
   },
   "m3": {
-    "seconds": 6.199667,
-    "say": "パイソンやジャバスクリプトの代入は、同じオブジェクトを共有するだけですが、ラストは違います。",
+    "seconds": 7.507479,
+    "say": "右の図のように、文字列のエイチとアイは、ヒープに置かれ、スタックにある、エスワンの箱が、その場所を指します。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -64,8 +80,8 @@
     }
   },
   "m4": {
-    "seconds": 7.277417,
-    "say": "三行目でエスワンをエスツーに代入すると、所有権がエスツーに移ります。これをムーブと呼びます。",
+    "seconds": 6.019333,
+    "say": "ラストの変数は、あたいそのものを持つので、エスワンは、この文字列の所有者になります。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -80,8 +96,8 @@
     }
   },
   "m5": {
-    "seconds": 6.9195,
-    "say": "コピーされるのは、スタック上のポインタ、長さ、容量だけで、ヒープ上の文字列は複製されません。",
+    "seconds": 7.472083,
+    "say": "パイソンやジャバスクリプトの代入では、二つの変数が、同じオブジェクトを共有し、どちらの変数も使えます。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -96,8 +112,72 @@
     }
   },
   "m6": {
-    "seconds": 5.717729,
-    "say": "ムーブしたあとのエスワンは、もう使えません。使えるのは、エスツーだけです。",
+    "seconds": 7.620021,
+    "say": "ラストでは違います。三行目で、エスワンをエスツーに代入すると、所有権が、エスツーに移ります。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m7": {
+    "seconds": 3.859167,
+    "say": "このように、所有権が移ることを、ムーブと呼びます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m8": {
+    "seconds": 7.361146,
+    "say": "ムーブでコピーされるのは、スタック上のポインタ、長さ、容量だけで、ヒープ上の文字列は複製されません。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m9": {
+    "seconds": 4.722813,
+    "say": "そのため、文字列がどれだけ長くても、代入は、すぐに済みます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "m10": {
+    "seconds": 8.716333,
+    "say": "所有権を手放したエスワンは、もう使えません。四行目のように、使えるのは、所有者になった、エスツーだけです。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -112,8 +192,8 @@
     }
   },
   "e1": {
-    "seconds": 4.665813,
-    "say": "四行目のように、ムーブしたあとのエスワンを使うと、コンパイルできません。",
+    "seconds": 6.127854,
+    "say": "ムーブしたあとの変数は、使えません。使おうとすると、どうなるのかを確かめます。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -128,8 +208,8 @@
     }
   },
   "e2": {
-    "seconds": 5.324229,
-    "say": "コンパイラは、四行目のエスワンを、ムーブ済みのあたいを使ったエラーとして示します。",
+    "seconds": 6.949146,
+    "say": "次のコードは、前のコードの四行目を変えて、エスツーの代わりに、エスワンを表示するようにしたものです。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -144,8 +224,72 @@
     }
   },
   "e3": {
-    "seconds": 5.410042,
-    "say": "その上の行では、三行目の代入で、あたいがムーブされたことも示しています。",
+    "seconds": 6.352563,
+    "say": "エスワンの所有権は、三行目で、エスツーに移っているので、このコードは、コンパイルできません。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e4": {
+    "seconds": 4.487083,
+    "say": "コードの下に出したのは、コンパイルしたときの、コンパイラの出力です。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e5": {
+    "seconds": 8.310396,
+    "say": "出力の一行目は、ムーブ済みのあたいを使ったエラーであること、二行目は、その場所が、コードの四行目であることを示します。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e6": {
+    "seconds": 6.820646,
+    "say": "出力の最後の行のしるしは、四行目のエスワンが、ムーブしたあとに使った箇所だと、示しています。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "e7": {
+    "seconds": 6.360313,
+    "say": "バリュームーブドヒアと書かれた行は、三行目の代入で、あたいがムーブされたことを示しています。",
     "voice": {
       "narrator": "Natsuki Karin",
       "speed": 120,
@@ -160,6 +304,22 @@
     }
   },
   "z1": {
+    "seconds": 3.203458,
+    "say": "最後に、このレッスンで分かったことをまとめます。",
+    "voice": {
+      "narrator": "Natsuki Karin",
+      "speed": 120,
+      "pause": 0.2,
+      "emotion": {
+        "hightension": 20,
+        "buchigire": 5,
+        "nageki": 0,
+        "sagesumi": 20,
+        "sasayaki": 80
+      }
+    }
+  },
+  "z2": {
     "seconds": 6.531938,
     "say": "代入すると、ストリングの所有権は、新しい変数に移ります。これがムーブです。",
     "voice": {
@@ -175,7 +335,7 @@
       }
     }
   },
-  "z2": {
+  "z3": {
     "seconds": 3.491604,
     "say": "ムーブでコピーされるのは、スタック上の部分だけです。",
     "voice": {
@@ -191,7 +351,7 @@
       }
     }
   },
-  "z3": {
+  "z4": {
     "seconds": 4.857938,
     "say": "ムーブした元の変数を使うと、ムーブ済みのあたいを使ったエラーになります。",
     "voice": {

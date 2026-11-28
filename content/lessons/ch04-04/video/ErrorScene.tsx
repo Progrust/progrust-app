@@ -1,5 +1,5 @@
 // ムーブ済みの値を使ったエラー。ムーブした後の s1 を使うコードと、rustc の出力を上下に並べる。
-// 出力を出すところで見出しを消し、コードと出力へ寄せる（1.2 倍）。
+// 見出し・コード・callout はナレーションが触れるときに出す。出力を出すところで見出しを消し、コードと出力へ寄せる（1.2 倍）。
 import type { CSSProperties } from "react";
 import { useCurrentFrame, useVideoConfig } from "remotion";
 import {
@@ -40,24 +40,34 @@ export function ErrorScene() {
   const { at } = useCues();
   const { lessonNumber, lessonTitle } = useLesson();
 
-  // 合図（文の開始からの秒は、音声を作ったあとで言葉に合わせ直す）。
-  const line4 = at("e1", 0.32); // 「4 行目のように」
-  const cannot = at("e1", 3.35); // 「コンパイルできません」
-  const toOutput = at("e2"); // 出力を出す
-  const wavy = at("e2", 1.52); // 「4 行目の s1 を」
-  const reading = at("e3", 0.25); // 出力の「value moved here」の行を読む
-  const moved = at("e3", 1.5); // 「3 行目の代入で」
+  // 合図（文の開始からの秒）。
+  const headingIn = at("e1", 0.05); // 「ムーブしたあとの変数は」
+  const codeIn = at("e2", 0.05); // 「次のコードは」
+  const line4 = at("e2", 4.58); // 「エスワンを表示するようにした」
+  const line3 = at("e3", 1.54); // 「三行目で」
+  const cannot = at("e3", 5.03); // 「コンパイルできません」
+  const toOutput = at("e4", 0.05); // 「コードの下に出したのは」。出力を出す
+  const wavy = at("e6", 2.25); // 「四行目のエスワンが」
+  const reading = at("e7", 0.05); // 出力の「value moved here」の行を読む
+  const moved = at("e7", 2.3); // 「三行目の代入で」
 
   const view = cameraAt(frame, VIEW_CODE, VIEW_OUTPUT, toOutput);
-  const heading = progress(frame, toOutput, FRAMES.sceneFade, easeOut);
+  const heading = enter(frame, headingIn, { rise: 14 });
+  const headingOut = progress(frame, toOutput, FRAMES.sceneFade, easeOut);
+  const code = enter(frame, codeIn);
   const ng = enter(frame, cannot);
   const ngOut = exit(frame, toOutput);
   const output = enter(frame, toOutput + FRAMES.exit);
-  // 出力の「value moved here」の行（6・7 行目）と、それが指すコードの 3 行目だけを残して淡くする。
+  // 3 行目の s1 のマーカーは、e3 で引いて出力を出すときに消し、e7 でもう一度引く。
+  const line3Mark = Math.max(
+    drawAt(frame, line3, toOutput),
+    drawAt(frame, moved),
+  );
+  // 出力の「value moved here」の行（4・5 行目）と、それが指すコードの 3 行目だけを残して淡くする。
   const dim = progress(frame, reading, FRAMES.dim, easeOut);
   const codeDim = { 1: { dim }, 2: { dim }, 4: { dim }, 5: { dim } };
   const outputDim = Object.fromEntries(
-    [1, 2, 3, 4, 5, 8, 9].map((n) => [n, { dim }]),
+    [1, 2, 3, 6, 7].map((n) => [n, { dim }]),
   );
 
   return (
@@ -69,18 +79,26 @@ export function ErrorScene() {
       >
         <h1
           style={{
-            opacity: 1 - heading,
-            transform: `translateY(${-10 * heading}px)`,
+            opacity: Math.min(heading.opacity, 1 - headingOut),
+            transform: `translateY(${heading.translateY - 10 * headingOut}px)`,
           }}
         >
           ムーブした後の変数は、使えない
         </h1>
-        <div style={{ position: "absolute", left: 72, top: 149, width: WIDTH }}>
+        <div
+          style={{
+            position: "absolute",
+            left: 72,
+            top: 149,
+            width: WIDTH,
+            ...rise(code.opacity, code.translateY),
+          }}
+        >
           <CodeBlock
             block="use-after-move"
             marks={[
               { line: 4, text: "s1", progress: drawAt(frame, line4, wavy) },
-              { line: 3, text: "s1", progress: drawAt(frame, moved) },
+              { line: 3, text: "s1", progress: line3Mark },
             ]}
             errors={[{ line: 4, text: "s1", progress: drawAt(frame, wavy) }]}
             lines={codeDim}
