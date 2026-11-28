@@ -21,8 +21,8 @@ pub async fn get_environment_status(
         })
 }
 
-/// 設定の `tool_paths` を読み直して `cargo`・`claude` を検出し直し、検出し直した後の環境の状態を返す。
-/// `environment_updated` も送る。`cargo` が見つかり、初回準備の「実行する条件」に当てはまれば初回準備を始める
+/// 設定の `tool_paths` を読み直して `cargo`・`claude`・`clang` を検出し直し、検出し直した後の環境の状態を
+/// 返す。`environment_updated` も送る。`cargo` が見つかり、初回準備の「実行する条件」に当てはまれば初回準備を始める
 /// （戻り値の初回準備の状態は `preparing`）。検出に時間がかかるので、async のコマンドにして、別のスレッドで行う。
 #[tauri::command(rename_all = "snake_case")]
 pub async fn redetect_tools<R: Runtime>(

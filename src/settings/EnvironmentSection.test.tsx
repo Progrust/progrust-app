@@ -34,6 +34,7 @@ const FOUND: EnvironmentStatus = {
     path: "/home/me/.local/bin/claude",
     version: "2.1.329",
   },
+  clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
   crates: {
     status: "ready",
     prepared_at: "2026-11-24T19:02:00+09:00",
@@ -157,6 +158,7 @@ it("見つからないときは、そのことと導入手順のボタンを表�
       required_rustc_version: "1.100.0",
     },
     claude: { status: "not_found", path: null, version: null },
+    clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
     crates: { status: "not_started", prepared_at: null, error: null },
   };
   render(<SettingsScreen />);

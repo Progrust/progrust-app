@@ -329,6 +329,11 @@ function mockEnvironment(
               required_rustc_version: "1.100.0",
             },
             claude: { status: claude, path: null, version: null },
+            clang: {
+              status: "found",
+              path: "/usr/bin/clang",
+              version: "21.0.0",
+            },
             crates: { status: crates, prepared_at: null, error: null },
           }
         : null;

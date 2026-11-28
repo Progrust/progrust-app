@@ -1,5 +1,5 @@
 //! 「再検出」のコマンド `redetect_tools`（spec/architecture/commands/environment.md「`redetect_tools`」、
-//! spec/exercise-runner/crates-and-workspace.md「初回準備」、ADR 0234）を、偽の `cargo`・`rustc`・`claude` と
+//! spec/exercise-runner/crates-and-workspace.md「初回準備」、ADR 0234）を、偽の `cargo`・`rustc`・`claude`・`clang` と
 //! モックの実行環境で確かめる。
 //!
 //! 偽の `cargo` の `build`・`test --no-run` は、失敗するか、止めるまで終わらないようにする
@@ -26,8 +26,8 @@ use fake_rust::FakeRust;
 use progrust_lib::claude::ClaudeEnv;
 use progrust_lib::environment::preparation::stop_crate_preparation_on_exit;
 use progrust_lib::environment::{
-    CargoSearch, ClaudeSearch, ClaudeTool, ENVIRONMENT_UPDATED, Environment, RustTools, ToolSearch,
-    VERSION_TIMEOUT, start_detection,
+    CargoSearch, ClangSearch, ClangTool, ClaudeSearch, ClaudeTool, ENVIRONMENT_UPDATED,
+    Environment, RustTools, ToolSearch, VERSION_TIMEOUT, start_detection,
 };
 use progrust_lib::runner::RunnerDir;
 use progrust_lib::runner::prepared::{
@@ -133,6 +133,13 @@ impl Fixture {
                 env: ClaudeEnv::from_process(),
                 timeout: VERSION_TIMEOUT,
             },
+            // 最後に調べる場所（アプリでは /usr/bin）には何も無いことにする。
+            clang: ClangSearch {
+                configured_clang: None,
+                path_var: Some(std::env::join_paths([self.path_dir.path()]).unwrap()),
+                system_dir: None,
+                timeout: VERSION_TIMEOUT,
+            },
         };
         start_detection(self.app.handle(), search);
         self._dirs.push(empty);
@@ -155,10 +162,11 @@ impl Fixture {
     }
 
     /// 設定の `tool_paths` を、設定画面と同じく `update_settings` で変える。
-    fn set_tool_paths(&self, cargo: Option<&Path>, claude: Option<&Path>) {
+    fn set_tool_paths(&self, cargo: Option<&Path>, claude: Option<&Path>, clang: Option<&Path>) {
         let mut settings = Settings::default();
         settings.tool_paths.cargo = cargo.map(|path| path.to_str().unwrap().to_string());
         settings.tool_paths.claude = claude.map(|path| path.to_str().unwrap().to_string());
+        settings.tool_paths.clang = clang.map(|path| path.to_str().unwrap().to_string());
         let settings = serde_json::to_value(settings).unwrap();
         invoke(
             &self.window,
@@ -243,12 +251,26 @@ fn claude_not_found_json() -> Value {
     json!({ "status": "not_found", "path": null, "version": null })
 }
 
+fn clang_not_found_json() -> Value {
+    json!({ "status": "not_found", "path": null, "version": null })
+}
+
 /// `dir` に置いた偽の `claude`（tests/fake_tools/claude を指すシンボリックリンク）のパス。何も用意しないので、
 /// `--version` は `2.1.329 (Claude Code)` を返す。偽の `claude` の手助け（fake_tools/claude.rs）は、ここで使わない
 /// 機能が多いので読み込まない。
 fn place_claude(dir: &Path) -> PathBuf {
     let original = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fake_tools/claude");
     let path = dir.join("claude");
+    symlink(original, &path).unwrap();
+    path
+}
+
+/// `dir` に置いた偽の `clang`（tests/fake_tools/clang を指すシンボリックリンク）のパス。何も用意しないので、
+/// `--version` は `Apple clang version 21.0.0 (clang-2100.4.1.1)` から始まる出力を返す。偽の `clang` の手助け
+/// （fake_tools/clang.rs）は、ここで使わない機能が多いので読み込まない。
+fn place_clang(dir: &Path) -> PathBuf {
+    let original = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fake_tools/clang");
+    let path = dir.join("clang");
     symlink(original, &path).unwrap();
     path
 }
@@ -274,7 +296,7 @@ fn is_running(pid: u32) -> bool {
 
 // ---- 設定のパス ----
 
-/// `tool_paths` を変えてから `redetect_tools` を呼ぶと、指定したパスの `cargo`・`claude` を使う。`update_settings`
+/// `tool_paths` を変えてから `redetect_tools` を呼ぶと、指定したパスの `cargo`・`claude`・`clang` を使う。`update_settings`
 /// だけでは、検出し直さない。
 #[test]
 fn the_changed_tool_paths_are_used_after_redetect() {
@@ -286,6 +308,7 @@ fn the_changed_tool_paths_are_used_after_redetect() {
     let before = json!({
         "cargo": cargo_found_json(&first, "1.100.0"),
         "claude": claude_not_found_json(),
+        "clang": clang_not_found_json(),
         "crates": ready_json(),
     });
     assert_eq!(fx.status(), before);
@@ -295,7 +318,9 @@ fn the_changed_tool_paths_are_used_after_redetect() {
     set_behavior(configured.cargo(), "hang", "hang");
     let claude_dir = TempDir::new().unwrap();
     let claude = place_claude(claude_dir.path());
-    fx.set_tool_paths(Some(configured.cargo()), Some(&claude));
+    let clang_dir = TempDir::new().unwrap();
+    let clang = place_clang(clang_dir.path());
+    fx.set_tool_paths(Some(configured.cargo()), Some(&claude), Some(&clang));
     assert_eq!(fx.status(), before, "update_settings で検出し直した");
 
     let expected = json!({
@@ -304,6 +329,11 @@ fn the_changed_tool_paths_are_used_after_redetect() {
             "status": "found",
             "path": claude.to_str().unwrap(),
             "version": "2.1.329",
+        },
+        "clang": {
+            "status": "found",
+            "path": clang.to_str().unwrap(),
+            "version": "21.0.0",
         },
         "crates": ready_json(),
     });
@@ -326,11 +356,18 @@ fn the_changed_tool_paths_are_used_after_redetect() {
             version: "2.1.329".into(),
         })
     );
+    assert_eq!(
+        fx.environment().clang(),
+        Ok(ClangTool {
+            path: clang.clone(),
+            version: Some("21.0.0".into()),
+        })
+    );
     assert!(cargo_calls(first.cargo()).is_empty());
     assert!(cargo_calls(configured.cargo()).is_empty());
 
-    // 設定のパスを消して検出し直すと、PATH の cargo に戻る。
-    fx.set_tool_paths(None, None);
+    // 設定のパスを消して検出し直すと、PATH の cargo に戻り、clang は見つからなくなる。
+    fx.set_tool_paths(None, None, None);
     assert_eq!(fx.redetect(), before);
 }
 
@@ -410,7 +447,7 @@ fn a_different_rustc_after_redetect_starts_the_preparation() {
 
     let newer = FakeRust::new("1.101.0");
     set_behavior(newer.cargo(), "hang", "hang");
-    fx.set_tool_paths(Some(newer.cargo()), None);
+    fx.set_tool_paths(Some(newer.cargo()), None, None);
     let status = fx.redetect();
     assert_eq!(status["cargo"], cargo_found_json(&newer, "1.101.0"));
     assert_eq!(status["crates"], crates_json("preparing"));
@@ -437,7 +474,7 @@ fn redetect_while_preparing_keeps_the_running_preparation() {
 
     let newer = FakeRust::new("1.101.0");
     set_behavior(newer.cargo(), "hang", "hang");
-    fx.set_tool_paths(Some(newer.cargo()), None);
+    fx.set_tool_paths(Some(newer.cargo()), None, None);
     let status = fx.redetect();
     assert_eq!(status["cargo"], cargo_found_json(&newer, "1.101.0"));
     assert_eq!(status["crates"], crates_json("preparing"));

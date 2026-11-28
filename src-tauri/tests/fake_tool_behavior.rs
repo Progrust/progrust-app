@@ -1,4 +1,4 @@
-//! テスト用の偽の claude・cargo・rustc（spec/non-functional/testing.md「偽の claude と偽の cargo」）が、
+//! テスト用の偽の claude・cargo・rustc・clang（spec/non-functional/testing.md「偽の claude と偽の cargo」）が、
 //! 決めたとおりに動くことと、アプリに同梱されないことを確かめる。
 
 mod fake_tools;
@@ -15,7 +15,7 @@ use std::{
 };
 
 use fake_tools::cargo_behavior::{cargo_calls, hanging_pid, set_behavior};
-use fake_tools::{FakeClaude, FakeRust, originals_dir, stream_json};
+use fake_tools::{FakeClang, FakeClaude, FakeRust, originals_dir, stream_json};
 use serde_json::Value;
 
 /// アプリが `claude` に渡す 6 つの環境変数（spec/claude-integration/invocation.md「環境変数」）。
@@ -481,6 +481,103 @@ fn claude_output_does_not_depend_on_env_vars() {
         );
         assert_eq!(fake.calls()[0].env, six_env_vars());
     }
+}
+
+// ---- 偽の clang ----
+
+fn run_clang(fake: &FakeClang, args: &[&str]) -> Output {
+    Command::new(fake.path())
+        .args(args)
+        .stdin(Stdio::null())
+        .output()
+        .expect("偽の clang を起動できない")
+}
+
+#[test]
+fn clang_version_succeeds_with_the_apple_clang_output() {
+    let fake = FakeClang::new();
+    let output = run_clang(&fake, &["--version"]);
+    assert!(output.status.success(), "{output:?}");
+    assert_eq!(
+        stdout_text(&output).lines().next(),
+        Some("Apple clang version 21.0.0 (clang-2100.4.1.1)")
+    );
+}
+
+#[test]
+fn clang_version_can_fail() {
+    let fake = FakeClang::new();
+    fake.set_version_exit_code(1);
+    let output = run_clang(&fake, &["--version"]);
+    assert_eq!(output.status.code(), Some(1));
+    assert!(stdout_text(&output).starts_with("Apple clang version 21.0.0"));
+}
+
+#[test]
+fn clang_version_can_return_prepared_output() {
+    let fake = FakeClang::new();
+    fake.set_version_stdout("");
+    let output = run_clang(&fake, &["--version"]);
+    assert!(output.status.success(), "{output:?}");
+    assert!(output.stdout.is_empty());
+
+    fake.set_version_stdout("Homebrew clang version 20.1.8\n");
+    assert_eq!(
+        stdout_text(&run_clang(&fake, &["--version"])),
+        "Homebrew clang version 20.1.8\n"
+    );
+}
+
+#[test]
+fn clang_version_can_stop_responding() {
+    let fake = FakeClang::new();
+    fake.set_version_hang();
+    let mut child = Command::new(fake.path())
+        .arg("--version")
+        .stdin(Stdio::null())
+        .stdout(Stdio::piped())
+        .spawn()
+        .unwrap();
+    // 偽の clang は calls/1/ を作ってから args と env を書くので、後に書く env を待つ。
+    wait_until("呼び出しを書き残す", || {
+        fake.path().with_file_name("calls/1/env").exists()
+    });
+    assert_still_running_then_kill(&mut child);
+    let mut stdout = Vec::new();
+    child
+        .stdout
+        .take()
+        .unwrap()
+        .read_to_end(&mut stdout)
+        .unwrap();
+    assert!(stdout.is_empty(), "何も出力しないはず");
+    assert_eq!(fake.calls()[0].args, ["--version"]);
+}
+
+/// 受け取った引数と環境変数を書き残す。ほかの引数には対応しない。
+#[test]
+fn clang_records_args_and_env() {
+    let fake = FakeClang::new();
+    let output = Command::new(fake.path())
+        .args(["-c", "main.c", "-o", "a b.o"])
+        .env("PROGRUST_FAKE_CLANG_TEST", "値 1")
+        .stdin(Stdio::null())
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1), "{output:?}");
+    run_clang(&fake, &["--version"]);
+    let calls = fake.calls();
+    assert_eq!(calls.len(), 2);
+    assert_eq!(calls[0].args, ["-c", "main.c", "-o", "a b.o"]);
+    assert_eq!(
+        calls[0]
+            .env
+            .get("PROGRUST_FAKE_CLANG_TEST")
+            .map(String::as_str),
+        Some("値 1")
+    );
+    assert_eq!(calls[1].args, ["--version"]);
+    assert_eq!(calls[1].env.get("PROGRUST_FAKE_CLANG_TEST"), None);
 }
 
 #[test]

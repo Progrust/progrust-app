@@ -868,6 +868,7 @@ describe("環境の案内", () => {
           required_rustc_version: "1.100.0",
         },
         claude: { status: "not_found", path: null, version: null },
+        clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
         crates: {
           status: "ready",
           prepared_at: "2026-11-24T19:02:00+09:00",

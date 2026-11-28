@@ -70,6 +70,7 @@ pub fn run() {
             // 設定の `tool_paths`。設定を読めないときは、設定のパスを使わずに探す。
             let configured_cargo = environment::configured_cargo(&data_dir);
             let configured_claude = environment::configured_claude(&data_dir);
+            let configured_clang = environment::configured_clang(&data_dir);
             // 正解した後に終わっていないセッション（前回、異常終了したときのもの）を終える。画面がレッスンを開く前に
             // 終えるように、ここで待って行う。終えられなくても、起動は止めない。
             report_session_errors("起動時", data_dir.end_all_passed_sessions());
@@ -84,11 +85,11 @@ pub fn run() {
             app.manage(Chats::default());
             // 実行・提出を同時に 1 つだけ行う状態。作業領域は `{app_data_dir}/workspace/`（実行のコマンドが使う）。
             app.manage(Runs::default());
-            // cargo・rustc と claude を、画面の表示を待たせずに別のスレッドで探す。cargo が見つかったら、
+            // cargo・rustc と claude と clang を、画面の表示を待たせずに別のスレッドで探す。cargo が見つかったら、
             // 初回準備の「実行する条件」を判定し、当てはまれば初回準備を始める（上の AppDataDir と RunnerDir を使う）。
             environment::start_detection(
                 app.handle(),
-                ToolSearch::from_process(configured_cargo, configured_claude),
+                ToolSearch::from_process(configured_cargo, configured_claude, configured_clang),
             );
             Ok(())
         })

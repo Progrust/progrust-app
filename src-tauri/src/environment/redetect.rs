@@ -1,9 +1,9 @@
 //! 設定画面と初回起動画面の「再検出」（spec/architecture/commands/environment.md「`redetect_tools`」、
 //! spec/exercise-runner/crates-and-workspace.md「初回準備」、ADR 0234）。
 //!
-//! 設定の `tool_paths` を読み直して `cargo`・`claude` を検出し直し、メモリの検出結果を置き換える。検出し直した後、
-//! `cargo` が見つかり、初回準備の状態が `preparing` でなければ、「実行する条件」を判定し、当てはまれば初回準備を
-//! 始め、当てはまらなければ `ready` にする。
+//! 設定の `tool_paths` を読み直して `cargo`・`claude`・`clang` を検出し直し、メモリの検出結果を置き換える。
+//! 検出し直した後、`cargo` が見つかり、初回準備の状態が `preparing` でなければ、「実行する条件」を判定し、
+//! 当てはまれば初回準備を始め、当てはまらなければ `ready` にする。
 //!
 //! 検出と判定（`rustc -vV` を動かす）は、状態のロックの外で行う。検出結果の置き換えと初回準備の状態の変更は、
 //! 1 回のロックの間に行う。そのため、実行・提出のコマンドや `get_environment_status` は、置き換える前の状態か、
@@ -16,12 +16,12 @@ use tauri::{AppHandle, Manager, Runtime};
 use super::preparation::{Judgment, begin, judge, notify, places, spawn_preparation};
 use super::{
     CratesState, CratesStatus, Environment, EnvironmentStatus, ToolSearch, configured_cargo,
-    configured_claude,
+    configured_clang, configured_claude,
 };
 use crate::storage::AppDataDir;
 
-/// `cargo`・`claude` を検出し直し、検出し直した後の環境の状態を返す。`environment_updated` も送る。検出に時間が
-/// かかり、起動時の検出が終わるのも待つので、メインスレッドでは呼ばない。
+/// `cargo`・`claude`・`clang` を検出し直し、検出し直した後の環境の状態を返す。`environment_updated` も送る。
+/// 検出に時間がかかり、起動時の検出が終わるのも待つので、メインスレッドでは呼ばない。
 ///
 /// 初回準備を始めたときは、戻り値の初回準備の状態は `preparing` になる。再検出を同時に呼んだときは、1 つずつ行う。
 pub fn redetect_tools<R: Runtime>(app: &AppHandle<R>) -> EnvironmentStatus {
@@ -35,12 +35,13 @@ pub fn redetect_tools<R: Runtime>(app: &AppHandle<R>) -> EnvironmentStatus {
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner());
 
-    let (cargo, claude) = tool_paths(app);
+    let (cargo, claude, clang) = tool_paths(app);
     let mut search = base
         .clone()
-        .unwrap_or_else(|| ToolSearch::from_process(None, None));
+        .unwrap_or_else(|| ToolSearch::from_process(None, None, None));
     search.cargo.configured_cargo = cargo;
     search.claude.configured_claude = claude;
+    search.clang.configured_clang = clang;
     let tools = search.detect();
 
     // 判定は、置き換える前に、ロックの外で行う。`preparing` のときは判定しない。`failed` のときは、それ自体が
@@ -84,11 +85,17 @@ pub fn redetect_tools<R: Runtime>(app: &AppHandle<R>) -> EnvironmentStatus {
     status
 }
 
-/// 設定（`settings.json`）の `tool_paths.cargo`・`tool_paths.claude`。学習者データのディレクトリが分からないとき、
-/// 設定を読めないときは、設定のパスを使わずに探す（起動時と同じ）。
-fn tool_paths<R: Runtime>(app: &AppHandle<R>) -> (Option<PathBuf>, Option<PathBuf>) {
+/// 設定（`settings.json`）の `tool_paths.cargo`・`tool_paths.claude`・`tool_paths.clang`。学習者データの
+/// ディレクトリが分からないとき、設定を読めないときは、設定のパスを使わずに探す（起動時と同じ）。
+fn tool_paths<R: Runtime>(
+    app: &AppHandle<R>,
+) -> (Option<PathBuf>, Option<PathBuf>, Option<PathBuf>) {
     match app.try_state::<AppDataDir>() {
-        Some(data_dir) => (configured_cargo(&data_dir), configured_claude(&data_dir)),
-        None => (None, None),
+        Some(data_dir) => (
+            configured_cargo(&data_dir),
+            configured_claude(&data_dir),
+            configured_clang(&data_dir),
+        ),
+        None => (None, None, None),
     }
 }

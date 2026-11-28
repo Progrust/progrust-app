@@ -263,6 +263,9 @@ impl Fixture {
         app.manage(Environment::detected(DetectedTools {
             cargo: tools,
             claude: None,
+            // clang は見つからない状態にする。Rust の演習は clang の有無に左右されない
+            // （spec/architecture/c-toolchain.md「見つからない場合」）ので、どのテストもそのまま通る。
+            clang: None,
         }));
         app.manage(Runs::new(RunLimits::default()));
 
