@@ -15,9 +15,14 @@ import "./lessons.css";
 
 const STATE_LABEL = { todo: "未着手", doing: "進行中", done: "完了" } as const;
 
-function scrollToChapter(chapterNumber: number) {
+// 章の区切りの要素の ID。章の番号は言語ごとに 1 から始まるので、章 ID で決める。
+function chapterAnchor(chapterId: string): string {
+  return `chapter-${chapterId}`;
+}
+
+function scrollToChapter(chapterId: string) {
   document
-    .getElementById(`ch${chapterNumber}`)
+    .getElementById(chapterAnchor(chapterId))
     ?.scrollIntoView?.({ block: "start" });
 }
 
@@ -71,13 +76,13 @@ export function LessonList({
     () => buildLessonList(numberChapters(chapters.chapters), progress),
     [chapters, progress],
   );
-  const recommendedNumber = model.recommendedChapter?.number ?? null;
+  const recommendedChapterId = model.recommendedChapter?.id ?? null;
   // 初期表示では、推奨レッスンのある章までスクロールする。
   useEffect(() => {
-    if (recommendedNumber !== null) {
-      scrollToChapter(recommendedNumber);
+    if (recommendedChapterId !== null) {
+      scrollToChapter(recommendedChapterId);
     }
-  }, [recommendedNumber]);
+  }, [recommendedChapterId]);
 
   const open = (row: Extract<LessonRow, { preparing: false }>) => {
     navigate(
@@ -86,9 +91,9 @@ export function LessonList({
         : { name: "video", lessonId: row.id },
     );
   };
-  const jump = (chapterNumber: number) => (event: MouseEvent) => {
+  const jump = (chapterId: string) => (event: MouseEvent) => {
     event.preventDefault();
-    scrollToChapter(chapterNumber);
+    scrollToChapter(chapterId);
   };
 
   return (
@@ -108,8 +113,8 @@ export function LessonList({
           >
             <a
               className="pg-btn pg-btn--sm"
-              href={`#ch${model.recommendedChapter.number}`}
-              onClick={jump(model.recommendedChapter.number)}
+              href={`#${chapterAnchor(model.recommendedChapter.id)}`}
+              onClick={jump(model.recommendedChapter.id)}
             >
               <span className="pg-next">次はここ</span>
               {model.recommendedRow.number} {model.recommendedRow.title}
@@ -120,62 +125,102 @@ export function LessonList({
       <div className="lessons-body">
         <nav className="pg-index" aria-label="章">
           <p className="pg-index-title">章</p>
-          {model.sections.map((section) => (
-            <a
-              key={section.number}
-              href={`#ch${section.number}`}
-              data-chapter={section.color}
-              onClick={jump(section.number)}
-            >
-              <span className="pg-badge">{section.number}</span>
-              <span>{section.title}</span>
-              <IndexCount section={section} />
-            </a>
+          {model.parts.map((part) => (
+            <div key={part.language} className="lessons-index-part">
+              <p className="subheading lessons-index-part-title">
+                {part.title}
+              </p>
+              {part.sections.map((section) => (
+                <a
+                  key={section.id}
+                  href={`#${chapterAnchor(section.id)}`}
+                  data-chapter={section.color}
+                  onClick={jump(section.id)}
+                >
+                  <span className="pg-badge">{section.badge}</span>
+                  <span>{section.title}</span>
+                  <IndexCount section={section} />
+                </a>
+              ))}
+            </div>
           ))}
         </nav>
         <div className="lessons-chapters">
-          {model.sections.map((section) => (
+          {model.parts.map((part) => (
             <section
-              key={section.number}
-              id={`ch${section.number}`}
-              data-chapter={section.color}
-              aria-labelledby={`ch${section.number}-title`}
+              key={part.language}
+              className="lessons-part"
+              aria-labelledby={`part-${part.language}-title`}
             >
-              <div className="pg-chapter-head">
-                <span className="pg-badge">{section.number}</span>
-                <div>
-                  <h2 id={`ch${section.number}-title`}>
-                    第{section.number}章{"　"}
-                    {section.title}
-                  </h2>
-                  <p>{section.description}</p>
-                </div>
-                <span className="pg-chapter-count">
-                  {section.total === 0 ? (
-                    "準備中"
-                  ) : (
-                    <>
-                      <b>{section.done}</b> / {section.total} 完了
-                    </>
-                  )}
-                </span>
-              </div>
-              <ul className="pg-lessons">
-                {section.rows.map((row) => (
-                  <li key={row.id}>
-                    {row.preparing ? (
-                      <PreparingRow row={row} />
-                    ) : (
-                      <LessonRowView row={row} onOpen={open} />
-                    )}
-                  </li>
+              <h2
+                id={`part-${part.language}-title`}
+                className="heading lessons-part-title"
+              >
+                {part.title}
+              </h2>
+              <div className="lessons-part-chapters">
+                {part.sections.map((section) => (
+                  <ChapterSectionView
+                    key={section.id}
+                    section={section}
+                    onOpen={open}
+                  />
                 ))}
-              </ul>
+              </div>
             </section>
           ))}
         </div>
       </div>
     </main>
+  );
+}
+
+function ChapterSectionView({
+  section,
+  onOpen,
+}: {
+  section: ChapterSection;
+  onOpen: (row: Extract<LessonRow, { preparing: false }>) => void;
+}) {
+  const anchor = chapterAnchor(section.id);
+  return (
+    <section
+      id={anchor}
+      data-chapter={section.color}
+      aria-labelledby={`${anchor}-title`}
+    >
+      <div className="pg-chapter-head">
+        <span className="pg-badge">{section.badge}</span>
+        <div>
+          <h2 id={`${anchor}-title`}>
+            {section.label}
+            {"　"}
+            {section.title}
+          </h2>
+          <p>{section.description}</p>
+        </div>
+        <span className="pg-chapter-count">
+          {section.total === 0 ? (
+            "準備中"
+          ) : (
+            <>
+              <b>{section.done}</b> / {section.total} 完了
+            </>
+          )}
+        </span>
+      </div>
+      <ul className="pg-lessons">
+        {section.rows.map((row) => (
+          <li key={row.id}>
+            {row.preparing ? (
+              <PreparingRow row={row} />
+            ) : (
+              <LessonRowView row={row} onOpen={onOpen} />
+            )}
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

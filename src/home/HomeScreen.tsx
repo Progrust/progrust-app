@@ -3,8 +3,12 @@
 import { Check, ListChecks } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { MouseEvent, ReactNode } from "react";
-import { chapterColor, findLesson, numberChapters } from "../chapterNumbers";
-import type { NumberedChapter } from "../chapterNumbers";
+import {
+  chapterBadge,
+  chapterColor,
+  findLesson,
+  numberChapters,
+} from "../chapterNumbers";
 import { listChapters } from "../commands/content";
 import type { ChapterList } from "../commands/content";
 import { getDashboard } from "../commands/learningRecord";
@@ -18,7 +22,7 @@ import {
 import { useNavigation } from "../router";
 import "./home.css";
 
-const EMPTY_ANALYSIS = "演習に正解すると、ここに分析が表示されます";
+const EMPTY_ANALYSIS = "Rust の演習に正解すると、ここに分析が表示されます";
 const UNREADABLE_ANALYSIS = "分析ファイルを読み込めません";
 
 // ダッシュボードと章の並びを読み込んで、トップページを表示する。
@@ -117,7 +121,7 @@ export function Home({
         aria-label="次のレッスン"
       >
         <div className="pg-emblem">
-          <small>第{found.chapter.number}章</small>
+          <small>{found.chapter.label}</small>
           <b>{number}</b>
         </div>
         <div className="pg-hero-body">
@@ -186,19 +190,14 @@ export function Home({
           </span>
         </div>
         <nav className="pg-tiles" aria-label="章の一覧">
-          {dashboard.chapters.map((count) => {
-            const chapter = numbered.find((n) => n.chapter.id === count.id);
-            return (
-              <ChapterTileView
-                key={count.id}
-                number={chapter?.number ?? 0}
-                chapter={chapter}
-                count={count}
-                current={next !== null && next.chapter_id === count.id}
-                onOpen={openLessons}
-              />
-            );
-          })}
+          {dashboard.chapters.map((count) => (
+            <ChapterTileView
+              key={count.id}
+              count={count}
+              current={next !== null && next.chapter_id === count.id}
+              onOpen={openLessons}
+            />
+          ))}
           <a className="pg-tile pg-tile--more" href="#" onClick={openLessons}>
             レッスン一覧を開く
           </a>
@@ -226,15 +225,12 @@ export function Home({
   );
 }
 
+// 章の番号と言語は、get_dashboard の chapters[] の number・language を使う。
 function ChapterTileView({
-  number,
-  chapter,
   count,
   current,
   onOpen,
 }: {
-  number: number;
-  chapter: NumberedChapter | undefined;
   count: Dashboard["chapters"][number];
   current: boolean;
   onOpen: (event: MouseEvent) => void;
@@ -247,12 +243,14 @@ function ChapterTileView({
     <a
       className="pg-tile"
       href="#"
-      data-chapter={chapter?.color ?? chapterColor(number || 1)}
+      data-chapter={chapterColor(count.number)}
       aria-current={current ? "true" : undefined}
       onClick={onOpen}
     >
       <div className="pg-tile-head">
-        <span className="pg-badge">{number}</span>
+        <span className="pg-badge">
+          {chapterBadge(count.language, count.number)}
+        </span>
         <span className="pg-tile-name">{count.title}</span>
         {current && <span className="pg-tile-state">学習中</span>}
       </div>

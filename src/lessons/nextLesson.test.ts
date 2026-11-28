@@ -66,6 +66,28 @@ describe("次のレッスンへ", () => {
     expect(nextLessonId(chapters, "ch01-02")).toBeNull();
   });
 
+  it("C の最後のレッスン c03-review の次は、Rust の最初のレッスン ch01-01 になる", () => {
+    const chapters = [
+      {
+        ...chapter("c01", [lesson("c01-01"), lesson("c01-review")]),
+        language: "c" as const,
+      },
+      {
+        ...chapter("c03", [lesson("c03-01"), lesson("c03-review")]),
+        language: "c" as const,
+        number: 3,
+      },
+      chapter("ch01", [lesson("ch01-01"), lesson("ch01-review")]),
+    ];
+    expect(nextLessonId(chapters, "c03-review")).toBe("ch01-01");
+    // ch01-01 が準備中なら、その次の準備中でないレッスン。
+    chapters[2] = chapter("ch01", [
+      lesson("ch01-01", true),
+      lesson("ch01-review"),
+    ]);
+    expect(nextLessonId(chapters, "c03-review")).toBe("ch01-review");
+  });
+
   it("章の並びにないレッスンでは、無し", () => {
     const chapters = [chapter("ch01", [lesson("ch01-01")])];
     expect(nextLessonId(chapters, "nope")).toBeNull();

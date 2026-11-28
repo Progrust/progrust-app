@@ -39,14 +39,26 @@ const durations: Durations = {
   a3: { seconds: 1.0, say: "さん", voice },
 };
 
+// C の第1章の後に、Rust の第1〜5章。
 const chapters: Chapter[] = [
+  {
+    id: "c01",
+    title: "C の基本",
+    description: "",
+    language: "c",
+    number: 1,
+    lessons: [
+      lesson("c01-01", "video_only", "なぜ C 言語から学ぶのか"),
+      lesson("c01-02", "lesson", "はじめての C"),
+    ],
+  },
   {
     id: "ch01",
     title: "はじめに",
     description: "",
     language: "rust",
     number: 1,
-    lessons: [],
+    lessons: [lesson("ch01-01", "lesson", "はじめての Rust")],
   },
   {
     id: "ch02",
@@ -146,7 +158,7 @@ function setup(
 ) {
   const kind =
     options.kind ??
-    (lessonId === "ch04-01" || lessonId === "ch05-01"
+    (lessonId === "ch04-01" || lessonId === "ch05-01" || lessonId === "c01-01"
       ? "video_only"
       : "lesson");
   const calls: Calls = [];
@@ -257,6 +269,31 @@ describe("開いたとき", () => {
     );
   });
 
+  it("C の章のレッスンでは、左上に「C 第1章」を出し、Rust の第1章と同じ章カラーを付ける", async () => {
+    const { container } = setup("c01-02");
+    await ready();
+    const chip = container.querySelector(".pg-chip");
+    expect(chip).toHaveTextContent("C 第1章 C の基本");
+    expect(chip?.querySelector(".pg-chip-num")).toBeNull();
+    expect(container.querySelector(".pg-context-title")).toHaveTextContent(
+      "C1-2 はじめての C",
+    );
+    expect(container.querySelector("main")).toHaveAttribute(
+      "data-chapter",
+      "1",
+    );
+    cleanup();
+    const rust = setup("ch01-01");
+    await ready();
+    expect(rust.container.querySelector(".pg-chip")).toHaveTextContent(
+      "1はじめに",
+    );
+    expect(rust.container.querySelector("main")).toHaveAttribute(
+      "data-chapter",
+      "1",
+    );
+  });
+
   it("open_lesson を呼び、保存した文の頭の位置で止めて表示する", async () => {
     const { calls, container } = setup("ch04-02", {
       progress: { last_sentence_id: "a2" },
@@ -340,6 +377,40 @@ describe("右端の行動", () => {
     expect(navigate).toHaveBeenCalledWith({
       name: "video",
       lessonId: "ch04-02",
+    });
+  });
+
+  it("C の章の動画のみのレッスンも、最後まで再生すると見終わったことを保存し、「次のレッスンへ」を出す", async () => {
+    const { calls, navigate } = setup("c01-01");
+    await ready();
+    expect(
+      screen.queryByRole("button", { name: "次のレッスンへ" }),
+    ).not.toBeInTheDocument();
+    const bar = screen.getByRole("slider", { name: "再生位置" });
+    vi.spyOn(bar, "getBoundingClientRect").mockReturnValue(
+      DOMRect.fromRect({ x: 0, y: 0, width: 1000, height: 20 }),
+    );
+    await act(async () => {
+      fireEvent.pointerDown(bar, { button: 0, pointerId: 1, clientX: 1000 });
+      fireEvent.pointerUp(bar, { button: 0, pointerId: 1, clientX: 1000 });
+    });
+    // 動画のみのレッスンは、見終わったことの保存で完了になる（バックエンドの save_video_position）。
+    await waitFor(() =>
+      expect(commands(calls, "save_video_position")).toContainEqual({
+        lesson_id: "c01-01",
+        last_sentence_id: "a3",
+        video_watched: true,
+      }),
+    );
+    expect(
+      screen.queryByRole("button", { name: "演習へ" }),
+    ).not.toBeInTheDocument();
+    fireEvent.click(
+      await screen.findByRole("button", { name: "次のレッスンへ" }),
+    );
+    expect(navigate).toHaveBeenCalledWith({
+      name: "video",
+      lessonId: "c01-02",
     });
   });
 

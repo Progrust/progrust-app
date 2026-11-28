@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
+import { ChapterChip } from "../ChapterChip";
+import type { ChipChapter } from "../ChapterChip";
 import { findLesson, numberChapters } from "../chapterNumbers";
 import { useChat } from "../chat/useChat";
 import { getLesson, listChapters } from "../commands/content";
@@ -191,6 +193,16 @@ export function ExerciseScreen({ lessonId }: { lessonId: string }) {
     [chapters, lessonId],
   );
 
+  // 左上と正解のモーダルに出す、章のチップ。
+  const chip: ChipChapter | null =
+    found === null
+      ? null
+      : {
+          language: found.chapter.language,
+          number: found.chapter.number,
+          title: found.chapter.chapter.title,
+        };
+
   // 正解のモーダルと帯に出す、レッスンの番号と名前と、「次のレッスンへ」で開くレッスン。
   const lessonLabel =
     found !== null
@@ -243,12 +255,9 @@ export function ExerciseScreen({ lessonId }: { lessonId: string }) {
           />
           {links.backLabel}
         </a>
-        {found !== null ? (
+        {found !== null && chip !== null ? (
           <>
-            <span className="pg-chip">
-              <span className="pg-chip-num">{found.chapter.number}</span>
-              {found.chapter.chapter.title}
-            </span>
+            <ChapterChip chapter={chip} />
             <span className="pg-context-title">
               {found.lesson.number} {found.lesson.lesson.title}
             </span>
@@ -275,14 +284,7 @@ export function ExerciseScreen({ lessonId }: { lessonId: string }) {
           lessonId={lessonId}
           loaded={loaded}
           lessonLabel={lessonLabel}
-          chapter={
-            found === null
-              ? null
-              : {
-                  number: found.chapter.number,
-                  title: found.chapter.chapter.title,
-                }
-          }
+          chapter={chip}
           next={next}
           leaveRef={leaveRef}
         />
@@ -317,7 +319,7 @@ function ExerciseWorkspace({
   lessonId: string;
   loaded: Loaded;
   lessonLabel: string;
-  chapter: { number: number; title: string } | null;
+  chapter: ChipChapter | null;
   // 「次のレッスンへ」で開く画面と、ボタンに添える番号と名前。無いときは null で、ボタンを出さない。
   next: { route: Route; label: string } | null;
   // 画面の中のリンク・ボタン（左上のリンク、「動画を見直す」）で移るときの関数を、ここに差し込む。

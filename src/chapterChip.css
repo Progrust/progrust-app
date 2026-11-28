@@ -1,0 +1,4 @@
+/* 番号の丸を置かない章のチップ（C の章）。丸のぶんの左の余白を、右と同じにする。 */
+.pg-chip.pgx-chip-text {
+  padding-left: var(--space-12);
+}

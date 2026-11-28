@@ -107,6 +107,48 @@ const chapters: Chapter[] = [
   },
 ];
 
+// C の第1〜3章の後に、Rust の第1章（C の章を含む章の並び）。
+const withC: Chapter[] = [
+  {
+    id: "c01",
+    title: "C の基本",
+    description: "",
+    language: "c",
+    number: 1,
+    lessons: [
+      summary("c01-01", "video_only", "なぜ C 言語から学ぶのか"),
+      summary("c01-02", "lesson", "はじめての C"),
+    ],
+  },
+  {
+    id: "c02",
+    title: "ポインタとメモリ",
+    description: "",
+    language: "c",
+    number: 2,
+    lessons: [summary("c02-01", "lesson", "アドレス")],
+  },
+  {
+    id: "c03",
+    title: "メモリの誤り",
+    description: "",
+    language: "c",
+    number: 3,
+    lessons: [
+      summary("c03-01", "lesson", "解放した後の使用"),
+      summary("c03-review", "chapter_review", "C 第3章の復習"),
+    ],
+  },
+  {
+    id: "ch01",
+    title: "はじめに",
+    description: "",
+    language: "rust",
+    number: 1,
+    lessons: [summary("ch01-01", "lesson", "はじめての Rust")],
+  },
+];
+
 function summary(id: string, kind: LessonKind, title: string) {
   return {
     id,
@@ -121,6 +163,8 @@ function summary(id: string, kind: LessonKind, title: string) {
 type Calls = { command: string; args: unknown }[];
 
 type Options = {
+  // list_chapters の章の並び。無いときは chapters。
+  chapters?: Chapter[];
   // get_environment_status の cargo の状態。無いときは見つかっている。
   cargo?: "found" | "not_found" | "version_too_old";
   kind?: LessonKind;
@@ -147,12 +191,13 @@ function mockCommands(calls: Calls, options: Options = {}) {
   const handle: Parameters<typeof mockIPC>[0] = (command, args) => {
     calls.push({ command, args });
     const lessonId = (args as { lesson_id?: string }).lesson_id ?? "";
-    const title =
-      chapters[3].lessons.find((l) => l.id === lessonId)?.title ?? "";
+    const list = options.chapters ?? chapters;
+    const owner = list.find((c) => c.lessons.some((l) => l.id === lessonId));
+    const title = owner?.lessons.find((l) => l.id === lessonId)?.title ?? "";
     const starter = options.starter ?? { "src/main.rs": STARTER };
     switch (command) {
       case "list_chapters":
-        return { chapters };
+        return { chapters: list };
       case "get_lesson":
         if (lessonFailures > 0) {
           lessonFailures -= 1;
@@ -161,7 +206,7 @@ function mockCommands(calls: Calls, options: Options = {}) {
         return {
           lesson: {
             id: lessonId,
-            chapter: "ch04",
+            chapter: owner?.id ?? "ch04",
             kind: options.kind ?? "lesson",
             title,
             primary_elements: [],
@@ -352,6 +397,31 @@ describe("開いたとき", () => {
     expect(container.querySelector("main")).toHaveAttribute(
       "data-chapter",
       "4",
+    );
+  });
+
+  it("C の章のレッスンでは、左上に「C 第1章」を出し、Rust の第1章と同じ章カラーを付ける", async () => {
+    const { container } = setup("c01-02", { chapters: withC });
+    await editor();
+    const chip = container.querySelector(".pg-chip");
+    expect(chip).toHaveTextContent("C 第1章 C の基本");
+    expect(chip?.querySelector(".pg-chip-num")).toBeNull();
+    expect(container.querySelector(".pg-context-title")).toHaveTextContent(
+      "C1-2 はじめての C",
+    );
+    expect(container.querySelector("main")).toHaveAttribute(
+      "data-chapter",
+      "1",
+    );
+    cleanup();
+    const rust = setup("ch01-01", { chapters: withC });
+    await editor();
+    expect(rust.container.querySelector(".pg-chip")).toHaveTextContent(
+      "1はじめに",
+    );
+    expect(rust.container.querySelector("main")).toHaveAttribute(
+      "data-chapter",
+      "1",
     );
   });
 
@@ -1079,6 +1149,28 @@ describe("判定結果と正解", () => {
       key: "Escape",
     });
     expect(screen.queryByRole("dialog", { name: "正解" })).toBeNull();
+  });
+
+  it("C の最後のレッスン c03-review に正解すると、「次のレッスンへ」で Rust の ch01-01 を開く", async () => {
+    const { calls, navigate } = setup("c03-review", {
+      chapters: withC,
+      kind: "chapter_review",
+    });
+    await editor();
+    await submit(calls, PASSED);
+    const dialog = passDialog();
+    expect(dialog).toHaveTextContent("C3-2 C 第3章の復習 を完了しました");
+    expect(dialog).toHaveTextContent("C 第3章 メモリの誤り");
+    const next = within(dialog).getByRole("button", { name: /次のレッスンへ/ });
+    expect(next).toHaveTextContent("1-1 はじめての Rust");
+    await act(async () => {
+      fireEvent.click(next);
+    });
+    await flush();
+    expect(navigate).toHaveBeenCalledWith({
+      name: "video",
+      lessonId: "ch01-01",
+    });
   });
 
   it("次のレッスンが無いレッスンでは、「次のレッスンへ」を出さない", async () => {

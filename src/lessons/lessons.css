@@ -52,12 +52,49 @@
   top: var(--space-16);
 }
 
+/* 「C 言語編」「Rust 編」の区切りの間は、章の間（40px）より広く空ける
+   （design-system/progrust/components/LessonList/README.md）。 */
 .lessons-chapters {
   flex: 1;
   min-width: 0;
   display: flex;
   flex-direction: column;
+  gap: 64px;
+}
+
+.lessons-part {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-16);
+}
+
+/* 区切りの見出し。章の色を持ち込まない（data-chapter の外に置く）。 */
+.lessons-part-title {
+  margin: 0;
+  color: var(--ink);
+}
+
+.lessons-part-chapters {
+  display: flex;
+  flex-direction: column;
   gap: 40px;
+}
+
+/* 章の目次の「C 言語編」「Rust 編」の区切り。 */
+.lessons-index-part {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.lessons-index-part + .lessons-index-part {
+  margin-top: var(--space-16);
+}
+
+.lessons-index-part-title {
+  margin: 0;
+  padding: 0 var(--space-10) var(--space-4);
+  color: var(--ink-2);
 }
 
 /* 準備中のレッスンの行。番号と文字を淡い色にし、マウスを乗せても見た目を変えない。 */

@@ -221,7 +221,8 @@ it("シーンを、レッスン ID の data-lesson を持つ要素の中に描�
 
 it("useLesson() は、章の並びとレッスン定義から決めた番号と名前を返す", () => {
   renderAt(40);
-  expect(value("lesson")).toBe("2 所有権 2-2 所有権のムーブ");
+  // 章の番号は、章の並びの位置ではなく、list_chapters の number で決まる。
+  expect(value("lesson")).toBe("4 所有権 4-2 所有権のムーブ");
 });
 
 it("useCodeBlocks() は、台本の code_blocks を返す", () => {

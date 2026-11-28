@@ -1,6 +1,6 @@
 // レッスン一覧の表示用の値を、章の並びと進捗から求める。
 // 決まりは documents/spec/screens/lesson-list.md。
-import type { LessonKind } from "../commands/content";
+import type { Language, LessonKind } from "../commands/content";
 import type { ProgressSummary } from "../commands/progress";
 import type { NumberedChapter } from "../chapterNumbers";
 
@@ -21,7 +21,11 @@ export type LessonRow =
     };
 
 export type ChapterSection = {
+  language: Language;
   number: number;
+  // 章の表示（「第4章」「C 第1章」）と、章の番号の印の中の文字（「4」「C1」）。
+  label: string;
+  badge: string;
   color: number;
   id: string;
   title: string;
@@ -33,8 +37,21 @@ export type ChapterSection = {
   rows: LessonRow[];
 };
 
-export type LessonListModel = {
+// 「C 言語編」「Rust 編」の区切り。章の無い言語の区切りは作らない。
+export type LanguagePart = {
+  language: Language;
+  title: string;
   sections: ChapterSection[];
+};
+
+// 区切りの見出しと、表示する順（C 言語編が先）。
+const PARTS: { language: Language; title: string }[] = [
+  { language: "c", title: "C 言語編" },
+  { language: "rust", title: "Rust 編" },
+];
+
+export type LessonListModel = {
+  parts: LanguagePart[];
   done: number;
   total: number;
   // 推奨レッスンのある章。推奨レッスンが無いときは null。
@@ -50,7 +67,8 @@ export function buildLessonList(
   let totalAll = 0;
   let recommendedChapter: ChapterSection | null = null;
   let recommendedRow: LessonListModel["recommendedRow"] = null;
-  const sections = chapters.map(({ chapter, number, color, lessons }) => {
+  const sections = chapters.map((numbered) => {
+    const { chapter, lessons } = numbered;
     let done = 0;
     let total = 0;
     const rows = lessons.map(({ lesson, number: lessonNo }): LessonRow => {
@@ -83,8 +101,11 @@ export function buildLessonList(
     doneAll += done;
     totalAll += total;
     const section: ChapterSection = {
-      number,
-      color,
+      language: numbered.language,
+      number: numbered.number,
+      label: numbered.label,
+      badge: numbered.badge,
+      color: numbered.color,
       id: chapter.id,
       title: chapter.title,
       description: chapter.description,
@@ -100,8 +121,13 @@ export function buildLessonList(
     }
     return section;
   });
+  const parts = PARTS.map(({ language, title }) => ({
+    language,
+    title,
+    sections: sections.filter((section) => section.language === language),
+  })).filter((part) => part.sections.length > 0);
   return {
-    sections,
+    parts,
     done: doneAll,
     total: totalAll,
     recommendedChapter,
