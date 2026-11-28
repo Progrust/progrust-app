@@ -36,6 +36,7 @@
 * [ADR 0250](0250-keep-remotion-skill-out-of-git-and-restore-from-lock.md) - Remotion のスキルを、コミットの履歴は書き換えずに、今後のコミットから外して .gitignore し、手元では skills-lock.json から版を固定した skills の CLI で入れ直し、実装のループの作業ツリーには用意しない
 * [ADR 0253](0253-upgrade-monaco-and-rand-for-dependabot-alerts.md) - Dependabot alerts が報告した依存の脆弱性に対応して、monaco-editor を 0.58 系に上げて間接の依存の dompurify を直った版にし、許可クレートの rand を 0.9.5 に上げる
 * [ADR 0259](0259-stage-prompts-in-build-script.md) - 同梱する指示文を、ビルドスクリプトがリポジトリの `prompts/` の直下の `.md` だけ `src-tauri/gen/bundled/prompts/` に写し、Tauri がそれを `{app_resources}/prompts/` に入れる
+* [ADR 0271](0271-do-not-detect-clang-without-command-line-tools.md) - Command Line Tools が入っていない Mac で、導入のダイアログを出さずに clang の有無を確かめる手順は用意せず、clang の検出は作者の Mac（Command Line Tools が入っている）で動けばよいとする
 
 # 教材データ形式
 
@@ -156,6 +157,8 @@
 * [ADR 0238](0238-call-allowed-crates-external-crates-on-screen.md) - 画面の文言では、許可クレートを「外部クレート」と呼び、初回準備の案内を「外部クレートを準備しています」などにする
 * [ADR 0244](0244-remove-exercise-builds-in-both-cargo-layouts.md) - 初回準備で target-validate/ から学習者の project/ のビルド結果を消すときは、cargo の版で変わるビルド先の配置によらず、パッケージ progrust_exercise の途中の成果物と fingerprint を、cargo 1.100.0 の置き場所（build/progrust_exercise/）と cargo 1.99.1 の置き場所（deps/・.fingerprint/）の両方から消す
 * [ADR 0266](0266-build-c-exercises-with-clang-and-check-memory-on-submit.md) - C の演習を学習者の Mac の clang でビルドし、実行はメモリの検査なしで動かし、提出は AddressSanitizer・UndefinedBehaviorSanitizer と、確保と解放を数えるライブラリによるメモリの検査つきで判定する
+* [ADR 0272](0272-read-kind-and-location-from-sanitizer-reports.md) - C の演習の提出で、誤りの行がある報告のファイルだけを memory_error にし、メモリの検査の報告の UndefinedBehaviorSanitizer の文と AddressSanitizer の SUMMARY の種類から kind を、最初のスタックの main.c のフレームから location を決め、report を SUMMARY の行までにし、kind に stack_overflow を足し、ASAN_OPTIONS に allocator_may_return_null=1 と external_symbolizer_path=/usr/bin/atos を足す
+* [ADR 0273](0273-build-leak-check-library-from-embedded-source.md) - C の演習の提出のメモリリークの検査のライブラリを、バックエンドに埋め込んだ C のソースから提出のたびに学習者の clang でビルドし、学習者の実行ファイルのコードから呼ばれた malloc・calloc・realloc・strdup を数え、検査の起動がふつうに終わらなかったテストケースを runtime_error にする
 
 # レッスン進行・進捗管理
 

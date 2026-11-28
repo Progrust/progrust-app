@@ -24,6 +24,6 @@ C の演習（[C のコードの実行（run）](c-run.md)、[C のコードの�
 - `run` イベントの `mode` は、常に `main` である。
 - `error_codes` は、常に空の配列にする。
 - `run` イベントの `stderr` には、ビルドの出力（`clang` の出力。[C の演習の作業領域とビルド](c-project-assembly.md)「ビルドの出力の表示」）と、プログラムの標準エラー出力を、この順に連結して保存する。ビルドの出力は、ANSI エスケープを除去したものにする。シグナルで終わったときの 1 行（[C のコードの実行（run）](c-run.md)「シグナルで終わったとき」）は保存しない。
-- `submit` イベントの `stderr` には、提出で表示したビルドの出力（[C のコードの提出（submit）](c-submit.md)「手順」の 1。ANSI エスケープを除去したもの）と、プログラムの標準エラー出力を、この順に連結して保存する。「プログラムの標準エラー出力」は、判定結果が `timeout`・`runtime_error` のテストケースの `detail`（シグナルで終わった `runtime_error` では、`detail` に続けたシグナルの 1 行を含む）と、`memory_error` のテストケースの `detail` の `report` を、`cases[]` の順に連結したものとする。空のものは除き、改行で終わらないものには改行を足す。
+- `submit` イベントの `stderr` には、提出で表示したビルドの出力（[C のコードの提出（submit）](c-submit.md)「手順」の 1。ANSI エスケープを除去したもの）と、プログラムの標準エラー出力を、この順に連結して保存する。「プログラムの標準エラー出力」は、判定結果が `timeout`・`runtime_error` のテストケースの `detail`（シグナルで終わった `runtime_error` では `detail` に続けたシグナルの 1 行を、メモリリークを検査できなかった `runtime_error` では `detail` に続けたその旨の 1 行を含む）と、`memory_error` のテストケースの `detail` の `report` を、`cases[]` の順に連結したものとする。空のものは除き、改行で終わらないものには改行を足す。
 - `submit` イベントの `failed_cases` には、`memory_error` のテストケースの表示名も入れる。
 - `stdout` / `stderr` の保存の上限と、`stdin` の記録のしかたは、上と同じである。

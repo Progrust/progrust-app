@@ -22,7 +22,7 @@ C の演習（C のレッスンの演習）のビルドには `clang` を使う�
   - 次の場所は使えないとして飛ばし、次の場所を調べる。設定で指定したパスが無いか、相対パスである。`clang` が無いか、実行できない。`clang --version` が失敗するか、10 秒で終わらないか、出力が空である。
   - 使える場所が無いときは、見つからないとする（「見つからない場合」）。
 - バージョンは、`clang --version` の出力の 1 行目で、`version` の次の語とする（例: `Apple clang version 21.0.0 (clang-2100.4.1.1)` の `21.0.0`）。取り出せないときも、その場所を使い、バージョンは無いものとする。バージョンは表示に使い、必要条件には使わない。
-- Command Line Tools が入っていない Mac で、`clang` の有無を確かめる方法は決まっていない（[アーキテクチャの未決事項](open-questions.md)）。
+- Command Line Tools が入っていない Mac で、導入のダイアログを出さずに `clang` の有無を確かめる手順は持たない。そのような Mac の `/usr/bin/clang` は、`clang --version` で起動すると、Command Line Tools の導入を促すダイアログを出す。
 - 検出結果（パス・バージョン）はメモリに保持し、`get_environment_status` で返す（[環境のコマンドとイベント](commands/environment.md)「環境の状態」）。
 
 ## 見つからない場合

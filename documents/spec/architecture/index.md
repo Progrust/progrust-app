@@ -11,4 +11,4 @@
 * [開発環境と依存の版](development-environment.md) - アプリの開発に要るもの（Node.js、npm、Rust ツールチェーン、Xcode Command Line Tools、gitleaks）、パッケージマネージャー（npm）、主な依存の版と版の固定のしかた（`package.json`・`package-lock.json`・`Cargo.lock`）、版を上げるときに確かめること、アプリの識別子（`com.progrust.desktop`）と開発時の識別子、lint と整形の道具、秘密の情報の検査（gitleaks の版の固定、`npm run secrets:check` が確かめるものと確かめないもの、自己点検、版を変えるとき）、git に入れないエージェントのスキル（Remotion のスキル）を `skills-lock.json` から入れ直す手順、開発時の起動・本番ビルドなどの npm のコマンドの名前を定める。
 * [Tauri の権限](tauri-permissions.md) - フロントエンドに許可する Tauri の権限（capabilities）の範囲と、外部 URL を開ける範囲、アセットプロトコルで読める範囲、外部サイトをアプリ内で表示しないことを定める。
 * [アーキテクチャの受け入れ条件](acceptance.md) - アーキテクチャの仕様を満たしたと判断する条件を定める。
-* [アーキテクチャの未決事項](open-questions.md) - アーキテクチャの仕様でまだ決まっていない事項（読み込めないファイルを退避したときの通知の出し方、Command Line Tools が入っていない Mac で `clang` の有無を確かめる方法）を記す。
+* [アーキテクチャの未決事項](open-questions.md) - アーキテクチャの仕様でまだ決まっていない事項（読み込めないファイルを退避したときの通知の出し方）を記す。
