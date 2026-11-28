@@ -367,9 +367,18 @@ impl FakeClang {
 
 /// `claude` に渡す 6 つのほかの環境変数として、cargo がテストのプロセスに渡す `CARGO_` で始まるものを、
 /// `名前=値` の形で返す。値に改行を含むものは、行ごとに比べられないので除く。
-fn cargo_env_lines() -> Vec<String> {
+///
+/// `shell_names_only` のときは、名前が sh の変数名として使えるもの（英数字と `_`。`CARGO_BIN_EXE_progrust-judge` の
+/// ように `-` を含まないもの）だけにする。偽の `clang` は sh のスクリプトで、Linux の `/bin/sh`（dash）は、変数名として
+/// 使えない名前の環境変数を、`env` などの子プロセスに渡さないからである。
+fn cargo_env_lines(shell_names_only: bool) -> Vec<String> {
+    let is_shell_name = |name: &str| {
+        !name.starts_with(|c: char| c.is_ascii_digit())
+            && name.chars().all(|c| c.is_ascii_alphanumeric() || c == '_')
+    };
     let lines: Vec<String> = std::env::vars()
         .filter(|(name, value)| name.starts_with("CARGO_") && !value.contains('\n'))
+        .filter(|(name, _)| !shell_names_only || is_shell_name(name))
         .map(|(name, value)| format!("{name}={value}"))
         .collect();
     assert!(
@@ -499,7 +508,7 @@ fn c_exercises_run_without_cargo_in_any_preparation_state() {
         ]
     );
     // clang には、アプリが受け取った環境変数をそのまま渡す（`claude` に渡す 6 つに絞らない）。
-    for line in cargo_env_lines() {
+    for line in cargo_env_lines(true) {
         assert!(calls[0].1.contains(&line), "{line} が clang に渡っていない");
     }
     // `c-project/` は {app_data_dir}/workspace/c-project/。Rust の演習の project/ は作らない。
@@ -1050,7 +1059,7 @@ mod macos {
     /// 学習者のプログラムには、アプリが受け取った環境変数をそのまま渡す（`claude` に渡す 6 つに絞らない）。
     #[test]
     fn environment_variables_are_not_narrowed_for_the_program() {
-        let others = cargo_env_lines();
+        let others = cargo_env_lines(false);
         let fx = fixture();
         let code = "#include <stdio.h>\n\
              extern char **environ;\n\
