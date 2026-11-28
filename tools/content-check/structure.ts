@@ -3,7 +3,9 @@
 // 演習のファイルの中身と、台本・音声の中身の検査は、ほかの項目が行う。
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { readdirSync } from "node:fs";
 import {
+  isCLesson,
   isDirectory,
   isFile,
   isPrepared,
@@ -72,14 +74,16 @@ function checkLesson(entry: LessonEntry): Finding[] {
     if (!isDirectory(join(entry.dir, "exercise"))) {
       error("exercise", "exercise/ がない");
     } else {
+      const isC = isCLesson(entry);
       for (const file of [
         "exercise/problem.md",
         "exercise/explanation.md",
-        "exercise/starter/src/main.rs",
-        "exercise/solution/src/main.rs",
+        isC ? "exercise/starter/main.c" : "exercise/starter/src/main.rs",
+        isC ? "exercise/solution/main.c" : "exercise/solution/src/main.rs",
       ]) {
         needFile(file);
       }
+      if (isC) checkCExerciseFiles(entry, error);
       const exercise =
         lesson.state === "ok" ? lesson.value.exercise : undefined;
       const judge =
@@ -88,11 +92,37 @@ function checkLesson(entry: LessonEntry): Finding[] {
           : undefined;
       const mode =
         typeof judge === "object" && judge !== null ? judge.mode : undefined;
-      if (mode === "stdout") needFile("exercise/cases.json");
-      if (mode === "test") needFile("exercise/judge_tests.rs");
+      if (isC || mode === "stdout") needFile("exercise/cases.json");
+      if (!isC && mode === "test") needFile("exercise/judge_tests.rs");
     }
   }
   return out;
+}
+
+// C の演習は、starter/main.c・solution/main.c・cases.json（と問題文・解説）だけを持つ。
+// judge_tests.rs と、starter/・solution/ の main.c 以外のファイル（src/・Cargo.toml など）を持たない。
+function checkCExerciseFiles(
+  entry: LessonEntry,
+  error: (file: string, message: string) => void,
+): void {
+  const dir = join(entry.dir, "exercise");
+  if (existsAnything(join(dir, "judge_tests.rs"))) {
+    error(
+      "exercise/judge_tests.rs",
+      "C の演習に judge_tests.rs がある（C の演習は stdout 方式だけで、cases.json で判定する）",
+    );
+  }
+  for (const part of ["starter", "solution"]) {
+    const partDir = join(dir, part);
+    if (!isDirectory(partDir)) continue;
+    for (const name of readdirSync(partDir).sort()) {
+      if (name === "main.c") continue;
+      error(
+        `exercise/${part}/${name}`,
+        `C の演習の ${part}/ に main.c 以外の ${name} がある（ファイルは main.c の 1 つだけ）`,
+      );
+    }
+  }
 }
 
 function existsAnything(path: string): boolean {

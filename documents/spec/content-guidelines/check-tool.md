@@ -9,7 +9,7 @@ description: "`tools/` の教材チェックツールで検証するチェック
 | チェック項目 | 内容 |
 |---|---|
 | カリキュラム | `chapters.json` の章の並び（C の章を含む）、各章の ID・タイトル・説明、レッスンの並びと、章末復習レッスン以外の各レッスンの `lesson.json` の `title` が [章とレッスンの一覧](../curriculum/chapters/index.md) と一致する。`chapters.json` の章の `language` が、同じ一覧の章 ID が表す言語（`c{NN}` なら C、`ch{NN}` なら Rust）と一致し、C の章がすべて Rust の章より前にある。`lesson.json` の `kind` が `video_only` のレッスンが、同じ一覧で動画のみのレッスンと定めたレッスンと一致する。`kind` が `lesson` の各 Rust のレッスンの `lesson.json` の `primary_elements` が、同じ一覧の「主要素」と一致する（C のレッスンは要素を持たないので照合しない） |
-| 構成 | `chapters.json` の全レッスンのディレクトリと必要なファイルが存在する。章末復習レッスン以外は、`video/` に `script.json`・`index.tsx`・`durations.json` と、すべての文の音声ファイルがある。動画のみのレッスンには `exercise/` がない |
+| 構成 | `chapters.json` の全レッスンのディレクトリと必要なファイルが存在する。章末復習レッスン以外は、`video/` に `script.json`・`index.tsx`・`durations.json` と、すべての文の音声ファイルがある。動画のみのレッスンには `exercise/` がない。C のレッスンの演習は `starter/main.c`・`solution/main.c`・`cases.json` だけを持ち、`judge_tests.rs` と、`starter/`・`solution/` の `main.c` 以外のファイル（`src/`・`Cargo.toml` など）を持たない |
 | 定義 | `lesson.json` が [レッスン定義の形式（lesson.json）](../content-format/lesson-json.md) の形式に合っている。C のレッスンの `lesson.json` が、同じ文書「C のレッスン」の決まり（`primary_elements`・`secondary_elements` が空、`exercise` が `layout` は `single`・`judge.mode` は `stdout`・`judge.target` は `main.c` など）に合っている。要素 ID が要素マスタに存在する |
 | 既習要素 | Rust のレッスンの `secondary_elements` の各要素が、そのレッスンにとって既習の要素である |
 | 要素マスタ | `deprecated` でない要素は、いずれかの Rust のレッスンの `primary_elements` に含まれている |

@@ -4,6 +4,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  isCLesson,
   isFile,
   isPrepared,
   readLessonEntries,
@@ -23,6 +24,8 @@ const DEFAULT_ALLOWED_CRATES = join(ROOT, "runner/allowed-crates.toml");
 const FEW_CASE_CHAPTERS = new Set(["ch01", "ch02"]);
 const MIN_CASES = 3;
 const MIN_CASES_EARLY = 1;
+// C の演習は 3 件以上。標準入力を学ぶ前の c01-02〜c01-04 は 1 件以上（c-lessons.md「演習」）。
+const FEW_CASE_C_LESSONS = new Set(["c01-02", "c01-03", "c01-04"]);
 
 const PROBLEM_HEADINGS = ["問題", "出力", "例"];
 const EXPLANATION_HEADINGS = [
@@ -33,6 +36,7 @@ const EXPLANATION_HEADINGS = [
 ];
 
 interface Exercise {
+  isC: boolean;
   dir: string;
   mode: string | undefined;
   dependencies: unknown;
@@ -57,6 +61,7 @@ function exerciseOf(entry: LessonEntry): Exercise | null {
       ? (e.judge.mode as string | undefined)
       : undefined;
   return {
+    isC: isCLesson(entry),
     dir: join(entry.dir, "exercise"),
     mode,
     dependencies: e.dependencies,
@@ -171,11 +176,13 @@ function checkText(entry: LessonEntry, ex: Exercise): Finding[] {
 function checkCases(entry: LessonEntry, ex: Exercise): Finding[] {
   const out: Finding[] = [];
   const error = finder(entry, CASES_CHECK, out);
-  const min = FEW_CASE_CHAPTERS.has(entry.chapter)
-    ? MIN_CASES_EARLY
-    : MIN_CASES;
+  const few = ex.isC
+    ? FEW_CASE_C_LESSONS.has(entry.id)
+    : FEW_CASE_CHAPTERS.has(entry.chapter);
+  const min = few ? MIN_CASES_EARLY : MIN_CASES;
 
-  if (ex.mode === "stdout") {
+  // C の演習は stdout 方式だけで、cases.json で数える（方式の誤りは「定義」が報告する）。
+  if (ex.isC || ex.mode === "stdout") {
     const cases = readCases(join(ex.dir, "cases.json"));
     if (cases === null) return out;
     if ("message" in cases) {
@@ -240,7 +247,8 @@ function checkCrates(
   allowed: Set<string> | null,
 ): Finding[] {
   const out: Finding[] = [];
-  if (!Array.isArray(ex.dependencies)) return out;
+  // C のレッスンは許可クレートを使わない（dependencies は「定義」が空だけを許す）。
+  if (ex.isC || !Array.isArray(ex.dependencies)) return out;
   const error = finder(entry, CRATES_CHECK, out);
   for (const name of ex.dependencies) {
     if (typeof name !== "string") continue;

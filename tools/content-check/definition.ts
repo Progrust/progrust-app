@@ -5,6 +5,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
+  isCLesson,
   isPrepared,
   readLessonEntries,
   readLessonJson,
@@ -48,6 +49,53 @@ function readElementIds(contentDir: string): Set<string> | undefined {
     );
   } catch {
     return undefined;
+  }
+}
+
+// C のレッスンの exercise（lesson-json.md「C のレッスン」）。
+function checkCExercise(
+  exercise: unknown,
+  error: (message: string) => void,
+): void {
+  if (!isRecord(exercise)) {
+    error("exercise がオブジェクトでない");
+    return;
+  }
+  if (exercise.layout !== "single") {
+    error(
+      `C のレッスンの exercise.layout は single だけ（${JSON.stringify(exercise.layout)}）`,
+    );
+  }
+  const judge = exercise.judge;
+  if (!isRecord(judge)) {
+    error("exercise.judge がオブジェクトでない");
+  } else {
+    if (judge.mode !== "stdout") {
+      error(
+        `C のレッスンの exercise.judge.mode は stdout だけ（${JSON.stringify(judge.mode)}）`,
+      );
+    }
+    if (judge.target !== undefined && judge.target !== "main.c") {
+      error(
+        `C のレッスンの exercise.judge.target は main.c（${JSON.stringify(judge.target)}）`,
+      );
+    }
+    if (judge.min_learner_tests !== undefined) {
+      error("C のレッスンでは exercise.judge.min_learner_tests を書けない");
+    }
+  }
+  for (const key of ["dependencies", "readonly_files"]) {
+    const value = exercise[key];
+    if (value !== undefined && !(Array.isArray(value) && value.length === 0)) {
+      error(`C のレッスンの exercise.${key} は空の配列にする`);
+    }
+  }
+  const labels = exercise.case_labels;
+  if (
+    labels !== undefined &&
+    !(isRecord(labels) && Object.keys(labels).length === 0)
+  ) {
+    error("C のレッスンの exercise.case_labels は空のオブジェクトにする");
   }
 }
 
@@ -132,6 +180,44 @@ function checkExercise(
   }
 }
 
+// Rust のレッスンと生成問題の要素（要素マスタにあること、主要素の件数、video_only の副要素）。
+function checkElements(
+  lesson: Record<string, unknown>,
+  knownKind: string | undefined,
+  lists: [string, unknown][],
+  elementIds: Set<string> | undefined,
+  error: (message: string) => void,
+): void {
+  for (const [key, value] of lists) {
+    if (!isStringArray(value)) {
+      error(`${key} が文字列の配列でない`);
+      continue;
+    }
+    if (elementIds) {
+      for (const id of value) {
+        if (!elementIds.has(id))
+          error(`${key} の要素 ${id} が要素マスタにない`);
+      }
+    }
+  }
+  if (isStringArray(lesson.primary_elements) && knownKind !== undefined) {
+    const [min, max] = primaryRange(knownKind);
+    const n = lesson.primary_elements.length;
+    if (n < min || n > max) {
+      error(
+        `primary_elements の件数が ${knownKind} の範囲（${min === max ? `${min} 件` : `${min}〜${max} 件`}）にない（${n} 件）`,
+      );
+    }
+  }
+  if (
+    knownKind === "video_only" &&
+    isStringArray(lesson.secondary_elements) &&
+    lesson.secondary_elements.length > 0
+  ) {
+    error("video_only の secondary_elements は空の配列にする");
+  }
+}
+
 function checkLesson(
   entry: LessonEntry,
   elementIds: Set<string> | undefined,
@@ -186,6 +272,10 @@ function checkLesson(
   }
   const knownKind =
     typeof kind === "string" && KINDS.includes(kind) ? kind : undefined;
+  const isC = isCLesson(entry);
+  if (isC && knownKind === "generated") {
+    error("C のレッスンの kind に generated は使えない");
+  }
 
   // tags
   const tags = lesson.tags;
@@ -205,33 +295,17 @@ function checkLesson(
     ["primary_elements", lesson.primary_elements],
     ["secondary_elements", lesson.secondary_elements],
   ];
-  for (const [key, value] of lists) {
-    if (!isStringArray(value)) {
-      error(`${key} が文字列の配列でない`);
-      continue;
-    }
-    if (elementIds) {
-      for (const id of value) {
-        if (!elementIds.has(id))
-          error(`${key} の要素 ${id} が要素マスタにない`);
+  if (isC) {
+    // C のレッスンは要素を持たない。
+    for (const [key, value] of lists) {
+      if (!isStringArray(value)) {
+        error(`${key} が文字列の配列でない`);
+      } else if (value.length > 0) {
+        error(`C のレッスンの ${key} は空の配列にする`);
       }
     }
-  }
-  if (isStringArray(lesson.primary_elements) && knownKind !== undefined) {
-    const [min, max] = primaryRange(knownKind);
-    const n = lesson.primary_elements.length;
-    if (n < min || n > max) {
-      error(
-        `primary_elements の件数が ${knownKind} の範囲（${min === max ? `${min} 件` : `${min}〜${max} 件`}）にない（${n} 件）`,
-      );
-    }
-  }
-  if (
-    knownKind === "video_only" &&
-    isStringArray(lesson.secondary_elements) &&
-    lesson.secondary_elements.length > 0
-  ) {
-    error("video_only の secondary_elements は空の配列にする");
+  } else {
+    checkElements(lesson, knownKind, lists, elementIds, error);
   }
 
   // exercise
@@ -241,6 +315,7 @@ function checkLesson(
   } else if (knownKind !== undefined) {
     if (lesson.exercise === undefined)
       error(`kind が ${knownKind} の lesson.json に exercise がない`);
+    else if (isC) checkCExercise(lesson.exercise, error);
     else checkExercise(lesson.exercise, error);
   }
   return out;

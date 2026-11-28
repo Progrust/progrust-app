@@ -42,6 +42,11 @@ export function readLessonEntries(contentDir: string): LessonEntry[] {
   return out;
 }
 
+// C の章のレッスン（章 ID が c{NN} の形）。chapters.json の language と章 ID の一致は「カリキュラム」が検査する。
+export function isCLesson(entry: LessonEntry): boolean {
+  return /^c\d+$/.test(entry.chapter);
+}
+
 // レッスンのディレクトリが無いレッスンは、準備中のレッスン。
 export function isPrepared(entry: LessonEntry): boolean {
   return !existsSync(entry.dir);
