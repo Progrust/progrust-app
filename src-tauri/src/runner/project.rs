@@ -206,17 +206,22 @@ fn read_allowed_crates(runner: &RunnerDir) -> Result<BTreeMap<String, String>, A
 
 /// `dir` を空のディレクトリにする。無いときは作る。
 fn empty_dir(dir: &Path) -> Result<(), AssemblyError> {
-    let io_error = |source| AssemblyError::Io {
+    make_empty_dir(dir).map_err(|source| AssemblyError::Io {
         path: dir.to_path_buf(),
         source,
-    };
+    })
+}
+
+/// `dir` を空のディレクトリにする。無いときは作る。`dir` がシンボリックリンクのときは、リンク先をたどらずに
+/// リンクを消してから作る。C の演習の `c-project/` の組み立て（[`super::c_project`]）でも使う。
+pub(super) fn make_empty_dir(dir: &Path) -> io::Result<()> {
     match std::fs::symlink_metadata(dir) {
-        Ok(metadata) if metadata.is_dir() => std::fs::remove_dir_all(dir).map_err(io_error)?,
-        Ok(_) => std::fs::remove_file(dir).map_err(io_error)?,
+        Ok(metadata) if metadata.is_dir() => std::fs::remove_dir_all(dir)?,
+        Ok(_) => std::fs::remove_file(dir)?,
         Err(error) if error.kind() == io::ErrorKind::NotFound => {}
-        Err(error) => return Err(io_error(error)),
+        Err(error) => return Err(error),
     }
-    create_dir_all(dir)
+    std::fs::create_dir_all(dir)
 }
 
 fn create_dir_all(dir: &Path) -> Result<(), AssemblyError> {

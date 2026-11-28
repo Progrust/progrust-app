@@ -52,6 +52,11 @@ impl WorkspaceDir {
         self.root.join("project")
     }
 
+    /// C の演習の実行・提出のたびに組み立てる作業領域（`c-project/`。[`super::c_project`]）。
+    pub fn c_project(&self) -> PathBuf {
+        self.root.join("c-project")
+    }
+
     /// `project/` の、許可クレートを使う演習のビルド先（`target/`。初回準備と共有）。
     pub fn target(&self) -> PathBuf {
         self.root.join("target")
@@ -92,6 +97,7 @@ mod tests {
         assert_eq!(workspace.allcrates(), Path::new("/tmp/workspace/allcrates"));
         assert_eq!(workspace.warmup(), Path::new("/tmp/workspace/warmup"));
         assert_eq!(workspace.project(), Path::new("/tmp/workspace/project"));
+        assert_eq!(workspace.c_project(), Path::new("/tmp/workspace/c-project"));
         assert_eq!(workspace.target(), Path::new("/tmp/workspace/target"));
         assert_eq!(
             workspace.target_validate(),
