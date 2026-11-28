@@ -107,7 +107,9 @@ it("学習記録がない状態でも、エラーにならず、分析の欄に�
   );
   for (const panel of panels) {
     expect(
-      within(panel).getByText("演習に正解すると、ここに分析が表示されます"),
+      within(panel).getByText(
+        "Rust の演習に正解すると、ここに分析が表示されます",
+      ),
     ).toBeInTheDocument();
   }
 });
@@ -188,6 +190,84 @@ it("準備中のレッスンしかない章は、完了率の代わりに「準�
     .getAllByRole("link")
     .find((link) => link.querySelector(".pg-badge")?.textContent === "11");
   expect(tile?.querySelector(".pg-tile-count")?.textContent).toBe("準備中");
+});
+
+it("C の章のレッスンは「C 第1章」「C1-4」の形で表示し、章のタイルの印は「C1」の形にする", () => {
+  // C の第1〜3章の後に、Rust の第1〜4章。
+  const cChapter = (n: number, lessonCount: number): Chapter => ({
+    id: `c0${n}`,
+    title: `C の章${n}`,
+    description: "",
+    language: "c",
+    number: n,
+    lessons: Array.from({ length: lessonCount }, (_, i) =>
+      lesson(`c0${n}-0${i + 1}`),
+    ),
+  });
+  const chapters: ChapterList = {
+    chapters: [
+      cChapter(1, 4),
+      cChapter(2, 1),
+      cChapter(3, 1),
+      ...chapterList.chapters.slice(0, 4),
+    ],
+  };
+  const chapterCounts: ChapterCount[] = chapters.chapters.map((chapter) => ({
+    id: chapter.id,
+    title: chapter.title,
+    language: chapter.language,
+    number: chapter.number,
+    completed: 0,
+    total: chapter.lessons.length,
+  }));
+  const navigate = vi.fn<(route: Route) => void>();
+  render(
+    <NavigationContext value={{ route: { name: "home" }, navigate }}>
+      <Home
+        dashboard={{
+          ...dashboard,
+          next_lesson: {
+            lesson_id: "c01-04",
+            chapter_id: "c01",
+            chapter_title: "C の章1",
+            language: "c",
+            chapter_number: 1,
+            title: "タイトル c01-04",
+            summary: "",
+            started: false,
+          },
+          chapters: chapterCounts,
+        }}
+        chapters={chapters}
+      />
+    </NavigationContext>,
+  );
+  const hero = screen.getByRole("region", { name: "次のレッスン" });
+  expect(hero).toHaveAttribute("data-chapter", "1");
+  expect(hero.querySelector(".pg-emblem")?.textContent).toBe("C 第1章C1-4");
+  const tiles = within(screen.getByRole("navigation", { name: "章の一覧" }))
+    .getAllByRole("link")
+    .filter((tile) => !tile.classList.contains("pg-tile--more"));
+  expect(
+    tiles.map((tile) => [
+      tile.querySelector(".pg-badge")?.textContent,
+      tile.getAttribute("data-chapter"),
+    ]),
+  ).toEqual([
+    ["C1", "1"],
+    ["C2", "2"],
+    ["C3", "3"],
+    ["1", "1"],
+    ["2", "2"],
+    ["3", "3"],
+    ["4", "4"],
+  ]);
+  // C のレッスンを学んでいても、学習記録がない状態の文言は変わらない。
+  expect(
+    within(screen.getByRole("region", { name: "総評" })).getByText(
+      "Rust の演習に正解すると、ここに分析が表示されます",
+    ),
+  ).toBeInTheDocument();
 });
 
 it("章のタイルと「レッスン一覧を開く」で、レッスン一覧へ移る", () => {

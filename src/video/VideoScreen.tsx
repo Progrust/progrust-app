@@ -7,6 +7,7 @@ import { loadLessonVideo } from "virtual:progrust-lesson-videos";
 import { ChevronLeft, MessageCircle } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent } from "react";
+import { ChapterChip } from "../ChapterChip";
 import { findLesson, numberChapters } from "../chapterNumbers";
 import { ChatPanel } from "../chat/ChatPanel";
 import { useChat } from "../chat/useChat";
@@ -350,10 +351,13 @@ function VideoScreenBody({
           </a>
           {found !== null && (
             <>
-              <span className="pg-chip">
-                <span className="pg-chip-num">{found.chapter.number}</span>
-                {found.chapter.chapter.title}
-              </span>
+              <ChapterChip
+                chapter={{
+                  language: found.chapter.language,
+                  number: found.chapter.number,
+                  title: found.chapter.chapter.title,
+                }}
+              />
               <span className="pg-context-title">
                 {found.lesson.number} {found.lesson.lesson.title}
               </span>

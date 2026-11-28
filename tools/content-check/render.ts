@@ -15,8 +15,10 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type { HeadlessBrowser } from "@remotion/renderer";
+import { numberWithinLanguage } from "../../src/chapterNumbers.ts";
 import type {
   Chapter,
+  Language,
   LessonDefinition,
   Script,
 } from "../../src/commands/content.ts";
@@ -88,30 +90,31 @@ function firstLine(e: unknown): string {
 }
 
 // chapters.json を、useLesson() の材料の形（list_chapters の chapters）にする。
-// lessonInfo は、章の ID・タイトルと、レッスンの ID の並びだけを使う。
-function readChapters(contentDir: string): Chapter[] {
+// lessonInfo は、章の ID・言語・番号・タイトルと、レッスンの ID の並びだけを使う。
+// 章の番号は、アプリ（list_chapters）と同じく、同じ言語の章の中での位置とする。`language` を省いた章は Rust の章。
+export function readChapters(contentDir: string): Chapter[] {
   const result = readJsonFile(join(contentDir, "chapters.json"));
   if (result.state !== "ok" || !Array.isArray(result.value)) return [];
-  const counts = { c: 0, rust: 0 };
-  return result.value.filter(isRecord).map((c) => {
-    const language = c.language === "c" ? "c" : "rust";
-    counts[language] += 1;
-    return {
-      id: String(c.id),
-      title: String(c.title),
-      description: String(c.description),
-      language,
-      number: counts[language],
-      lessons: (Array.isArray(c.lessons) ? c.lessons : []).map((id) => ({
-        id: String(id),
-        kind: null,
-        title: null,
-        summary: null,
-        estimated_minutes: null,
-        in_preparation: false,
-      })),
-    };
-  });
+  const records = result.value.filter(isRecord);
+  const languages = records.map((c): Language =>
+    c.language === "c" ? "c" : "rust",
+  );
+  const numbers = numberWithinLanguage(languages);
+  return records.map((c, index) => ({
+    id: String(c.id),
+    title: String(c.title),
+    description: String(c.description),
+    language: languages[index],
+    number: numbers[index],
+    lessons: (Array.isArray(c.lessons) ? c.lessons : []).map((id) => ({
+      id: String(id),
+      kind: null,
+      title: null,
+      summary: null,
+      estimated_minutes: null,
+      in_preparation: false,
+    })),
+  }));
 }
 
 // 描画するレッスンと、描画の前に分かるエラー。

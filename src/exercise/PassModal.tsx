@@ -6,6 +6,8 @@
 import { ArrowRight, Check, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { KeyboardEvent } from "react";
+import { ChapterChip } from "../ChapterChip";
+import type { ChipChapter } from "../ChapterChip";
 import type { DraftFiles } from "../commands/progress";
 import { ChatPanel } from "../chat/ChatPanel";
 import type { UseChat } from "../chat/useChat";
@@ -27,7 +29,7 @@ export type PassModalProps = {
   // 「4-4 所有権のムーブ」のようなレッスンの番号と名前。
   lessonLabel: string;
   // 章のチップ。章の並びを読めなかったときは null。
-  chapter: { number: number; title: string } | null;
+  chapter: ChipChapter | null;
   explanationMd: string;
   problemMd: string;
   // 提出したコード。
@@ -99,12 +101,7 @@ export function PassModal({
               を完了しました。
             </p>
           </div>
-          {chapter !== null && (
-            <span className="pg-chip">
-              <span className="pg-chip-num">{chapter.number}</span>
-              {chapter.title}
-            </span>
-          )}
+          {chapter !== null && <ChapterChip chapter={chapter} />}
           <button
             type="button"
             className="pg-icon-btn pg-icon-btn--md"
