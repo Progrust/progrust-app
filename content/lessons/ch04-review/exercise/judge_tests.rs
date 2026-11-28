@@ -1,48 +1,48 @@
 use super::*;
 
 #[test]
-fn exclaim_adds_marks() {
-    assert_eq!(exclaim(String::from("がんばれ"), 3), String::from("がんばれ!!!"));
+fn go_up_adds_parents() {
+    assert_eq!(go_up(String::from("logs/app"), 3), String::from("logs/app/../../.."));
 }
 
 #[test]
-fn exclaim_zero_count() {
-    assert_eq!(exclaim(String::from("がんばれ"), 0), String::from("がんばれ"));
+fn go_up_zero_levels() {
+    assert_eq!(go_up(String::from("logs/app"), 0), String::from("logs/app"));
 }
 
 #[test]
-fn exclaim_empty_text() {
-    assert_eq!(exclaim(String::from(""), 2), String::from("!!"));
+fn go_up_one_level() {
+    assert_eq!(go_up(String::from("src"), 1), String::from("src/.."));
 }
 
 #[test]
-fn plain_and_loud_keeps_text() {
+fn path_and_up_keeps_path() {
     assert_eq!(
-        plain_and_loud(String::from("Alice"), 2),
-        (String::from("Alice"), String::from("Alice!!"))
+        path_and_up(String::from("data"), 2),
+        (String::from("data"), String::from("data/../.."))
     );
 }
 
 #[test]
-fn plain_and_loud_zero_count() {
+fn path_and_up_zero_levels() {
     assert_eq!(
-        plain_and_loud(String::from("太郎"), 0),
-        (String::from("太郎"), String::from("太郎"))
+        path_and_up(String::from("tmp"), 0),
+        (String::from("tmp"), String::from("tmp"))
     );
 }
 
 #[test]
-fn call_twice_joins_with_space() {
+fn diff_args_joins_with_space() {
     assert_eq!(
-        call_twice(String::from("ファイト"), 2),
-        String::from("ファイト!! ファイト!!")
+        diff_args(String::from("a/b"), 1),
+        String::from("a/b a/b/..")
     );
 }
 
 #[test]
-fn call_twice_zero_count() {
+fn diff_args_zero_levels() {
     assert_eq!(
-        call_twice(String::from("ファイト"), 0),
-        String::from("ファイト ファイト")
+        diff_args(String::from("a/b"), 0),
+        String::from("a/b a/b")
     );
 }

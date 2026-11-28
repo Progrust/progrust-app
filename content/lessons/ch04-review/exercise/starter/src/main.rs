@@ -1,24 +1,24 @@
-fn exclaim(text: String, count: u32) -> String {
+fn go_up(path: String, levels: u32) -> String {
     // ここを書く（いまは仮の値を返している）
-    text
+    path
 }
 
-fn plain_and_loud(text: String, count: u32) -> (String, String) {
+fn path_and_up(path: String, levels: u32) -> (String, String) {
     // ここを書く（いまは仮の値を返している）
-    (text, String::from(""))
+    (path, String::from(""))
 }
 
-fn call_twice(text: String, count: u32) -> String {
+fn diff_args(path: String, levels: u32) -> String {
     // ここを書く（いまは仮の値を返している）
-    text
+    path
 }
 
 fn main() {
-    println!("{}", exclaim(String::from("がんばれ"), 3));
+    println!("{}", go_up(String::from("logs/app"), 2));
 
-    let (plain, loud) = plain_and_loud(String::from("Alice"), 2);
-    println!("{plain}");
-    println!("{loud}");
+    let (current, upper) = path_and_up(String::from("logs/app"), 1);
+    println!("{current}");
+    println!("{upper}");
 
-    println!("{}", call_twice(String::from("ファイト"), 2));
+    println!("{}", diff_args(String::from("config"), 1));
 }

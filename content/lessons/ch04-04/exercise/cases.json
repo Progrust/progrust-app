@@ -1,22 +1,22 @@
 [
   {
     "name": "例と同じ入力",
-    "stdin": "Alice\n",
-    "expected_stdout": "Alice\nAliceさん、こんにちは\n"
+    "stdin": "app\n",
+    "expected_stdout": "app\napp.log\n"
   },
   {
-    "name": "日本語の名前",
-    "stdin": "太郎\n",
-    "expected_stdout": "太郎\n太郎さん、こんにちは\n"
+    "name": "日本語のベース名",
+    "stdin": "売上\n",
+    "expected_stdout": "売上\n売上.log\n"
   },
   {
-    "name": "1 文字の名前",
+    "name": "1 文字のベース名",
     "stdin": "a\n",
-    "expected_stdout": "a\naさん、こんにちは\n"
+    "expected_stdout": "a\na.log\n"
   },
   {
-    "name": "20 文字の名前",
+    "name": "20 文字のベース名",
     "stdin": "abcdefghijklmnopqrst\n",
-    "expected_stdout": "abcdefghijklmnopqrst\nabcdefghijklmnopqrstさん、こんにちは\n"
+    "expected_stdout": "abcdefghijklmnopqrst\nabcdefghijklmnopqrst.log\n"
   }
 ]
