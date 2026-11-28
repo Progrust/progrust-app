@@ -350,6 +350,19 @@ impl ContentDir {
         Ok(dir)
     }
 
+    /// レッスンの言語（属する章の `language`。spec/content-format/chapters-json.md）を返す。
+    /// レッスンが無いときの扱いは `get_lesson` と同じ。
+    pub fn lesson_language(&self, lesson_id: &str) -> Result<Language, ContentError> {
+        self.existing_lesson_dir(lesson_id)?;
+        self.read_chapters_json()?
+            .into_iter()
+            .find(|chapter| chapter.lessons.iter().any(|id| id == lesson_id))
+            .map(|chapter| chapter.language)
+            .ok_or_else(|| ContentError::LessonNotFound {
+                lesson_id: lesson_id.to_string(),
+            })
+    }
+
     /// 演習が使う許可クレートの名前（`lesson.json` の `exercise.dependencies`）を読む。書かれていないときは空。
     /// レッスンが無いときの扱いは `get_lesson` と同じ。
     pub fn exercise_dependencies(&self, lesson_id: &str) -> Result<Vec<String>, ContentError> {

@@ -2,34 +2,38 @@
 //! （spec/architecture/commands/run.md）。
 //!
 //! 実行・テスト実行のタスクは [`crate::runner::run`]、提出のタスクは [`crate::runner::submit`]、同時に 1 つだけ行う
-//! 状態は [`crate::runner::runs`] にある。ここでは、受け付ける前に確かめること（ID、下書きの保存、`cargo`、
-//! 初回準備の状態）と、イベントの送り先・試行ログと進捗の書き込み先を扱う。
+//! 状態は [`crate::runner::runs`] にある。ここでは、受け付ける前に確かめること（ID、下書きの保存、Rust の演習では
+//! `cargo` と初回準備の状態、C の演習では `mode` と `clang`）と、イベントの送り先・試行ログと進捗の書き込み先を扱う。
+//!
+//! C の演習（レッスンの言語が `c`）では、`cargo` と初回準備の状態を確かめない
+//! （spec/exercise-runner/c-project-assembly.md「作業領域」）。C の演習の提出は、まだ作っていない（`submit_code` は
+//! `internal` を返す）。
 
 use std::collections::BTreeMap;
-use std::path::PathBuf;
 use std::sync::Arc;
 
 use tauri::{AppHandle, Emitter, Manager, Runtime, State};
 
 use super::error::{CommandError, ErrorCode};
 use crate::attempts::{RunMode, RunRecord, SessionKind, SubmitRecord};
-use crate::content::{ContentDir, has_exercise};
+use crate::content::{ContentDir, Language, has_exercise};
 use crate::environment::Environment;
 use crate::environment::preparation::restart_crate_preparation;
 use crate::progress::LessonProgress;
 use crate::runner::RunnerDir;
 use crate::runner::run::{
     self, RUN_FINISHED, RUN_OUTPUT, RUN_STARTED, RunEvents, RunFinished, RunJob, RunOutput,
-    RunStarted,
+    RunStarted, RunToolchain,
 };
 use crate::runner::runs::{ActiveRun, RunKind, Runs, not_running};
 use crate::runner::submit::{self, SUBMIT_PROGRESS, SubmitJob, SubmitProgress};
 use crate::runner::workspace::WorkspaceDir;
 use crate::storage::{AppDataDir, StorageError};
 
-/// 演習画面の「実行」（`mode` が `main`）と「テスト」（`test`）。下書きを保存し、`cargo` と初回準備の状態を確かめてから、
-/// 別のスレッドで実行を始めて返す。実行（`main`）では、プログラムを起動したことを `run_started` で送る。
-/// 出力は `run_output`、結果は `run_finished` で送る。
+/// 演習画面の「実行」（`mode` が `main`）と「テスト」（`test`）。下書きを保存し、`cargo` と初回準備の状態
+/// （C の演習では、`mode` が `main` であることと `clang`）を確かめてから、別のスレッドで実行を始めて返す。
+/// 実行（`main`）では、プログラムを起動したことを `run_started` で送る。出力は `run_output`、結果は `run_finished`
+/// で送る。
 ///
 /// 確かめる間に `cargo` の検出が終わるのを待つことがあるので、async のコマンドにして、別のスレッドで行う。
 #[tauri::command(rename_all = "snake_case")]
@@ -45,6 +49,7 @@ pub async fn run_code<R: Runtime>(
             request_id: &request_id,
             lesson_id: &lesson_id,
             kind: RunKind::Run,
+            mode: Some(mode),
             files,
         };
         start(&app, request, |prepared| {
@@ -54,10 +59,8 @@ pub async fn run_code<R: Runtime>(
                 mode,
                 session_kind: prepared.session_kind,
                 files: prepared.files,
-                dependencies: prepared.dependencies,
-                cargo: prepared.cargo,
                 workspace: prepared.workspace,
-                runner: prepared.runner,
+                toolchain: prepared.toolchain,
             };
             Ok(Box::new(move |events| run::execute(job, events)))
         })
@@ -85,9 +88,26 @@ pub async fn submit_code<R: Runtime>(
             request_id: &request_id,
             lesson_id: &lesson_id,
             kind: RunKind::Submit,
+            mode: None,
             files,
         };
         start(&app, request, |prepared| {
+            let RunToolchain::Cargo {
+                cargo,
+                dependencies,
+                runner,
+            } = prepared.toolchain
+            else {
+                // C の演習の提出（spec/exercise-runner/c-submit.md）は、まだ作っていない。
+                return Err(CommandError {
+                    code: ErrorCode::Internal,
+                    message: "C の演習の提出には、まだ対応していません。".into(),
+                    detail: Some(format!(
+                        "レッスン {} は C の演習",
+                        prepared.active.lesson_id()
+                    )),
+                });
+            };
             let judge = app
                 .state::<ContentDir>()
                 .exercise_judge(prepared.active.lesson_id())?;
@@ -96,11 +116,11 @@ pub async fn submit_code<R: Runtime>(
                 runs: prepared.runs,
                 session_kind: prepared.session_kind,
                 files: prepared.files,
-                dependencies: prepared.dependencies,
+                dependencies,
                 judge,
-                cargo: prepared.cargo,
+                cargo,
                 workspace: prepared.workspace,
-                runner: prepared.runner,
+                runner,
             };
             Ok(Box::new(move |events| submit::execute(job, events)))
         })
@@ -118,6 +138,8 @@ struct Request<'a> {
     request_id: &'a str,
     lesson_id: &'a str,
     kind: RunKind,
+    /// `run_code` の `mode`。提出では `None`。
+    mode: Option<RunMode>,
     /// エディタ上の全ファイル。
     files: BTreeMap<String, String>,
 }
@@ -131,10 +153,8 @@ struct Prepared {
     runs: Runs,
     session_kind: SessionKind,
     files: BTreeMap<String, String>,
-    dependencies: Vec<String>,
-    cargo: PathBuf,
     workspace: WorkspaceDir,
-    runner: RunnerDir,
+    toolchain: RunToolchain,
 }
 
 /// 要求を始め、確かめることを確かめ、`make_task` でタスクを作ってから、タスクのスレッドを起動する。
@@ -146,7 +166,7 @@ fn start<R: Runtime>(
 ) -> Result<(), CommandError> {
     let runs = app.state::<Runs>().inner().clone();
     let active = runs.begin(request.request_id, request.lesson_id, request.kind)?;
-    match prepare(app, &active, &runs, request.files).and_then(make_task) {
+    match prepare(app, &active, &runs, request.mode, request.files).and_then(make_task) {
         Ok(task) => {
             let events: Arc<dyn RunEvents> = Arc::new(AppEvents(app.clone()));
             std::thread::spawn(move || task(events));
@@ -159,11 +179,14 @@ fn start<R: Runtime>(
     }
 }
 
-/// 下書きの保存 → `cargo` → 初回準備の状態の順に確かめる。
+/// Rust の演習は、下書きの保存 → `cargo` → 初回準備の状態の順に確かめる。C の演習は、`mode` → 下書きの保存
+/// → `clang` の順に確かめる。ファイルパスと `mode` の誤り（`invalid_argument`）は、`clang_unavailable` より先に返す
+/// （spec/architecture/commands/run.md「run_code」）。
 fn prepare<R: Runtime>(
     app: &AppHandle<R>,
     active: &Arc<ActiveRun>,
     runs: &Runs,
+    mode: Option<RunMode>,
     files: BTreeMap<String, String>,
 ) -> Result<Prepared, CommandError> {
     let lesson_id = active.lesson_id();
@@ -179,22 +202,42 @@ fn prepare<R: Runtime>(
             message: "このレッスンには演習がありません。".into(),
             detail: Some(format!("レッスン {lesson_id} は演習の無いレッスン")),
         })?;
-    // ファイルパスが条件を満たさないときは、ここで、何も書かずに invalid_argument になる。
-    data_dir.save_draft(lesson_id, files.clone())?;
-    let tools = environment.rust_tools()?;
-    let dependencies = content.exercise_dependencies(lesson_id)?;
-    if !dependencies.is_empty() {
-        environment.ensure_crates_ready()?;
+    let language = content.lesson_language(lesson_id)?;
+    if language == Language::C && mode == Some(RunMode::Test) {
+        // C の演習には、テスト実行が無い（spec/exercise-runner/c-run.md「テスト実行が無いこと」）。
+        return Err(CommandError {
+            code: ErrorCode::InvalidArgument,
+            message: "C の演習には、テスト実行がありません。".into(),
+            detail: Some(format!("レッスン {lesson_id} は C の演習で、mode が test")),
+        });
     }
+    // ファイルパスが条件を満たさないときは、ここで、何も書かずに invalid_argument になる。
+    data_dir.save_draft(lesson_id, language, files.clone())?;
+    let toolchain = match language {
+        Language::Rust => {
+            let tools = environment.rust_tools()?;
+            let dependencies = content.exercise_dependencies(lesson_id)?;
+            if !dependencies.is_empty() {
+                environment.ensure_crates_ready()?;
+            }
+            RunToolchain::Cargo {
+                cargo: tools.cargo,
+                dependencies,
+                runner: app.state::<RunnerDir>().inner().clone(),
+            }
+        }
+        // C の演習は、cargo の有無と初回準備の状態に左右されない。
+        Language::C => RunToolchain::Clang {
+            clang: environment.clang()?.path,
+        },
+    };
     Ok(Prepared {
         active: Arc::clone(active),
         runs: runs.clone(),
         session_kind,
         files,
-        dependencies,
-        cargo: tools.cargo,
         workspace: WorkspaceDir::in_app_data(&data_dir),
-        runner: app.state::<RunnerDir>().inner().clone(),
+        toolchain,
     })
 }
 

@@ -9,12 +9,14 @@
 //! - `project/` を cargo でビルドし、ビルドの出力・エラーコード・実行ファイルを得る部品は [`build`]。
 //! - C の演習の `c-project/` の組み立て（`main.c` と、メモリリークの検査のライブラリのソースを置く）は [`c_project`]、
 //!   `c-project/` を `clang` で検査なし・検査つき・メモリリークの検査のライブラリにビルドする部品は [`c_build`]。
+//!   C の演習の実行の手順（検査なしでビルドして `c-project/main` を動かし、シグナルで終わったときの 1 行を送る）は
+//!   [`c_run`]。
 //! - ビルドの失敗が、初回準備のやり直しが要る失敗に当たるかの判定は [`lost_crates`]。
 //! - ビルド済みの実行ファイルを `stdout` 方式で判定する部品は [`judge`]、`test` 方式の隠しテストを組み込んで
 //!   判定し、`min_learner_tests` のある演習では学習者が書いたテストも判定する部品は [`judge_test`]。
 //! - 実行・提出を同時に 1 つだけ行う状態（止める操作と標準入力を含む）は [`runs`]、実行・テスト実行のタスクと
-//!   イベント `run_started`・`run_output`・`run_finished` の内容は [`run`]、提出のタスクとイベント `submit_progress` と
-//!   `run_finished` の `submit` の内容は [`submit`]。
+//!   イベント `run_started`・`run_output`・`run_finished` の内容は [`run`]（C の演習と Rust の演習で共通）、
+//!   提出のタスクとイベント `submit_progress` と `run_finished` の `submit` の内容は [`submit`]。
 //! - 初回準備の状態の記録 `prepared.json` の読み書きと、初回準備を実行する条件の判定は [`prepared`]。
 //! - 初回準備の手順（`allcrates/`・`warmup/` を作ってビルドし、`target-validate/` に複製し、`prepared.json` に書く）を
 //!   1 回動かす部品は [`preparation`]。
@@ -24,6 +26,7 @@
 pub mod build;
 pub mod c_build;
 pub mod c_project;
+pub mod c_run;
 pub mod file_path;
 pub mod judge;
 pub mod judge_test;

@@ -124,8 +124,8 @@ fn no_exercise(lesson_id: &str) -> CommandError {
     }
 }
 
-/// エディタ上の全ファイルを下書きに保存する。ファイルパスが条件を満たさないときは、何も書かずに
-/// `invalid_argument` を返す。演習の無いレッスンでも `invalid_argument` を返す。
+/// エディタ上の全ファイルを下書きに保存する。ファイルパスが条件（C の演習では `main.c` だけ）を満たさないときは、
+/// 何も書かずに `invalid_argument` を返す。演習の無いレッスンでも `invalid_argument` を返す。
 #[tauri::command(rename_all = "snake_case")]
 pub fn save_draft(
     data_dir: State<'_, AppDataDir>,
@@ -136,7 +136,8 @@ pub fn save_draft(
     if !has_exercise(&content.lesson_kind(&lesson_id)?) {
         return Err(no_exercise(&lesson_id));
     }
-    data_dir.save_draft(&lesson_id, files)?;
+    let language = content.lesson_language(&lesson_id)?;
+    data_dir.save_draft(&lesson_id, language, files)?;
     Ok(())
 }
 

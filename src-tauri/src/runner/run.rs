@@ -6,6 +6,9 @@
 //!   学習者のプログラム（テスト実行では `cargo test`）を動かし、試行ログに `run` イベントを追記してから、
 //!   要求を外して `run_finished` を送る。実行（`main`）では、プログラムを起動して標準入力を受け付けるようにしてから、
 //!   `run_started` を送る。
+//! - C の演習（[`RunToolchain::Clang`]）では、`project/` の組み立てとビルドの代わりに、[`super::c_run`] の手順で
+//!   `c-project/` を組み立てて `clang` でビルドする。プログラムの動かし方、試行ログへの追記、`run_finished` を送る
+//!   順序は、Rust の演習と同じにする（spec/exercise-runner/c-run.md）。
 //! - イベントの送り先と試行ログ・進捗の書き込み先は [`RunEvents`] で受け取る。アプリでは Tauri の `emit` で送り、
 //!   学習者データのディレクトリに書く。提出のタスク（[`super::submit`]）も、同じものを使う。
 //! - アプリの終了で止めたときは、試行ログに追記せず、`run_finished` も送らない。
@@ -15,7 +18,7 @@
 
 use std::collections::BTreeMap;
 use std::ffi::OsString;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex, PoisonError};
 
 use serde::Serialize;
@@ -231,27 +234,42 @@ pub(super) fn size_text(bytes: usize) -> String {
 pub struct RunJob {
     pub active: Arc<ActiveRun>,
     pub runs: Runs,
+    /// C の演習では、いつも `main`。
     pub mode: RunMode,
     /// 試行ログに追記するときに、未完了のセッションが無ければ始めるセッションの種類。
     pub session_kind: SessionKind,
     /// エディタ上の全ファイル。
     pub files: BTreeMap<String, String>,
-    /// 演習の `dependencies`。
-    pub dependencies: Vec<String>,
-    /// `cargo` の絶対パス。
-    pub cargo: PathBuf,
     pub workspace: WorkspaceDir,
-    pub runner: RunnerDir,
+    /// ビルドに使うもの。Rust の演習か C の演習かで変わる。
+    pub toolchain: RunToolchain,
+}
+
+/// 実行のビルドに使うもの。
+pub enum RunToolchain {
+    /// Rust の演習。`project/` を組み立てて cargo でビルドする（spec/exercise-runner/run.md）。
+    Cargo {
+        /// `cargo` の絶対パス。
+        cargo: PathBuf,
+        /// 演習の `dependencies`。
+        dependencies: Vec<String>,
+        runner: RunnerDir,
+    },
+    /// C の演習。`c-project/` を組み立てて `clang` でビルドする（spec/exercise-runner/c-run.md）。
+    Clang {
+        /// 検出した `clang` の絶対パス。
+        clang: PathBuf,
+    },
 }
 
 /// 結果の状態が決まった実行。
-struct Outcome {
-    status: RunResultStatus,
-    exit_code: Option<i32>,
-    error_codes: Vec<String>,
-    build: BuildOutput,
-    stdout: String,
-    program_stderr: String,
+pub(super) struct Outcome {
+    pub(super) status: RunResultStatus,
+    pub(super) exit_code: Option<i32>,
+    pub(super) error_codes: Vec<String>,
+    pub(super) build: BuildOutput,
+    pub(super) stdout: String,
+    pub(super) program_stderr: String,
 }
 
 impl Outcome {
@@ -268,7 +286,7 @@ impl Outcome {
     }
 
     /// ビルドを始める前に止めた結果。
-    fn stopped_before_build() -> Self {
+    pub(super) fn stopped_before_build() -> Self {
         Self {
             status: RunResultStatus::Stopped,
             exit_code: None,
@@ -348,18 +366,36 @@ pub fn execute(job: RunJob, events: Arc<dyn RunEvents>) {
     }
 }
 
-/// `project/` の組み立てから、プログラムの終わりまで。アプリの側の失敗は `Err` で返す。
+/// 組み立てから、プログラムの終わりまで。アプリの側の失敗は `Err` で返す。
 fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, CommandError> {
-    let limits = job.runs.limits();
     if job.active.stop_cause().is_some() {
         return Ok(Outcome::stopped_before_build());
     }
-    assemble_project(&job.workspace, &job.runner, &job.dependencies, &job.files)?;
+    match &job.toolchain {
+        RunToolchain::Cargo {
+            cargo,
+            dependencies,
+            runner,
+        } => cargo_run_steps(job, cargo, dependencies, runner, events),
+        RunToolchain::Clang { clang } => super::c_run::run_steps(job, clang, events),
+    }
+}
 
-    let envs = build_env(&job.workspace, &job.dependencies);
+/// Rust の演習の、`project/` の組み立てから、プログラムの終わりまで。
+fn cargo_run_steps(
+    job: &RunJob,
+    cargo: &Path,
+    dependencies: &[String],
+    runner: &RunnerDir,
+    events: &Arc<dyn RunEvents>,
+) -> Result<Outcome, CommandError> {
+    let limits = job.runs.limits();
+    assemble_project(&job.workspace, runner, dependencies, &job.files)?;
+
+    let envs = build_env(&job.workspace, dependencies);
     let project_dir = job.workspace.project();
     let mut build_spec = BuildSpec::new(
-        &job.cargo,
+        cargo,
         &project_dir,
         match job.mode {
             RunMode::Main => BuildCommand::Build,
@@ -385,7 +421,7 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
         BuildStatus::Failed { .. }
             if built.needs_crate_preparation(
                 &job.workspace
-                    .project_target(uses_allowed_crates(&job.dependencies)),
+                    .project_target(uses_allowed_crates(dependencies)),
             ) =>
         {
             handle_lost_crates(events.as_ref(), job.active.request_id(), &built);
@@ -416,7 +452,7 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
             spec
         }
         RunMode::Test => {
-            let mut spec = ProcessSpec::new(&job.cargo, &project_dir, process_limits(&limits));
+            let mut spec = ProcessSpec::new(cargo, &project_dir, process_limits(&limits));
             spec.args = ["test", "--offline", "--no-fail-fast"]
                 .iter()
                 .map(OsString::from)
@@ -437,6 +473,36 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
         return Ok(Outcome::without_program(RunResultStatus::Stopped, &built));
     }
 
+    let program = run_program(job, events, spec)?;
+    let ended = program_end(&program.termination, &limits);
+    send_notice(job, events, ended.notice);
+    Ok(Outcome {
+        status: ended.status,
+        exit_code: ended.exit_code,
+        error_codes: built.error_codes.clone(),
+        build: built.attempt_output(),
+        stdout: program.stdout,
+        program_stderr: program.stderr,
+    })
+}
+
+/// 動かし終えた学習者のプログラム（テスト実行では `cargo test`）。
+pub(super) struct ProgramRun {
+    pub(super) termination: Termination,
+    /// 受け取った標準出力。
+    pub(super) stdout: String,
+    /// 受け取った標準エラー出力。
+    pub(super) stderr: String,
+}
+
+/// 学習者のプログラム（テスト実行では `cargo test`）を `spec` のとおりに起動し、出力を `run_output` で送りながら、
+/// 終わるまで待つ。実行（`main`）では、標準入力を受け付けるようにしてから `run_started` を送る。Rust の演習と
+/// C の演習で共通である（run.md「手順」の 3〜5、c-run.md「手順」の 3〜5）。
+pub(super) fn run_program(
+    job: &RunJob,
+    events: &Arc<dyn RunEvents>,
+    spec: ProcessSpec,
+) -> Result<ProgramRun, CommandError> {
     let collected = Arc::new(Mutex::new((String::new(), String::new())));
     let process = {
         let collected = Arc::clone(&collected);
@@ -473,27 +539,55 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
             request_id: job.active.request_id().to_string(),
         });
     }
+    // 返る前に、プログラムの出力はすべて送り終えている（process::RunningProcess::wait）。
     let termination = process.wait();
     job.active.set_finished();
     let termination = termination
         .map_err(|error| app_failure("プログラムの終わりを受け取れませんでした。", error))?;
+    let (stdout, stderr) =
+        std::mem::take(&mut *collected.lock().unwrap_or_else(PoisonError::into_inner));
+    Ok(ProgramRun {
+        termination,
+        stdout,
+        stderr,
+    })
+}
 
-    let (status, exit_code, notice) = match termination {
+/// プログラムの終わり方から決まる、結果の状態。
+pub(super) struct ProgramEnd {
+    pub(super) status: RunResultStatus,
+    pub(super) exit_code: Option<i32>,
+    /// `system` で送る知らせ（タイムアウトの旨、出力量の上限で停止した旨）。
+    pub(super) notice: Option<String>,
+}
+
+/// プログラムの終わり方から、結果の状態（run.md「結果の状態」）と、送る知らせを決める。
+pub(super) fn program_end(termination: &Termination, limits: &RunLimits) -> ProgramEnd {
+    let (status, exit_code, notice) = match *termination {
         Termination::Exited(0) => (RunResultStatus::Success, Some(0), None),
         Termination::Exited(code) => (RunResultStatus::RuntimeError, Some(code), None),
         Termination::Signaled(_) => (RunResultStatus::RuntimeError, None, None),
         Termination::TimedOut => (
             RunResultStatus::Timeout,
             None,
-            Some(timeout_message(&limits)),
+            Some(timeout_message(limits)),
         ),
         Termination::OutputLimitExceeded => (
             RunResultStatus::RuntimeError,
             None,
-            Some(output_limit_message(&limits)),
+            Some(output_limit_message(limits)),
         ),
         Termination::Stopped => (RunResultStatus::Stopped, None, None),
     };
+    ProgramEnd {
+        status,
+        exit_code,
+        notice,
+    }
+}
+
+/// 知らせがあれば、`run_output` の `system` で送る。
+pub(super) fn send_notice(job: &RunJob, events: &Arc<dyn RunEvents>, notice: Option<String>) {
     if let Some(text) = notice {
         send(
             job,
@@ -504,21 +598,10 @@ fn run_steps(job: &RunJob, events: &Arc<dyn RunEvents>) -> Result<Outcome, Comma
             }],
         );
     }
-
-    let (stdout, program_stderr) =
-        std::mem::take(&mut *collected.lock().unwrap_or_else(PoisonError::into_inner));
-    Ok(Outcome {
-        status,
-        exit_code,
-        error_codes: built.error_codes.clone(),
-        build: built.attempt_output(),
-        stdout,
-        program_stderr,
-    })
 }
 
 /// 実行・テスト実行の制限値（ビルドを除く）。
-fn process_limits(limits: &RunLimits) -> Limits {
+pub(super) fn process_limits(limits: &RunLimits) -> Limits {
     Limits {
         time: limits.run_time,
         output: OutputLimit::Total(limits.output),
@@ -552,7 +635,7 @@ pub(super) fn build_output_chunks(built: &BuildOutcome) -> Vec<RunOutputChunk> {
 }
 
 /// 断片があれば、`run_output` で送る。
-fn send(job: &RunJob, events: &Arc<dyn RunEvents>, chunks: Vec<RunOutputChunk>) {
+pub(super) fn send(job: &RunJob, events: &Arc<dyn RunEvents>, chunks: Vec<RunOutputChunk>) {
     send_output(events.as_ref(), job.active.request_id(), chunks);
 }
 
