@@ -5,7 +5,7 @@
 
 use serde::Serialize;
 
-use crate::content::{Chapter, ChapterList, LessonSummary};
+use crate::content::{Chapter, ChapterList, Language, LessonSummary};
 use crate::progress::{LessonStatus, Progress, recommended_lesson_id};
 
 /// 章ごとの完了率に表示する章の数。
@@ -26,6 +26,8 @@ pub struct NextLesson {
     pub lesson_id: String,
     pub chapter_id: String,
     pub chapter_title: String,
+    pub language: Language,
+    pub chapter_number: u32,
     pub title: String,
     pub summary: String,
     /// 進捗があれば `true`。`false` は未着手。
@@ -44,6 +46,8 @@ pub struct LessonCounts {
 pub struct ChapterCount {
     pub id: String,
     pub title: String,
+    pub language: Language,
+    pub number: u32,
     pub completed: usize,
     pub total: usize,
 }
@@ -111,6 +115,8 @@ fn next_lesson(chapter: &Chapter, lesson: &LessonSummary, progress: &Progress) -
         lesson_id: lesson.id.clone(),
         chapter_id: chapter.id.clone(),
         chapter_title: chapter.title.clone(),
+        language: chapter.language,
+        chapter_number: chapter.number,
         title: lesson.title.clone().unwrap_or_default(),
         summary: lesson.summary.clone().unwrap_or_default(),
         started: progress.lessons.contains_key(&lesson.id),
@@ -136,6 +142,8 @@ fn chapter_count(chapter: &Chapter, progress: &Progress) -> ChapterCount {
     ChapterCount {
         id: chapter.id.clone(),
         title: chapter.title.clone(),
+        language: chapter.language,
+        number: chapter.number,
         completed,
         total,
     }
@@ -174,6 +182,8 @@ mod tests {
             id: format!("ch{index:02}"),
             title: format!("第{index}章"),
             description: String::new(),
+            language: Language::Rust,
+            number: u32::try_from(index).unwrap(),
             lessons: lessons.iter().map(|(id, prep)| lesson(id, *prep)).collect(),
         }
     }
@@ -334,6 +344,8 @@ mod tests {
                 lesson_id: "l01".into(),
                 chapter_id: "ch01".into(),
                 chapter_title: "第1章".into(),
+                language: Language::Rust,
+                chapter_number: 1,
                 title: "l01 のタイトル".into(),
                 summary: "l01 の概要".into(),
                 started: false,
@@ -341,6 +353,97 @@ mod tests {
         );
         let dashboard = Dashboard::new(&chapters, &progress(&[("l01", LessonStatus::InProgress)]));
         assert!(dashboard.next_lesson.unwrap().started);
+    }
+
+    /// C の章 3 章（`c01`〜`c03`）に続けて、Rust の章 `n` 章（`ch01`〜）。レッスン ID は章の ID に `-1` を付けたもの。
+    fn c_and_rust_chapters(rust_chapters: usize) -> ChapterList {
+        let c_chapters = (1..=3).map(|i| (format!("c{i:02}"), Language::C, i));
+        let rust = (1..=rust_chapters).map(|i| (format!("ch{i:02}"), Language::Rust, i));
+        ChapterList {
+            chapters: c_chapters
+                .chain(rust)
+                .map(|(id, language, number)| Chapter {
+                    title: format!("{id} の章"),
+                    description: String::new(),
+                    language,
+                    number: u32::try_from(number).unwrap(),
+                    lessons: vec![lesson(&format!("{id}-1"), false)],
+                    id,
+                })
+                .collect(),
+        }
+    }
+
+    fn tiles(dashboard: &Dashboard) -> Vec<(&str, Language, u32)> {
+        dashboard
+            .chapters
+            .iter()
+            .map(|c| (c.id.as_str(), c.language, c.number))
+            .collect()
+    }
+
+    #[test]
+    fn when_the_next_lesson_is_in_c_chapter_1_three_c_and_six_rust_chapters_are_shown() {
+        let dashboard = Dashboard::new(&c_and_rust_chapters(23), &Progress::default());
+        let next = dashboard.next_lesson.as_ref().unwrap();
+        assert_eq!(next.lesson_id, "c01-1");
+        assert_eq!((next.language, next.chapter_number), (Language::C, 1));
+        let expected: Vec<(String, Language, u32)> = (1..=3)
+            .map(|i| (format!("c{i:02}"), Language::C, i))
+            .chain((1..=6).map(|i| (format!("ch{i:02}"), Language::Rust, i)))
+            .collect();
+        let expected: Vec<(&str, Language, u32)> = expected
+            .iter()
+            .map(|(id, language, number)| (id.as_str(), *language, *number))
+            .collect();
+        assert_eq!(tiles(&dashboard), expected);
+    }
+
+    #[test]
+    fn when_the_next_lesson_is_in_rust_chapter_1_c_chapters_2_and_3_come_first() {
+        let progress = progress(&[
+            ("c01-1", LessonStatus::Completed),
+            ("c02-1", LessonStatus::Completed),
+            ("c03-1", LessonStatus::Completed),
+        ]);
+        let dashboard = Dashboard::new(&c_and_rust_chapters(23), &progress);
+        let next = dashboard.next_lesson.as_ref().unwrap();
+        assert_eq!((next.language, next.chapter_number), (Language::Rust, 1));
+        let shown = tiles(&dashboard);
+        assert_eq!(shown.len(), 9);
+        assert_eq!(shown[0], ("c02", Language::C, 2));
+        assert_eq!(shown[1], ("c03", Language::C, 3));
+        assert_eq!(shown[2], ("ch01", Language::Rust, 1));
+        assert_eq!(shown[8], ("ch07", Language::Rust, 7));
+    }
+
+    #[test]
+    fn when_the_next_lesson_is_in_rust_chapter_4_rust_chapters_2_to_10_are_shown() {
+        let mut done = vec!["c01-1", "c02-1", "c03-1", "ch01-1", "ch02-1", "ch03-1"];
+        let entries: Vec<(&str, LessonStatus)> = done
+            .drain(..)
+            .map(|id| (id, LessonStatus::Completed))
+            .collect();
+        let dashboard = Dashboard::new(&c_and_rust_chapters(23), &progress(&entries));
+        let shown = tiles(&dashboard);
+        assert_eq!(shown[0], ("ch02", Language::Rust, 2));
+        assert_eq!(shown[8], ("ch10", Language::Rust, 10));
+    }
+
+    #[test]
+    fn completing_a_c_lesson_counts_in_the_totals_and_in_its_chapter() {
+        let chapters = c_and_rust_chapters(2);
+        let dashboard = Dashboard::new(&chapters, &progress(&[("c01-1", LessonStatus::Completed)]));
+        assert_eq!(
+            dashboard.lesson_counts,
+            LessonCounts {
+                completed: 1,
+                total: 5
+            }
+        );
+        assert_eq!(dashboard.chapters[0].completed, 1);
+        assert_eq!(dashboard.chapters[1].completed, 0);
+        assert_eq!(dashboard.next_lesson.unwrap().lesson_id, "c02-1");
     }
 
     #[test]

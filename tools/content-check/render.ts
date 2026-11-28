@@ -92,19 +92,26 @@ function firstLine(e: unknown): string {
 function readChapters(contentDir: string): Chapter[] {
   const result = readJsonFile(join(contentDir, "chapters.json"));
   if (result.state !== "ok" || !Array.isArray(result.value)) return [];
-  return result.value.filter(isRecord).map((c) => ({
-    id: String(c.id),
-    title: String(c.title),
-    description: String(c.description),
-    lessons: (Array.isArray(c.lessons) ? c.lessons : []).map((id) => ({
-      id: String(id),
-      kind: null,
-      title: null,
-      summary: null,
-      estimated_minutes: null,
-      in_preparation: false,
-    })),
-  }));
+  const counts = { c: 0, rust: 0 };
+  return result.value.filter(isRecord).map((c) => {
+    const language = c.language === "c" ? "c" : "rust";
+    counts[language] += 1;
+    return {
+      id: String(c.id),
+      title: String(c.title),
+      description: String(c.description),
+      language,
+      number: counts[language],
+      lessons: (Array.isArray(c.lessons) ? c.lessons : []).map((id) => ({
+        id: String(id),
+        kind: null,
+        title: null,
+        summary: null,
+        estimated_minutes: null,
+        in_preparation: false,
+      })),
+    };
+  });
 }
 
 // 描画するレッスンと、描画の前に分かるエラー。

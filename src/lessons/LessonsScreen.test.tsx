@@ -46,6 +46,8 @@ const chapter1: Chapter = {
   id: "basics",
   title: "基本",
   description: "基本の説明",
+  language: "rust",
+  number: 1,
   lessons: [
     lesson("a1", "video_only"),
     lesson("a2", "lesson"),
@@ -60,6 +62,8 @@ const chapter2: Chapter = {
   id: "later",
   title: "あと",
   description: "あとの説明",
+  language: "rust",
+  number: 2,
   lessons: [preparing("b1"), preparing("b2")],
 };
 const chapters: ChapterList = { chapters: [chapter1, chapter2] };

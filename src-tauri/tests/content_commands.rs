@@ -258,3 +258,89 @@ fn a_lesson_directory_without_lesson_json_is_an_io_error_not_in_preparation() {
     let error = invoke(&window, LOCAL_URL, "list_chapters", json!({})).unwrap_err();
     assert_eq!(error["code"], "io_error");
 }
+
+/// C の章（c01・c02）、`language` を省略した Rust の章、`language: "rust"` の Rust の章を並べた教材。
+fn make_mixed_content() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    write(
+        root,
+        "chapters.json",
+        &json!([
+            { "id": "c01", "title": "C1", "description": "", "language": "c", "lessons": ["c01-01"] },
+            { "id": "c02", "title": "C2", "description": "", "language": "c", "lessons": ["c02-01"] },
+            { "id": "ch01", "title": "R1", "description": "", "lessons": ["ch01-01"] },
+            { "id": "ch02", "title": "R2", "description": "", "language": "rust", "lessons": ["ch02-01"] },
+        ])
+        .to_string(),
+    );
+    for id in ["c01-01", "c02-01", "ch01-01", "ch02-01"] {
+        write(
+            root,
+            &format!("lessons/{id}/lesson.json"),
+            &lesson_json(id, "video_only"),
+        );
+        add_video(root, id);
+    }
+    dir
+}
+
+#[test]
+fn list_chapters_returns_the_language_and_the_number_within_the_language() {
+    let content = make_mixed_content();
+    let (_app, window) = app_with_content(content.path());
+    let response = invoke(&window, LOCAL_URL, "list_chapters", json!({})).unwrap();
+    let actual: Vec<(&str, &str, u64)> = response["chapters"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            (
+                c["id"].as_str().unwrap(),
+                c["language"].as_str().unwrap(),
+                c["number"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    assert_eq!(
+        actual,
+        [
+            ("c01", "c", 1),
+            ("c02", "c", 2),
+            ("ch01", "rust", 1),
+            ("ch02", "rust", 2),
+        ]
+    );
+}
+
+#[test]
+fn get_lesson_returns_the_language_and_the_chapter_number() {
+    let content = make_mixed_content();
+    let (_app, window) = app_with_content(content.path());
+    for (lesson_id, language, number) in [
+        ("c01-01", "c", 1),
+        ("c02-01", "c", 2),
+        ("ch01-01", "rust", 1),
+        ("ch02-01", "rust", 2),
+    ] {
+        let response = get_lesson(&window, lesson_id).unwrap();
+        assert_eq!(response["language"], language, "{lesson_id}");
+        assert_eq!(response["chapter_number"], number, "{lesson_id}");
+    }
+}
+
+#[test]
+fn a_chapter_with_an_unknown_language_is_an_unreadable_content() {
+    let content = make_mixed_content();
+    write(
+        content.path(),
+        "chapters.json",
+        &json!([{ "id": "x01", "title": "X", "description": "", "language": "go", "lessons": ["c01-01"] }])
+            .to_string(),
+    );
+    let (_app, window) = app_with_content(content.path());
+    let error = invoke(&window, LOCAL_URL, "list_chapters", json!({})).unwrap_err();
+    assert_eq!(error["code"], "internal");
+    let error = get_lesson(&window, "c01-01").unwrap_err();
+    assert_eq!(error["code"], "internal");
+}

@@ -1,10 +1,14 @@
 // 学習記録・分析のコマンド（documents/spec/architecture/commands/learning-record.md）。
 import { invoke } from "@tauri-apps/api/core";
+import type { Language } from "./content";
 
 export type NextLesson = {
   lesson_id: string;
   chapter_id: string;
   chapter_title: string;
+  // レッスンの言語と、属する章の番号（同じ言語の章の中での位置）。
+  language: Language;
+  chapter_number: number;
   title: string;
   summary: string;
   // 進捗があれば true。false は未着手（「始める」）。
@@ -14,6 +18,8 @@ export type NextLesson = {
 export type ChapterCount = {
   id: string;
   title: string;
+  language: Language;
+  number: number;
   // 準備中のレッスンを数えない。準備中でないレッスンが 1 つも無い章は total が 0。
   completed: number;
   total: number;

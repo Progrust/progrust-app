@@ -43,6 +43,8 @@ const chapterList: ChapterList = {
       id: `ch${n}`,
       title: `章${n}`,
       description: "",
+      language: "rust",
+      number: n,
       lessons:
         n === 11
           ? [preparing("p1"), preparing("p2")]
@@ -55,6 +57,8 @@ function counts(from: number, to: number): ChapterCount[] {
   return chapterList.chapters.slice(from - 1, to).map((chapter) => ({
     id: chapter.id,
     title: chapter.title,
+    language: chapter.language,
+    number: chapter.number,
     completed: chapter.id === "ch11" ? 0 : 1,
     total: chapter.id === "ch11" ? 0 : 2,
   }));
@@ -84,6 +88,8 @@ const dashboard: Dashboard = {
     lesson_id: "l4-1",
     chapter_id: "ch4",
     chapter_title: "章4",
+    language: "rust",
+    chapter_number: 4,
     title: "タイトル l4-1",
     summary: "概要 l4-1。",
     started: true,
@@ -132,6 +138,8 @@ it("未着手なら「始める」を表示し、章末復習レッスンは演�
       lesson_id: "l4-2",
       chapter_id: "ch4",
       chapter_title: "章4",
+      language: "rust",
+      chapter_number: 4,
       title: "復習",
       summary: "",
       started: false,
