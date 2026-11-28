@@ -9,7 +9,7 @@ description: "判定方式から来る制約で注意が必要な箇所（ch01�
 | 箇所 | 制約 | 対応 |
 | --- | --- | --- |
 | ch01〜ch02 | 関数が未習なので `stdout` 方式しか使えない。標準入力の読み込みも未習 | 入力のない、出力が固定の演習にする。「コンパイルエラーになるコードを直す」「途中まで書かれたコードを完成させる」のように、主要素を使わないと解けない問題にする。テストケースの件数は [演習の作成ルール](../content-guidelines/exercise.md)「テストケース」 |
-| ch03〜ch08 | 標準入力の読み込み（ch09-05）が未習 | `test` 方式（隠しテストが関数を呼ぶ）を中心にする。`stdout` 方式で入力が要る場合だけ、おまじない（[未登場の要素を使わない](../content-guidelines/no-unseen-elements.md)）を使う |
+| ch03〜ch08 | 標準入力の読み込み（ch09-05）が未習 | `test` 方式（隠しテストが関数を呼ぶ）を中心にする。`stdout` 方式で入力が要る場合だけ、入力の読み込みを初期コードに完成した形で用意する（[未登場の要素を使わない](../content-guidelines/no-unseen-elements.md)） |
 | ch09-01 panic | `stdout` 方式では panic が `runtime_error`（[コードの実行（run）](../exercise-runner/run.md)「結果の状態」）になり、「正しく panic する」ことを判定できない | `test` 方式の隠しテストで `#[should_panic]` を使う |
 | ch09-06・ch19 の main から Err を返す演習 | 終了コード 0 以外は `runtime_error` になる | `fn run() -> Result<..>` を実装させ、`test` 方式で判定する |
 | ch08-08〜ch08-10 HashMap・HashSet | 走査の順序が実行ごとに変わる | キーを指定して引く問題にする、またはキーを `Vec` に集めて `sort` してから出力させる（`collect` は ch15 なので `for` で `push`） |

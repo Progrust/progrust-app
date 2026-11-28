@@ -24,7 +24,8 @@ description: "言語、章、レッスン、動画、台本、演習、要素、
 | ナレーション | narration | 台本を読み上げた音声 |
 | 合図 | cue | 絵を動かす位置の指定。「文の開始 + 秒」で表す（[動画のタイムラインと合図](../content-format/video/timeline-and-cues.md)） |
 | 声の設定 | voice settings | 音声を作るときの VOICEPEAK のナレーターと設定値。全レッスン共通（`content/voice.json`。[動画の音声](../content-format/video/voice.md)） |
-| 読みの対応表 | readings | 読み間違えやすい語と、`say` に書く読みの対応。全レッスン共通（`content/readings.json`。[動画の音声](../content-format/video/voice.md)） |
+| 読みの対応表 | readings | 読み間違えやすい語とコードの決まった語（キーワード・型名など）と、`say` に書く読みの対応。全レッスン共通（`content/readings.json`。[動画の音声](../content-format/video/voice.md)、[ナレーションでのコードの読み方](../content-guidelines/readings.md)） |
+| 訳語の表 | terms | 教材で使う語と使わない語（言葉のゆれ）の対応。全レッスン共通で、質疑応答と演習問題生成の AI にも渡す（`content/terms.json`。[教材で使う訳語](../content-guidelines/terms.md)） |
 | 再生中の文 | current sentence | 再生位置にあたる文（決め方は [動画画面](../screens/video-screen.md)） |
 | 文の頭 | sentence start | 文の開始位置（[動画画面](../screens/video-screen.md)） |
 | 検索ワード | tags | レッスン検索の対象にする語（`lesson.json` の `tags`） |

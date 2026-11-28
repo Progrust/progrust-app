@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "教材チェックツール"
-description: "`tools/` の教材チェックツールで検証するチェック項目（エラーとして扱うもの。C の章・C のレッスンの検査を含む）と、「模範解答」「初期コード」をアプリと同じ判定処理（バックエンドの判定のコマンドラインのプログラム。C のレッスンは C の判定処理）で判定する方法、macOS でないときに C のレッスンを判定しないこと、準備中のレッスンの扱い、警告として扱う項目（動画の長さ、文の長さ、読み、判定しなかった C のレッスン）を定める。"
+description: "`tools/` の教材チェックツールで検証するチェック項目（エラーとして扱うもの。C の章・C のレッスンの検査と、訳語の表の形式の検査を含む）と、「模範解答」「初期コード」をアプリと同じ判定処理（バックエンドの判定のコマンドラインのプログラム。C のレッスンは C の判定処理）で判定する方法、macOS でないときに C のレッスンを判定しないこと、準備中のレッスンの扱い、警告として扱う項目（動画の長さ、文の長さ、読み、判定しなかった C のレッスン）を定める。"
 ---
 
 `tools/` に教材チェックツールを用意し、教材を追加・変更したら実行する。CI でも実行する。実行するコマンドは `npm run content:check`（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」）とする。動画のコードの型は、このツールでは検査せず、`npm run lint` の型検査で検査する（[開発環境と依存の版](../architecture/development-environment.md)「lint と整形」）。
@@ -15,6 +15,7 @@ description: "`tools/` の教材チェックツールで検証するチェック
 | 要素マスタ | `deprecated` でない要素は、いずれかの Rust のレッスンの `primary_elements` に含まれている |
 | 要素と一覧 | 要素マスタの `id` が [要素の分け方と要素 ID の付け方](elements.md)「要素 ID」の形式に合い、重複がない。[章とレッスンの一覧](../curriculum/chapters/index.md) の「主要素」の要素 ID が、すべて要素マスタにあり、`deprecated` でない。`deprecated` でない要素は、一覧のいずれかのレッスンの「主要素」にあり、`chapter` が、一覧の学習順で最初にその要素を「主要素」とするレッスンの章と一致する |
 | 章末復習の主要素 | Rust の章の章末復習レッスンの `primary_elements` の各要素が、[章とレッスンの一覧](../curriculum/chapters/index.md) で、その章のレッスンの「主要素」になっている |
+| 訳語の表 | `content/terms.json` が [訳語の表の形式（terms.json）](../content-format/terms-json.md) の形式に合い、`term` に重複がない |
 | 台本 | `script.json` が [動画の台本（script.json）](../content-format/video/script-json.md) の形式に合っている（ID の重複がないこと、文の並び、`say` が 140 字以下であることを含む）。`code_blocks` が [動画でのコードの表示](../content-format/video/code-display.md) の行番号と Diff の決まりに合っている。`index.tsx` のシーンが台本の `scenes` と一致する |
 | 音声 | すべての文に音声ファイルがあり、`durations.json` の `say`・`voice` が、台本の `say`・`content/voice.json` と同じである。台本にない文の音声ファイルと記録がない |
 | lint | 動画のコードが [動画のコードの禁止事項](../content-format/video/prohibited-code.md) に違反していない |

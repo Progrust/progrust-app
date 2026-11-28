@@ -181,8 +181,8 @@
   {
     "id": "borrow.immutable",
     "chapter": "ch05",
-    "name": "不変の参照",
-    "description": "`&` による参照、関数に値を貸すこと、参照外し `*`、参照の実体が値のあるアドレスであること",
+    "name": "共有参照",
+    "description": "`&` による共有参照、関数に値を貸すこと、参照外し `*`、参照の実体が値のあるアドレスであること",
     "related_errors": [
       "E0308",
       "E0507"
@@ -191,8 +191,8 @@
   {
     "id": "borrow.mutable",
     "chapter": "ch05",
-    "name": "可変の参照",
-    "description": "`&mut` による可変の参照と、可変の参照を通した値の変更",
+    "name": "可変参照",
+    "description": "`&mut` による可変参照と、可変参照を通した値の変更",
     "related_errors": [
       "E0596",
       "E0594"
@@ -202,7 +202,7 @@
     "id": "borrow.rules",
     "chapter": "ch05",
     "name": "借用の規則",
-    "description": "可変の参照は同時に 1 つだけで、不変の参照と共存できないこと、参照が使われる範囲（NLL）",
+    "description": "可変参照は同時に 1 つだけで、共有参照と共存できないこと、参照が使われる範囲（NLL）",
     "related_errors": [
       "E0499",
       "E0502",
@@ -745,7 +745,7 @@
     "id": "closure.capture",
     "chapter": "ch14",
     "name": "環境のキャプチャと move",
-    "description": "参照・可変の参照・所有権によるキャプチャと、`move`",
+    "description": "共有参照・可変参照・所有権によるキャプチャと、`move`",
     "related_errors": [
       "E0502",
       "E0596",
@@ -785,7 +785,7 @@
     "id": "iter.iter_into_iter",
     "chapter": "ch15",
     "name": "iter・iter_mut・into_iter",
-    "description": "要素を参照・可変の参照・所有権のどれで取り出すかの使い分け",
+    "description": "要素を共有参照・可変参照・所有権のどれで取り出すかの使い分け",
     "related_errors": [
       "E0382",
       "E0594"

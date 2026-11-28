@@ -89,7 +89,7 @@
 * [ADR 0131](0131-record-reasons-for-later-lesson-changes.md) - カリキュラムを組み立てた後に、個々のレッスンを足す・移す・残すなどの変更をしたときは、その理由を ADR に記録する
 * [ADR 0157](0157-define-primary-elements-in-curriculum-list.md) - 各レッスンの主要素を章とレッスンの一覧に定めて唯一の定義とし、`lesson.json` の `primary_elements` をそれに合わせ、副要素はレッスンを作るときに決める
 * [ADR 0262](0262-teach-c-chapters-before-rust.md) - カリキュラムの最初に C 言語の章を置き、メモリの仕組みを演習で体験させてから Rust を教え、最初のレッスンを C から学ぶ理由を説明する動画のみのレッスンにする
-* [ADR 0263](0263-c-chapters-scope-three-chapters.md) - C の章を、C の基本・ポインタとメモリ・メモリの誤りの 3 章（27 レッスンと章末復習レッスン 3 つ）にし、扱う範囲を、レッスンの数ではなく、メモリを学ぶのに十分かどうかで決める
+* [ADR 0263](0263-c-chapters-scope-three-chapters.md) - C の章を、C の基本・ポインタとメモリ・メモリの誤りの 3 章（27 レッスンと章末復習レッスン 3 つ）にし、扱う範囲を、レッスンの数ではなく、メモリを学ぶのに十分かどうかで決める（ADR 0279 で、理由を後で教える書き方の示し方を変えた）
 * [ADR 0268](0268-contrast-rust-lessons-with-c-chapters.md) - Rust のレッスンのうち C の章で体験した内容に対応するものを、C と対比して説明する内容に書き直し、ch04-01 を C の章の振り返りと Rust の仕組みの予告のレッスンにする
 
 # 教材作成ガイドライン
@@ -109,6 +109,11 @@
 * [ADR 0242](0242-content-check-prepares-crates-before-judging.md) - 教材チェックツールは、許可クレートを使う演習の模範解答と初期コードも判定し、判定の前に progrust-judge が判定の作業領域で初回準備をする
 * [ADR 0245](0245-content-check-prepares-again-on-lost-crates.md) - 教材チェックツールの判定のビルドが、初回準備のやり直しが要る失敗になったときは、progrust-judge が判定の作業領域の prepared.json の status を failed にし、初回準備をやり直してから 1 回だけ判定し直し、また同じ失敗になったら判定結果を返さずに 0 以外の終了コードで終わる
 * [ADR 0269](0269-c-lesson-content-rules.md) - C の章の教材は、説明を短くまとめず、既習の C の内容だけを使い、Rust のコードを c01-01 の動画以外に登場させず、演習の出力を実行のたびに同じになるものにし、模範解答をメモリの検査で誤りが出ないものにし、c01-02〜c01-04 の演習はテストケースを 1 件以上でよいとする
+* [ADR 0279](0279-explain-unlearned-code-instead-of-calling-it-magic.md) - 未学習の構文を初期コードに用意するときに「おまじない」と書かず、どんな処理かを簡単に説明して、詳しく学ぶレッスンを番号とタイトルで書く
+* [ADR 0280](0280-call-references-shared-and-mutable.md) - `&T` を「共有参照」、`&mut T` を「可変参照」と呼び、「不変」を変数にだけ使い、要素 `borrow.immutable` の ID を変えずに名前を「共有参照」にする
+* [ADR 0281](0281-teach-real-world-usage-in-rust-lessons.md) - Rust のレッスンと生成問題で、実務での使われ方と近年のコミュニティの考えを、根拠にする資料を決めて伝え、Rust の演習を実務で出会う題材にし、C の章には当てはめない
+* [ADR 0282](0282-narration-understandable-by-audio-alone.md) - 動画を、音声だけで話の筋が分かり、画面の要素にはすべてナレーションで触れて話す順に出し、画面の文を読み上げるだけにせず、コードは何のコードかから話し、画面の上のものを指示語だけで指さないように作る
+* [ADR 0283](0283-share-readings-and-terms-tables-across-lessons.md) - コードの読み方と教材の訳語を全レッスン共通の表でそろえ、決まった語の読みを読みの対応表（readings.json）に、組み合わせの読み方を仕様に、訳語を同梱する訳語の表（terms.json）に持つ
 
 # コード実行・判定
 
@@ -192,6 +197,7 @@
 * [ADR 0256](0256-start-video-chat-panel-closed.md) - 動画画面の質問のチャットパネルは、動画画面を開くたびに閉じた状態で始め、開閉の状態を保存しない
 * [ADR 0261](0261-derive-learned-elements-for-chat-from-bundled-content.md) - 質疑応答で AI に渡す既習の要素を、アプリは同梱した教材（要素マスタの `chapter`、前にある準備中でないレッスンの `primary_elements`、そのレッスンの `secondary_elements`）から求め、同じ章の前にある準備中のレッスンだけが導入する要素は含めない
 * [ADR 0267](0267-pass-c-lesson-titles-and-summaries-to-chat.md) - 質疑応答で、C のレッスンには既習の C のレッスンのタイトルと概要を渡し、Rust のレッスンにも C の章で学んだ内容として同じものを渡し、指示文のファイルは言語で分けない
+* [ADR 0284](0284-pass-terms-table-to-ai.md) - 訳語の表を質疑応答と演習問題生成の AI に渡し、回答と生成問題で教材と同じ語を使わせる
 
 # 学習記録・分析
 
