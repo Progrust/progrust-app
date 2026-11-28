@@ -12,7 +12,8 @@
 //!   C の演習の実行の手順（検査なしでビルドして `c-project/main` を動かし、シグナルで終わったときの 1 行を送る）は
 //!   [`c_run`]。
 //! - C の演習の提出で、メモリの検査の報告のファイルから、誤りがあるかどうかと `kind`・`location`・`report` を
-//!   取り出す部品は [`sanitizer_report`]。
+//!   取り出す部品は [`sanitizer_report`]。メモリリークの検査のライブラリ（埋め込んだ C のソース）のビルドと、
+//!   その結果のファイルの読み取りは [`leak_check`]。
 //! - ビルドの失敗が、初回準備のやり直しが要る失敗に当たるかの判定は [`lost_crates`]。
 //! - ビルド済みの実行ファイルを `stdout` 方式で判定する部品は [`judge`]、`test` 方式の隠しテストを組み込んで
 //!   判定し、`min_learner_tests` のある演習では学習者が書いたテストも判定する部品は [`judge_test`]。
@@ -32,6 +33,7 @@ pub mod c_run;
 pub mod file_path;
 pub mod judge;
 pub mod judge_test;
+pub mod leak_check;
 pub mod lesson_judge;
 pub mod lost_crates;
 pub mod preparation;
