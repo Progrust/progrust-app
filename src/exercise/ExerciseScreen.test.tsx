@@ -69,13 +69,36 @@ const PROBLEM = [
 ].join("\n");
 
 const chapters: Chapter[] = [
-  { id: "ch01", title: "はじめに", description: "", lessons: [] },
-  { id: "ch02", title: "変数", description: "", lessons: [] },
-  { id: "ch03", title: "型", description: "", lessons: [] },
+  {
+    id: "ch01",
+    title: "はじめに",
+    description: "",
+    language: "rust",
+    number: 1,
+    lessons: [],
+  },
+  {
+    id: "ch02",
+    title: "変数",
+    description: "",
+    language: "rust",
+    number: 2,
+    lessons: [],
+  },
+  {
+    id: "ch03",
+    title: "型",
+    description: "",
+    language: "rust",
+    number: 3,
+    lessons: [],
+  },
   {
     id: "ch04",
     title: "所有権",
     description: "",
+    language: "rust",
+    number: 4,
     lessons: [
       summary("ch04-01", "video_only", "メモリの仕組み"),
       summary("ch04-02", "lesson", "所有権のムーブ"),

@@ -67,11 +67,20 @@ const durations: Durations = {
 };
 
 const chapters: Chapter[] = [
-  { id: "ch01", title: "はじめに", description: "", lessons: [] },
+  {
+    id: "ch01",
+    title: "はじめに",
+    description: "",
+    language: "rust",
+    number: 1,
+    lessons: [],
+  },
   {
     id: "ch04",
     title: "所有権",
     description: "",
+    language: "rust",
+    number: 4,
     lessons: ["ch04-01", "ch04-02"].map((id) => ({
       id,
       kind: "lesson",

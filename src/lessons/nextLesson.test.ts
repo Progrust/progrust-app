@@ -23,7 +23,14 @@ function lesson(id: string, inPreparation = false): LessonSummary {
 }
 
 function chapter(id: string, lessons: LessonSummary[]): Chapter {
-  return { id, title: id, description: "", lessons };
+  return {
+    id,
+    title: id,
+    description: "",
+    language: "rust",
+    number: 1,
+    lessons,
+  };
 }
 
 describe("次のレッスンへ", () => {

@@ -7,6 +7,8 @@ function chapter(id: string, title: string, lessonIds: string[]): Chapter {
     id,
     title,
     description: "",
+    language: "rust",
+    number: 1,
     lessons: lessonIds.map((lessonId) => ({
       id: lessonId,
       kind: null,

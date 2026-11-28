@@ -104,6 +104,7 @@ fn without_any_learning_record_the_dashboard_does_not_fail() {
         dashboard["next_lesson"],
         json!({
             "lesson_id": "c01-1", "chapter_id": "ch01", "chapter_title": "第1章",
+            "language": "rust", "chapter_number": 1,
             "title": "c01-1 のタイトル", "summary": "c01-1 の概要", "started": false,
         })
     );
@@ -137,7 +138,7 @@ fn when_the_next_lesson_is_in_chapter_4_chapters_2_to_10_are_shown() {
     assert_eq!(chapter_ids(&dashboard), ids(2, 10));
     assert_eq!(
         dashboard["chapters"][0],
-        json!({ "id": "ch02", "title": "第2章", "completed": 3, "total": 3 })
+        json!({ "id": "ch02", "title": "第2章", "language": "rust", "number": 2, "completed": 3, "total": 3 })
     );
 }
 
@@ -155,7 +156,7 @@ fn lessons_in_preparation_are_not_counted_in_the_totals() {
     );
     assert_eq!(
         dashboard["chapters"][0],
-        json!({ "id": "ch01", "title": "第1章", "completed": 2, "total": 3 })
+        json!({ "id": "ch01", "title": "第1章", "language": "rust", "number": 1, "completed": 2, "total": 3 })
     );
     assert_eq!(dashboard["next_lesson"]["lesson_id"], "c01-3");
 }
@@ -176,4 +177,87 @@ fn when_everything_is_completed_there_is_no_next_lesson_and_the_last_chapters_ar
         json!({ "completed": 36, "total": 36 })
     );
     assert_eq!(chapter_ids(&dashboard), ids(4, 12));
+}
+
+/// C の章 `c01`〜`c03`（`language: "c"`）と、Rust の章 `ch01`〜`ch06` を並べた教材。各章に準備中でない 1 レッスン `{章 ID}-1`。
+fn make_mixed_content() -> tempfile::TempDir {
+    let dir = tempfile::tempdir().unwrap();
+    let root = dir.path();
+    let mut chapters = Vec::new();
+    for (id, language) in (1..=3)
+        .map(|i| (format!("c{i:02}"), Some("c")))
+        .chain((1..=6).map(|i| (format!("ch{i:02}"), None)))
+    {
+        let lesson_id = format!("{id}-1");
+        write(
+            root,
+            &format!("lessons/{lesson_id}/lesson.json"),
+            &json!({
+                "id": lesson_id, "kind": "video_only",
+                "title": format!("{lesson_id} のタイトル"), "summary": "概要",
+            })
+            .to_string(),
+        );
+        let mut chapter = json!({
+            "id": id, "title": format!("{id} の章"), "description": "", "lessons": [lesson_id],
+        });
+        if let Some(language) = language {
+            chapter["language"] = json!(language);
+        }
+        chapters.push(chapter);
+    }
+    write(root, "chapters.json", &Value::Array(chapters).to_string());
+    dir
+}
+
+#[test]
+fn when_the_next_lesson_is_in_c_chapter_1_the_nine_chapters_are_c_1_to_3_and_rust_1_to_6() {
+    let content = make_mixed_content();
+    let data = tempfile::tempdir().unwrap();
+    let (_app, window) = app_with(content.path(), data.path());
+    let dashboard = get_dashboard(&window);
+    // 一度もレッスンを開いていないので、推奨レッスンは C 第1章の最初のレッスン。
+    assert_eq!(
+        dashboard["next_lesson"],
+        json!({
+            "lesson_id": "c01-1", "chapter_id": "c01", "chapter_title": "c01 の章",
+            "language": "c", "chapter_number": 1,
+            "title": "c01-1 のタイトル", "summary": "概要", "started": false,
+        })
+    );
+    let tiles: Vec<(String, String, u64)> = dashboard["chapters"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|c| {
+            (
+                c["id"].as_str().unwrap().to_string(),
+                c["language"].as_str().unwrap().to_string(),
+                c["number"].as_u64().unwrap(),
+            )
+        })
+        .collect();
+    let expected: Vec<(String, String, u64)> = (1..=3)
+        .map(|i| (format!("c{i:02}"), "c".to_string(), i))
+        .chain((1..=6).map(|i| (format!("ch{i:02}"), "rust".to_string(), i)))
+        .collect();
+    assert_eq!(tiles, expected);
+}
+
+#[test]
+fn completing_a_c_lesson_increases_the_counts() {
+    let content = make_mixed_content();
+    let data = tempfile::tempdir().unwrap();
+    write_completed(data.path(), &["c01-1".to_string()]);
+    let (_app, window) = app_with(content.path(), data.path());
+    let dashboard = get_dashboard(&window);
+    assert_eq!(
+        dashboard["lesson_counts"],
+        json!({ "completed": 1, "total": 9 })
+    );
+    assert_eq!(
+        dashboard["chapters"][0],
+        json!({ "id": "c01", "title": "c01 の章", "language": "c", "number": 1, "completed": 1, "total": 1 })
+    );
+    assert_eq!(dashboard["next_lesson"]["lesson_id"], "c02-1");
 }

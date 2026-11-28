@@ -68,6 +68,8 @@ const chapters: Chapter[] = [
     id: "ch04",
     title: "所有権",
     description: "",
+    language: "rust",
+    number: 4,
     lessons: [
       {
         id: "ch04-02",

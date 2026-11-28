@@ -239,7 +239,7 @@ mod tests {
     use serde_json::json;
 
     use super::*;
-    use crate::content::{Chapter, LessonSummary};
+    use crate::content::{Chapter, Language, LessonSummary};
 
     fn lesson(id: &str, in_preparation: bool) -> LessonSummary {
         LessonSummary {
@@ -258,6 +258,8 @@ mod tests {
                 id: "ch01".into(),
                 title: "章".into(),
                 description: "".into(),
+                language: Language::Rust,
+                number: 1,
                 lessons: lessons
                     .iter()
                     .map(|(id, in_preparation)| lesson(id, *in_preparation))
@@ -302,6 +304,35 @@ mod tests {
         assert_eq!(
             recommended_lesson_id(&chapters, &Progress::default()),
             Some("a".into())
+        );
+    }
+
+    #[test]
+    fn with_c_chapters_first_nothing_started_recommends_the_first_c_lesson() {
+        let chapter = |id: &str, language, number, lesson_id: &str| Chapter {
+            id: id.into(),
+            title: "章".into(),
+            description: "".into(),
+            language,
+            number,
+            lessons: vec![lesson(lesson_id, false)],
+        };
+        let chapters = ChapterList {
+            chapters: vec![
+                chapter("c01", Language::C, 1, "c01-01"),
+                chapter("ch01", Language::Rust, 1, "ch01-01"),
+            ],
+        };
+        assert_eq!(
+            recommended_lesson_id(&chapters, &Progress::default()),
+            Some("c01-01".into())
+        );
+        // c01-01 が準備中なら、次の準備中でないレッスンを推奨する。
+        let mut unprepared = chapters.clone();
+        unprepared.chapters[0].lessons = vec![lesson("c01-01", true)];
+        assert_eq!(
+            recommended_lesson_id(&unprepared, &Progress::default()),
+            Some("ch01-01".into())
         );
     }
 

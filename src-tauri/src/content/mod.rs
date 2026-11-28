@@ -33,12 +33,25 @@ pub struct ChapterList {
     pub chapters: Vec<Chapter>,
 }
 
+/// 章（とレッスン）が教えるプログラミング言語（spec/content-format/chapters-json.md）。
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum Language {
+    C,
+    /// `chapters.json` で `language` を省略した章は、`Rust` として扱う。
+    #[default]
+    Rust,
+}
+
 /// 章。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize)]
 pub struct Chapter {
     pub id: String,
     pub title: String,
     pub description: String,
+    pub language: Language,
+    /// 同じ言語の章の中での位置（最初の章を 1 とする）。
+    pub number: u32,
     pub lessons: Vec<LessonSummary>,
 }
 
@@ -58,6 +71,10 @@ pub struct LessonSummary {
 pub struct LessonDetail {
     /// `lesson.json` の内容。
     pub lesson: Value,
+    /// レッスンの言語（属する章の言語）。
+    pub language: Language,
+    /// レッスンが属する章の番号（`list_chapters` の `chapters[].number`）。
+    pub chapter_number: u32,
     /// `script.json` の内容。動画の無いレッスンでは `None`。
     pub script: Option<Value>,
     /// 音声のディレクトリの絶対パス。動画の無いレッスンでは `None`。
@@ -199,6 +216,12 @@ struct RawChapter {
     id: String,
     title: String,
     description: String,
+    /// 省略したときは `rust`。`"c"`・`"rust"` 以外は、読めない教材として扱う。
+    #[serde(default)]
+    language: Language,
+    /// 同じ言語の章の中での位置。`chapters.json` には無く、読み込むときに決める。
+    #[serde(skip)]
+    number: u32,
     lessons: Vec<String>,
 }
 
@@ -237,6 +260,8 @@ impl ContentDir {
                     id: raw.id,
                     title: raw.title,
                     description: raw.description,
+                    language: raw.language,
+                    number: raw.number,
                     lessons,
                 })
             })
@@ -361,9 +386,15 @@ impl ContentDir {
             lesson_id: lesson_id.to_string(),
         };
         // ID を `chapters.json` の中から探すので、パスの区切りや `..` を含む ID でディレクトリの外を読むことは無い。
-        if lesson_id.starts_with(GENERATED_PREFIX) || !self.is_listed(lesson_id)? {
+        if lesson_id.starts_with(GENERATED_PREFIX) {
             return Err(not_found());
         }
+        let (language, chapter_number) = self
+            .read_chapters_json()?
+            .into_iter()
+            .find(|chapter| chapter.lessons.iter().any(|id| id == lesson_id))
+            .map(|chapter| (chapter.language, chapter.number))
+            .ok_or_else(not_found)?;
         let dir = self.lesson_dir(lesson_id);
         if !dir.is_dir() {
             return Err(not_found());
@@ -394,6 +425,8 @@ impl ContentDir {
 
         Ok(LessonDetail {
             lesson,
+            language,
+            chapter_number,
             script,
             voice_dir,
             exercise,
@@ -403,10 +436,21 @@ impl ContentDir {
     fn read_chapters_json(&self) -> Result<Vec<RawChapter>, ContentError> {
         let path = self.root.join("chapters.json");
         let value = read_json(&path)?;
-        serde_json::from_value(value).map_err(|error| ContentError::Invalid {
-            path,
-            reason: error.to_string(),
-        })
+        let mut chapters: Vec<RawChapter> =
+            serde_json::from_value(value).map_err(|error| ContentError::Invalid {
+                path,
+                reason: error.to_string(),
+            })?;
+        let (mut c_count, mut rust_count) = (0, 0);
+        for chapter in &mut chapters {
+            let count = match chapter.language {
+                Language::C => &mut c_count,
+                Language::Rust => &mut rust_count,
+            };
+            *count += 1;
+            chapter.number = *count;
+        }
+        Ok(chapters)
     }
 
     fn is_listed(&self, lesson_id: &str) -> Result<bool, ContentError> {

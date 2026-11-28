@@ -40,13 +40,36 @@ const durations: Durations = {
 };
 
 const chapters: Chapter[] = [
-  { id: "ch01", title: "はじめに", description: "", lessons: [] },
-  { id: "ch02", title: "変数", description: "", lessons: [] },
-  { id: "ch03", title: "型", description: "", lessons: [] },
+  {
+    id: "ch01",
+    title: "はじめに",
+    description: "",
+    language: "rust",
+    number: 1,
+    lessons: [],
+  },
+  {
+    id: "ch02",
+    title: "変数",
+    description: "",
+    language: "rust",
+    number: 2,
+    lessons: [],
+  },
+  {
+    id: "ch03",
+    title: "型",
+    description: "",
+    language: "rust",
+    number: 3,
+    lessons: [],
+  },
   {
     id: "ch04",
     title: "所有権",
     description: "",
+    language: "rust",
+    number: 4,
     lessons: [
       lesson("ch04-01", "video_only", "メモリの仕組み"),
       lesson("ch04-02", "lesson", "所有権のムーブ"),
@@ -57,6 +80,8 @@ const chapters: Chapter[] = [
     id: "ch05",
     title: "参照と借用",
     description: "",
+    language: "rust",
+    number: 5,
     lessons: [
       lesson("ch05-01", "video_only", "参照の仕組み"),
       lesson("ch05-02", "chapter_review", "第5章の復習"),

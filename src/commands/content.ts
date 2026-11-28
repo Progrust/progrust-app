@@ -14,10 +14,16 @@ export type LessonSummary = {
   in_preparation: boolean;
 };
 
+// 章とレッスンの言語（documents/spec/content-format/chapters-json.md）。
+export type Language = "c" | "rust";
+
 export type Chapter = {
   id: string;
   title: string;
   description: string;
+  language: Language;
+  // 同じ言語の章の中での位置（最初の章が 1）。
+  number: number;
   lessons: LessonSummary[];
 };
 
@@ -78,6 +84,9 @@ export type Exercise = {
 
 export type LessonDetail = {
   lesson: LessonDefinition;
+  // レッスンの言語と、属する章の番号（list_chapters の chapters[].number）。
+  language: Language;
+  chapter_number: number;
   script: Script | null;
   voice_dir: string | null;
   exercise: Exercise | null;
