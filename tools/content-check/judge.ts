@@ -16,6 +16,7 @@ import { spawnSync } from "node:child_process";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
+  isCLesson,
   isDirectory,
   isPrepared,
   readLessonEntries,
@@ -52,6 +53,8 @@ type JudgeRun =
 // 判定の検査の対象にするか。対象にしないときは null。
 function exerciseDir(entry: LessonEntry): string | null {
   if (isPrepared(entry)) return null;
+  // C のレッスンの判定は、#310 で作る。それまでは飛ばす。
+  if (isCLesson(entry)) return null;
   const lesson = readLessonJson(entry);
   if (lesson.state !== "ok") return null;
   if (lesson.value.kind === "video_only") return null;

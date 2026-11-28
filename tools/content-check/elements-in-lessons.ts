@@ -6,6 +6,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { readChapterList, type ListedChapter } from "./curriculum-list.ts";
 import {
+  isCLesson,
   isPrepared,
   readLessonEntries,
   readLessonJson,
@@ -26,12 +27,12 @@ function tryReadList(curriculumDir: string): ListedChapter[] | undefined {
   }
 }
 
-// 検査できる（準備中でなく、読める）レッスンの lesson.json。
+// 検査できる（Rust の、準備中でなく、読める）レッスンの lesson.json。C のレッスンは要素を持たないので含めない。
 function readLessons(
   contentDir: string,
 ): { entry: LessonEntry; value: Record<string, unknown> }[] {
   return readLessonEntries(contentDir).flatMap((entry) => {
-    if (isPrepared(entry)) return [];
+    if (isCLesson(entry) || isPrepared(entry)) return [];
     const result = readLessonJson(entry);
     return result.state === "ok" ? [{ entry, value: result.value }] : [];
   });
@@ -79,11 +80,11 @@ export function checkLearnedElements({
 }
 
 // 要素マスタ: deprecated でない要素が、いずれかのレッスンの primary_elements に含まれている。
-// 準備中のレッスンが 1 つでもある間は検査しない。
+// Rust のレッスンに準備中のレッスンが 1 つでもある間は検査しない（C のレッスンは要素を持たない）。
 export function checkMasterElementsUsed({
   contentDir,
 }: CheckOptions): Finding[] {
-  const entries = readLessonEntries(contentDir);
+  const entries = readLessonEntries(contentDir).filter((e) => !isCLesson(e));
   if (entries.length === 0 || entries.some(isPrepared)) return [];
 
   let parsed: unknown;
