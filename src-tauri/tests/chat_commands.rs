@@ -192,6 +192,7 @@ impl Fixture {
                 path: fake.path().to_path_buf(),
                 version: "2.1.329".into(),
             }),
+            clang: None,
         }));
         app.manage(Chats::new(time_limit, work.path().to_path_buf()));
 

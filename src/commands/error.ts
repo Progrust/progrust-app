@@ -5,6 +5,7 @@ export type CommandErrorCode =
   | "invalid_state"
   | "busy"
   | "cargo_unavailable"
+  | "clang_unavailable"
   | "claude_unavailable"
   | "crates_not_ready"
   | "io_error"

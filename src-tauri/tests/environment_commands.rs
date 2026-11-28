@@ -26,8 +26,8 @@ use fake_rust::FakeRust;
 use progrust_lib::claude::{ClaudeEnv, ENV_VAR_NAMES};
 use progrust_lib::commands::error::ErrorCode;
 use progrust_lib::environment::{
-    CargoSearch, ClaudeSearch, ClaudeTool, DetectedTools, ENVIRONMENT_UPDATED, Environment,
-    REQUIRED_RUSTC_VERSION, RustTools, ToolSearch, VERSION_TIMEOUT, configured_cargo,
+    CargoSearch, ClangSearch, ClaudeSearch, ClaudeTool, DetectedTools, ENVIRONMENT_UPDATED,
+    Environment, REQUIRED_RUSTC_VERSION, RustTools, ToolSearch, VERSION_TIMEOUT, configured_cargo,
     configured_claude, start_detection,
 };
 use progrust_lib::runner::RunnerDir;
@@ -63,6 +63,7 @@ fn cargo_status(search: &CargoSearch) -> Value {
     let status = Environment::detected(DetectedTools {
         cargo: search.detect(),
         claude: None,
+        clang: None,
     })
     .status();
     serde_json::to_value(status.cargo).unwrap()
@@ -356,6 +357,7 @@ fn cargo_only(cargo: Option<RustTools>) -> DetectedTools {
     DetectedTools {
         cargo,
         claude: None,
+        clang: None,
     }
 }
 
@@ -410,14 +412,16 @@ fn cargo_search_only(cargo: CargoSearch) -> ToolSearch {
     ToolSearch {
         cargo,
         claude: ClaudeSearch::nowhere(),
+        clang: ClangSearch::nowhere(),
     }
 }
 
 fn status_json(cargo: Value, crates: Value) -> Value {
     json!({
         "cargo": cargo,
-        // claude はどこも探さないので not_found。
+        // claude と clang はどこも探さないので not_found。
         "claude": claude_not_found_json(),
+        "clang": { "status": "not_found", "path": null, "version": null },
         "crates": crates,
     })
 }
@@ -597,6 +601,7 @@ fn claude_status(search: &ClaudeSearch) -> Value {
     let status = Environment::detected(DetectedTools {
         cargo: None,
         claude: search.detect(),
+        clang: None,
     })
     .status();
     serde_json::to_value(status.claude).unwrap()
@@ -929,6 +934,7 @@ fn claude_returns_the_detected_claude() {
     let environment = Environment::detected(DetectedTools {
         cargo: None,
         claude: Some(claude_tool(&fake)),
+        clang: None,
     });
     assert_eq!(environment.claude(), Some(claude_tool(&fake)));
     assert_eq!(
@@ -949,6 +955,7 @@ fn claude_waits_for_detection() {
     environment.finish_detection(DetectedTools {
         cargo: None,
         claude: Some(claude_tool(&fake)),
+        clang: None,
     });
     let found = receiver.recv_timeout(Duration::from_secs(10)).unwrap();
     assert_eq!(found, Some(claude_tool(&fake)));
@@ -973,11 +980,13 @@ fn get_environment_status_returns_the_detected_claude() {
         ToolSearch {
             cargo: search(None, &[dir_of(&rust)], home.path()),
             claude: claude_search(None, &[claude_dir(&claude)], home.path(), &[]),
+            clang: ClangSearch::nowhere(),
         },
     );
     let expected = json!({
         "cargo": found_json("found", &rust, "1.100.0"),
         "claude": claude_found_json(&claude, "2.1.329"),
+        "clang": { "status": "not_found", "path": null, "version": null },
         "crates": ready_json(),
     });
     let payload = receiver.recv_timeout(Duration::from_secs(10)).unwrap();

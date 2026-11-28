@@ -43,6 +43,7 @@ const FOUND: EnvironmentStatus = {
     required_rustc_version: "1.100.0",
   },
   claude: { status: "found", path: "/c/claude", version: "2.0.1" },
+  clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
   crates: { status: "ready", prepared_at: null, error: null },
 };
 
@@ -143,6 +144,7 @@ it("見つからないときは導入手順のボタンを出し、押すと導�
       required_rustc_version: "1.100.0",
     },
     claude: { status: "not_found", path: null, version: null },
+    clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
     crates: { status: "not_started", prepared_at: null, error: null },
   });
   render(<App />);
@@ -228,6 +230,7 @@ it("「始める」で first_launch_completed を true にして保存し、ト�
       required_rustc_version: "1.100.0",
     },
     claude: { status: "not_found", path: null, version: null },
+    clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
     crates: { status: "preparing", prepared_at: null, error: null },
   });
   render(<App />);

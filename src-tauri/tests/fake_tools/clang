@@ -1,0 +1,59 @@
+#!/bin/sh
+# テスト用の偽の clang（spec/non-functional/testing.md「偽の claude と偽の cargo」）。
+#
+# テストでは、この原本を指すシンボリックリンクを一時ディレクトリに置いて使う
+# （tests/fake_tools/mod.rs）。返す出力は、実行ファイル（リンク）と同じディレクトリの
+# 次のファイルで決める。環境変数では決めない。
+#
+#   version-stdout     `--version` で標準出力に書く内容。無ければ、実物の Apple clang 21 の形の 4 行を書く
+#   version-exit-code  `--version` の終了コード。無ければ 0
+#   version-hang       あれば、`--version` で何も書かずに、終了せずに止まる（応答しない）
+#
+# ほかの引数には対応しない（終了コード 1 で失敗する）。
+#
+# 呼び出しごとに、受け取ったものを calls/{1 から始まる番号}/ に書き残す。
+#
+#   args   引数。1 つを 1 行に書く
+#   env    環境変数。`env` の出力のとおり（sh が足す PWD などを含む）
+#
+# テストからは、tests/fake_tools/clang.rs の手助けで、これらのファイルを書き、読む。
+
+dir=${0%/*}
+
+mkdir "$dir/calls" 2> /dev/null
+number=1
+until mkdir "$dir/calls/$number" 2> /dev/null; do
+  if [ ! -d "$dir/calls/$number" ]; then
+    echo "fake clang: $dir/calls/$number を作れない" >&2
+    exit 1
+  fi
+  number=$((number + 1))
+done
+call="$dir/calls/$number"
+if [ "$#" -gt 0 ]; then
+  printf '%s\n' "$@" > "$call/args"
+else
+  : > "$call/args"
+fi
+env > "$call/env"
+
+if [ "$#" -eq 1 ] && [ "$1" = --version ]; then
+  while [ -e "$dir/version-hang" ]; do
+    sleep 1
+  done
+  if [ -f "$dir/version-stdout" ]; then
+    cat "$dir/version-stdout"
+  else
+    echo "Apple clang version 21.0.0 (clang-2100.4.1.1)"
+    echo "Target: arm64-apple-darwin27.2.0"
+    echo "Thread model: posix"
+    echo "InstalledDir: /Library/Developer/CommandLineTools/usr/bin"
+  fi
+  code=0
+  if [ -f "$dir/version-exit-code" ]; then
+    IFS= read -r code < "$dir/version-exit-code" || [ -n "$code" ]
+  fi
+  exit "$code"
+fi
+echo "fake clang: 対応していない引数: $*" >&2
+exit 1

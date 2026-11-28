@@ -512,6 +512,7 @@ fn the_command_uses_the_chat_model_from_settings() {
     app.manage(Environment::detected(DetectedTools {
         cargo: None,
         claude: Some(tool(&fake)),
+        clang: None,
     }));
     let response = invoke(&window, LOCAL_URL, "test_claude_connection", json!({}));
     assert_eq!(

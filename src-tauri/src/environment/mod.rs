@@ -1,9 +1,10 @@
 //! 外部ツールの検出と、環境の状態（spec/architecture/external-tools.md「検出」、
-//! spec/architecture/commands/environment.md「環境の状態」）。
+//! spec/architecture/c-toolchain.md「検出」、spec/architecture/commands/environment.md「環境の状態」）。
 //!
 //! アプリの起動時に [`start_detection`] で、画面の表示を待たせずに別のスレッドで `cargo`・`rustc` と
-//! `claude` を探す。結果は [`Environment`] がメモリに持ち、`get_environment_status` と、実行・提出の
-//! コマンド（[`Environment::rust_tools`]）と、`claude` を起動する処理（[`Environment::claude`]）が使う。
+//! `claude` と `clang` を探す。結果は [`Environment`] がメモリに持ち、`get_environment_status` と、実行・提出の
+//! コマンド（[`Environment::rust_tools`]）と、`claude` を起動する処理（[`Environment::claude`]）と、C の演習の
+//! ビルド（[`Environment::clang`]）が使う。
 //! 検出が終わる前に読まれたときは、終わるまで待つ。設定画面と初回起動画面の「再検出」（`redetect_tools`）では、
 //! [`redetect`] が検出し直して、メモリの検出結果を置き換える。
 //!
@@ -40,8 +41,13 @@ pub const REQUIRED_RUSTC_VERSION: &str = "1.100.0";
 /// 検出が終わったときと、検出し直したときに送るイベントの名前。
 pub const ENVIRONMENT_UPDATED: &str = "environment_updated";
 
-/// `rustc --version`・`claude --version` が終わるのを待つ時間。過ぎたら止めて、その場所は使えないとする。
+/// `rustc --version`・`claude --version`・`clang --version` が終わるのを待つ時間。過ぎたら止めて、その場所は
+/// 使えないとする。
 pub const VERSION_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// `clang` を探す場所の最後に調べるディレクトリ（spec/architecture/c-toolchain.md「検出」）。`PATH` に無くても
+/// （macOS で Finder から起動したときを含む）調べる。
+pub const CLANG_SYSTEM_DIR: &str = "/usr/bin";
 
 /// `claude` を探す npm のグローバルインストール先（spec/architecture/external-tools.md「検出」）。
 /// Homebrew の Node.js（Apple シリコン）と、公式のインストーラーの Node.js の場所を、この順に調べる。
@@ -387,7 +393,116 @@ impl ClaudeSearch {
     }
 }
 
-// ---- cargo と claude の検出 ----
+// ---- clang の検出 ----
+
+/// 見つかった `clang`。C の演習のビルドは、これのパスで起動する。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ClangTool {
+    /// `clang` の絶対パス。
+    pub path: PathBuf,
+    /// `clang --version` から取り出したバージョン（例: `21.0.0`）。取り出せないときは `None`。
+    /// 表示に使い、必要条件には使わない。
+    pub version: Option<String>,
+}
+
+/// `clang --version` の出力（例: `Apple clang version 21.0.0 (clang-2100.4.1.1)`）の 1 行目から、`version` の
+/// 次の語をバージョンとして取り出す。`version` の語が無いとき、その後ろに語が無いときは `None`。
+pub fn clang_version_from_output(output: &str) -> Option<String> {
+    let mut words = output.lines().next()?.split_whitespace();
+    words.find(|word| *word == "version")?;
+    words.next().map(str::to_string)
+}
+
+/// `clang` を探すときの入力。
+///
+/// 探す順は、`configured_clang` → `path_var` の各ディレクトリ → `system_dir` とする。それぞれの場所で、`clang` が
+/// 実行できるファイルで、`clang --version` が `timeout` の間に終了コード 0 で終わり、出力の 1 行目が空でなければ、
+/// それを使う。バージョンを取り出せなくても使う。
+///
+/// `clang --version` は、`claude` と違い、アプリが受け取った環境変数のままで起動する
+/// （spec/claude-integration/invocation.md「環境変数」）。
+#[derive(Debug, Clone)]
+pub struct ClangSearch {
+    /// 設定の `tool_paths.clang`（`clang` の実行ファイルのパス）。
+    pub configured_clang: Option<PathBuf>,
+    /// 環境変数 `PATH` の値。
+    pub path_var: Option<OsString>,
+    /// 最後に調べるディレクトリ。アプリでは [`CLANG_SYSTEM_DIR`]（`/usr/bin`）。テストでは、実物の
+    /// `/usr/bin/clang` を見つけないよう、別のディレクトリにする。
+    pub system_dir: Option<PathBuf>,
+    /// `clang --version` が終わるのを待つ時間。アプリでは [`VERSION_TIMEOUT`]。
+    pub timeout: Duration,
+}
+
+/// 設定（`settings.json`）の `tool_paths.clang`。`null` のとき、設定を読めないときは `None`。
+pub fn configured_clang(data_dir: &AppDataDir) -> Option<PathBuf> {
+    data_dir
+        .read_settings()
+        .ok()
+        .and_then(|settings| settings.tool_paths.clang)
+        .map(PathBuf::from)
+}
+
+impl ClangSearch {
+    /// アプリのプロセスの `PATH` と、設定の `tool_paths.clang`（[`configured_clang`]）から作る。
+    pub fn from_process(configured_clang: Option<PathBuf>) -> Self {
+        Self {
+            configured_clang,
+            path_var: std::env::var_os("PATH"),
+            system_dir: Some(PathBuf::from(CLANG_SYSTEM_DIR)),
+            timeout: VERSION_TIMEOUT,
+        }
+    }
+
+    /// どこも探さない。テストで、`clang` が見つからない状態にするときに使う。
+    pub fn nowhere() -> Self {
+        Self {
+            configured_clang: None,
+            path_var: None,
+            system_dir: None,
+            timeout: VERSION_TIMEOUT,
+        }
+    }
+
+    /// 調べる `clang` を、探す順に返す。相対パスの場所は使わない。
+    fn candidates(&self) -> Vec<PathBuf> {
+        let mut candidates = Vec::new();
+        let mut push = |clang: PathBuf| {
+            if clang.is_absolute() && !candidates.contains(&clang) {
+                candidates.push(clang);
+            }
+        };
+        if let Some(clang) = &self.configured_clang {
+            push(clang.clone());
+        }
+        if let Some(path_var) = &self.path_var {
+            for dir in std::env::split_paths(path_var) {
+                push(dir.join("clang"));
+            }
+        }
+        if let Some(dir) = &self.system_dir {
+            push(dir.join("clang"));
+        }
+        candidates
+    }
+
+    /// `clang` を探す。見つからないときは `None`。
+    pub fn detect(&self) -> Option<ClangTool> {
+        self.candidates().into_iter().find_map(|path| {
+            if !is_executable_file(&path) {
+                return None;
+            }
+            let stdout = tool_stdout(&path, &["--version"], self.timeout)?;
+            if stdout.lines().next()?.is_empty() {
+                return None;
+            }
+            let version = clang_version_from_output(&stdout);
+            Some(ClangTool { path, version })
+        })
+    }
+}
+
+// ---- cargo と claude と clang の検出 ----
 
 /// 検出の結果。
 #[derive(Debug, Clone, Default, PartialEq, Eq)]
@@ -396,13 +511,16 @@ pub struct DetectedTools {
     pub cargo: Option<RustTools>,
     /// 見つかった `claude`。見つからないときは `None`。
     pub claude: Option<ClaudeTool>,
+    /// 見つかった `clang`。見つからないときは `None`。
+    pub clang: Option<ClangTool>,
 }
 
-/// `cargo`・`rustc` と `claude` を探すときの入力。
+/// `cargo`・`rustc` と `claude` と `clang` を探すときの入力。
 #[derive(Debug, Clone)]
 pub struct ToolSearch {
     pub cargo: CargoSearch,
     pub claude: ClaudeSearch,
+    pub clang: ClangSearch,
 }
 
 impl ToolSearch {
@@ -410,23 +528,27 @@ impl ToolSearch {
     pub fn from_process(
         configured_cargo: Option<PathBuf>,
         configured_claude: Option<PathBuf>,
+        configured_clang: Option<PathBuf>,
     ) -> Self {
         Self {
             cargo: CargoSearch::from_process(configured_cargo),
             claude: ClaudeSearch::from_process(configured_claude),
+            clang: ClangSearch::from_process(configured_clang),
         }
     }
 
-    /// `cargo`・`rustc` と `claude` を、並べて探す。どちらかに応答しない場所があっても、検出にかかる
-    /// 時間が 2 つの合計にならないようにする。
+    /// `cargo`・`rustc` と `claude` と `clang` を、並べて探す。どれかに応答しない場所があっても、検出に
+    /// かかる時間が 3 つの合計にならないようにする。
     pub fn detect(&self) -> DetectedTools {
         thread::scope(|scope| {
             let claude = scope.spawn(|| self.claude.detect());
+            let clang = scope.spawn(|| self.clang.detect());
             let cargo = self.cargo.detect();
             DetectedTools {
                 cargo,
                 // 検出のスレッドが落ちたときは、見つからないとする。
                 claude: claude.join().ok().flatten(),
+                clang: clang.join().ok().flatten(),
             }
         })
     }
@@ -439,6 +561,7 @@ impl ToolSearch {
 pub struct EnvironmentStatus {
     pub cargo: CargoStatus,
     pub claude: ClaudeStatus,
+    pub clang: ClangStatus,
     pub crates: CratesStatus,
 }
 
@@ -511,6 +634,38 @@ impl ClaudeStatus {
                 status: ClaudeState::Found,
                 path: Some(tool.path.to_string_lossy().into_owned()),
                 version: Some(tool.version.clone()),
+            },
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+pub struct ClangStatus {
+    pub status: ClangState,
+    pub path: Option<String>,
+    /// 見つからないときと、バージョンを取り出せないときは `None`。
+    pub version: Option<String>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ClangState {
+    Found,
+    NotFound,
+}
+
+impl ClangStatus {
+    fn from_tool(tool: Option<&ClangTool>) -> Self {
+        match tool {
+            None => Self {
+                status: ClangState::NotFound,
+                path: None,
+                version: None,
+            },
+            Some(tool) => Self {
+                status: ClangState::Found,
+                path: Some(tool.path.to_string_lossy().into_owned()),
+                version: tool.version.clone(),
             },
         }
     }
@@ -596,7 +751,7 @@ struct Shared {
 /// 1 つのロックで守る状態。検出結果と初回準備の状態を、一緒に読み書きする。
 #[derive(Default)]
 struct State {
-    /// `cargo`・`rustc` と `claude` の検出結果。検出が終わるまでは `None`。
+    /// `cargo`・`rustc` と `claude` と `clang` の検出結果。検出が終わるまでは `None`。
     tools: Option<DetectedTools>,
     /// 初回準備の状態。
     crates: CratesStatus,
@@ -689,6 +844,7 @@ impl Environment {
         Some(EnvironmentStatus {
             cargo: CargoStatus::from_tools(tools.cargo.as_ref()),
             claude: ClaudeStatus::from_tool(tools.claude.as_ref()),
+            clang: ClangStatus::from_tool(tools.clang.as_ref()),
             crates: state.crates.clone(),
         })
     }
@@ -729,6 +885,16 @@ impl Environment {
     /// `None`。待つので、メインスレッドでは呼ばない。
     pub fn claude(&self) -> Option<ClaudeTool> {
         self.wait_tools().claude
+    }
+
+    /// C の演習のビルドで使う `clang`。検出が終わるまで待つ。見つからないときは `clang_unavailable`
+    /// （spec/architecture/c-toolchain.md「見つからない場合」）。待つので、メインスレッドでは呼ばない。
+    pub fn clang(&self) -> Result<ClangTool, CommandError> {
+        self.wait_tools().clang.ok_or_else(|| CommandError {
+            code: ErrorCode::ClangUnavailable,
+            message: "C のコンパイラ（clang）が見つかりません。ターミナルで xcode-select --install を実行して、Command Line Tools を導入してください。".into(),
+            detail: None,
+        })
     }
 }
 
@@ -965,5 +1131,121 @@ mod tests {
     #[test]
     fn nowhere_has_no_candidates() {
         assert_eq!(ClaudeSearch::nowhere().candidates(), Vec::<PathBuf>::new());
+    }
+
+    #[test]
+    fn parses_clang_version_output() {
+        for (output, expected) in [
+            (
+                "Apple clang version 21.0.0 (clang-2100.4.1.1)\nTarget: arm64-apple-darwin27.2.0\n",
+                "21.0.0",
+            ),
+            ("clang version 19.1.7\n", "19.1.7"),
+            ("Homebrew clang version 20.1.0", "20.1.0"),
+            // 語の形は確かめない。
+            ("clang version unknown\n", "unknown"),
+        ] {
+            assert_eq!(
+                clang_version_from_output(output).as_deref(),
+                Some(expected),
+                "{output:?}"
+            );
+        }
+    }
+
+    #[test]
+    fn clang_version_output_without_a_version_has_no_version() {
+        for output in [
+            "",
+            "\n",
+            "Apple clang\n",
+            "Apple clang version\n",
+            "clang 21.0.0\n",
+            // 2 行目の version は使わない。
+            "Apple clang\nversion 21.0.0\n",
+        ] {
+            assert_eq!(clang_version_from_output(output), None, "{output:?}");
+        }
+    }
+
+    #[test]
+    fn clang_candidates_follow_the_search_order() {
+        let search = ClangSearch {
+            configured_clang: Some("/opt/llvm/bin/clang".into()),
+            path_var: Some("/opt/homebrew/bin:relative/bin:/opt/llvm/bin:/usr/bin".into()),
+            system_dir: Some("/usr/bin".into()),
+            ..ClangSearch::nowhere()
+        };
+        let expected: Vec<PathBuf> = [
+            "/opt/llvm/bin/clang",
+            "/opt/homebrew/bin/clang",
+            "/usr/bin/clang",
+        ]
+        .iter()
+        .map(PathBuf::from)
+        .collect();
+        // 相対パスの場所は使わず、同じ場所は 2 度調べない。
+        assert_eq!(search.candidates(), expected);
+    }
+
+    /// `PATH` が分からないとき（Finder から起動して、`PATH` に `/usr/bin` が無いときと同じく）も、最後に
+    /// `system_dir` を調べる。
+    #[test]
+    fn clang_system_dir_is_searched_without_path() {
+        let search = ClangSearch {
+            system_dir: Some("/usr/bin".into()),
+            ..ClangSearch::nowhere()
+        };
+        assert_eq!(search.candidates(), [PathBuf::from("/usr/bin/clang")]);
+    }
+
+    #[test]
+    fn a_relative_configured_clang_is_not_used() {
+        let search = ClangSearch {
+            configured_clang: Some("bin/clang".into()),
+            ..ClangSearch::nowhere()
+        };
+        assert_eq!(search.candidates(), Vec::<PathBuf>::new());
+        assert_eq!(ClangSearch::nowhere().candidates(), Vec::<PathBuf>::new());
+    }
+
+    /// アプリでは、`PATH` の後に /usr/bin を調べ、`clang --version` を 10 秒で打ち切る。
+    #[test]
+    fn clang_search_from_process_uses_the_app_settings() {
+        let search = ClangSearch::from_process(Some("/opt/llvm/bin/clang".into()));
+        assert_eq!(
+            search.configured_clang.as_deref(),
+            Some(Path::new("/opt/llvm/bin/clang"))
+        );
+        assert_eq!(search.system_dir.as_deref(), Some(Path::new("/usr/bin")));
+        assert_eq!(CLANG_SYSTEM_DIR, "/usr/bin");
+        assert_eq!(search.timeout, Duration::from_secs(10));
+        assert_eq!(search.path_var, std::env::var_os("PATH"));
+    }
+
+    /// 起動時の検出の入力は、設定の `tool_paths` の 3 つを、それぞれのツールの探す場所の最初に入れる。
+    #[test]
+    fn tool_search_from_process_uses_each_configured_path() {
+        let search = ToolSearch::from_process(
+            Some("/opt/cargo".into()),
+            Some("/opt/claude".into()),
+            Some("/opt/clang".into()),
+        );
+        assert_eq!(
+            search.cargo.configured_cargo.as_deref(),
+            Some(Path::new("/opt/cargo"))
+        );
+        assert_eq!(
+            search.claude.configured_claude.as_deref(),
+            Some(Path::new("/opt/claude"))
+        );
+        assert_eq!(
+            search.clang.configured_clang.as_deref(),
+            Some(Path::new("/opt/clang"))
+        );
+        assert_eq!(
+            search.clang.system_dir.as_deref(),
+            Some(Path::new("/usr/bin"))
+        );
     }
 }

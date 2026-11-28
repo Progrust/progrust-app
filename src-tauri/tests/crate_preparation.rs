@@ -28,8 +28,8 @@ use progrust_lib::environment::preparation::{
     Judgment, judge, start_crate_preparation, stop_crate_preparation_on_exit,
 };
 use progrust_lib::environment::{
-    CargoSearch, ClaudeSearch, CratesState, DetectedTools, ENVIRONMENT_UPDATED, Environment,
-    RustTools, ToolSearch, start_detection,
+    CargoSearch, ClangSearch, ClaudeSearch, CratesState, DetectedTools, ENVIRONMENT_UPDATED,
+    Environment, RustTools, ToolSearch, start_detection,
 };
 use progrust_lib::runner::RunnerDir;
 use progrust_lib::runner::prepared::{
@@ -121,6 +121,7 @@ impl Fixture {
                 home: Some(place.path().to_path_buf()),
             },
             claude: ClaudeSearch::nowhere(),
+            clang: ClangSearch::nowhere(),
         };
         start_detection(self.app.handle(), search);
         self._dirs.push(place);
@@ -450,6 +451,7 @@ fn a_retry_when_not_failed_is_invalid_state() {
     fx.app.manage(Environment::detected(DetectedTools {
         cargo: Some(tools_of(&fake)),
         claude: None,
+        clang: None,
     }));
     assert_eq!(
         error_code(fx.invoke("retry_crate_preparation")),
@@ -475,6 +477,7 @@ fn a_retry_without_cargo_is_cargo_unavailable() {
     let environment = Environment::detected(DetectedTools {
         cargo: Some(tools_of(&fake)),
         claude: None,
+        clang: None,
     });
     fx.app.manage(environment.clone());
     assert!(start_crate_preparation(fx.app.handle(), &tools_of(&fake)));
@@ -500,6 +503,7 @@ fn the_preparation_does_not_start_twice() {
     fx.app.manage(Environment::detected(DetectedTools {
         cargo: Some(tools_of(&fake)),
         claude: None,
+        clang: None,
     }));
     assert_eq!(fx.crates(), crates_json("not_started"));
     assert!(start_crate_preparation(fx.app.handle(), &tools_of(&fake)));

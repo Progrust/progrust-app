@@ -51,6 +51,7 @@ function setup(options: Options = {}) {
             required_rustc_version: "1.100.0",
           },
           claude: { status: "found", path: "/c/claude", version: "1.0.0" },
+          clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
           crates: { status: options.crates, prepared_at: null, error: null },
         };
       }
@@ -530,6 +531,7 @@ describe("外部クレートの準備", () => {
           required_rustc_version: "1.100.0",
         },
         claude: { status: "found", path: "/c/claude", version: "1.0.0" },
+        clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
         crates: { status: "ready", prepared_at: null, error: null },
       });
     });

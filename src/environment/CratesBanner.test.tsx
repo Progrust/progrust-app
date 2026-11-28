@@ -23,6 +23,7 @@ function env(status: CratesStatus["status"]): EnvironmentStatus {
       required_rustc_version: "1.100.0",
     },
     claude: { status: "found", path: "/c/claude", version: "1.0.0" },
+    clang: { status: "found", path: "/usr/bin/clang", version: "21.0.0" },
     crates: crates(status),
   };
 }

@@ -22,6 +22,14 @@ export type ClaudeStatus = {
   version: string | null;
 };
 
+// clang の検出結果（documents/spec/architecture/c-toolchain.md「検出」）。
+export type ClangStatus = {
+  status: "found" | "not_found";
+  path: string | null;
+  // clang --version から取り出したバージョン（例: 21.0.0）。見つからないときと、取り出せないときは null。
+  version: string | null;
+};
+
 // 初回準備の状態（documents/spec/exercise-runner/crates-and-workspace.md「初回準備の状態」）。
 export type CratesStatus = {
   status: "not_started" | "preparing" | "ready" | "failed";
@@ -35,6 +43,7 @@ export type CratesStatus = {
 export type EnvironmentStatus = {
   cargo: CargoStatus;
   claude: ClaudeStatus;
+  clang: ClangStatus;
   crates: CratesStatus;
 };
 
@@ -43,8 +52,8 @@ export function getEnvironmentStatus(): Promise<EnvironmentStatus> {
   return invoke<EnvironmentStatus>("get_environment_status");
 }
 
-// 設定の tool_paths を読み直して cargo・claude を検出し直し、検出し直した後の環境の状態で解決する（「再検出」）。
-// environment_updated も届く。初回準備を始めたときは、crates.status が preparing になる。
+// 設定の tool_paths を読み直して cargo・claude・clang を検出し直し、検出し直した後の環境の状態で解決する
+// （「再検出」）。environment_updated も届く。初回準備を始めたときは、crates.status が preparing になる。
 export function redetectTools(): Promise<EnvironmentStatus> {
   return invoke<EnvironmentStatus>("redetect_tools");
 }
