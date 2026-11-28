@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "演習問題生成で AI に渡す入力"
-description: "生成時に AI に渡す入力の内容と順序（C の章の教材の作成ルールを渡さないこと、既習の要素に C のレッスンが関わらないことを含む）、指示文（`prompts/generate.md`）で AI に指示する事項を定める。"
+description: "生成時に AI に渡す入力の内容と順序（実務での書き方の決まりと訳語の表を渡すこと、C の章の教材の作成ルールを渡さないこと、既習の要素に C のレッスンが関わらないことを含む）、指示文（`prompts/generate.md`）で AI に指示する事項を定める。"
 ---
 
 1. 指示文（`prompts/generate.md`）
@@ -9,9 +9,10 @@ description: "生成時に AI に渡す入力の内容と順序（C の章の教
 3. 既習の要素の一覧（完了済みレッスンの `primary_elements` に含まれる要素）。C のレッスンは要素を持たない（[レッスン定義の形式（lesson.json）](../content-format/lesson-json.md)「C のレッスン」）。C のレッスンの完了は、この一覧に関わらない
 4. 「苦手分野を中心にする」がオンの場合: 分析ファイルの本文のうち「苦手分野」「全体に共通する傾向」「演習問題生成への推奨」セクションと、選択した要素の `level`・`recurring_patterns`
 5. 直近 20 件の生成問題のタイトルと概要
-6. 演習の作成ルール（[演習の作成ルール](../content-guidelines/exercise.md)）と、判定方式から来る制約（[レッスンの演習を作るときの注意](../curriculum/exercise-constraints.md)）。C の章の教材の作成ルール（[C の章の教材の作成ルール](../content-guidelines/c-lessons.md)）は渡さない
-7. 許可クレートの一覧
-8. 出力形式（[演習問題生成の出力と検証](output-and-validation.md)「出力形式」）と、[演習問題生成の出力と検証](output-and-validation.md)「検証」の条件
+6. 演習の作成ルール（[演習の作成ルール](../content-guidelines/exercise.md)）と、実務での書き方の決まり（[実務での書き方を伝える](../content-guidelines/practice.md)）と、判定方式から来る制約（[レッスンの演習を作るときの注意](../curriculum/exercise-constraints.md)）。C の章の教材の作成ルール（[C の章の教材の作成ルール](../content-guidelines/c-lessons.md)）は渡さない
+7. 訳語の表（`content/terms.json`。[訳語の表の形式（terms.json）](../content-format/terms-json.md)）
+8. 許可クレートの一覧
+9. 出力形式（[演習問題生成の出力と検証](output-and-validation.md)「出力形式」）と、[演習問題生成の出力と検証](output-and-validation.md)「検証」の条件
 
 指示文で以下を指示する。
 
@@ -19,6 +20,7 @@ description: "生成時に AI に渡す入力の内容と順序（C の章の教
 - 選択した要素はすべて問題に登場させる（主要素または副要素）。
 - 選択した要素と既習の要素以外は使わない。
 - 直近の生成問題と同じ内容の問題にしない。
+- 問題文・解説・コードのコメントでは、訳語の表の `term` を使い、`avoid` の語を使わない。
 - 苦手分野を中心にする場合、`recurring_patterns` の躓きを克服できる問題にする。
 - 既習の要素に応じて、判定方式から来る制約に従う（例: 標準入力の読み込みが未習なら `test` 方式を中心にする）。
 - ch10-04（モジュールをファイルに分ける）を完了していない学習者には、難易度によらず `layout` を `single` にする。

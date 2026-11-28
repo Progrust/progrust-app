@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "教材のディレクトリ構成"
-description: "`content/` の下の `chapters.json`・`elements.json`・`voice.json`・`readings.json`・`assets/`・`lessons/`（レッスンごとの `lesson.json`・`video/`・`exercise/`）の配置と、動画の共通部品と音声を作るツールを `content/` の外に置くことを定める。"
+description: "`content/` の下の `chapters.json`・`elements.json`・`voice.json`・`readings.json`・`terms.json`・`assets/`・`lessons/`（レッスンごとの `lesson.json`・`video/`・`exercise/`）の配置と、動画の共通部品と音声を作るツールを `content/` の外に置くことを定める。"
 ---
 
 リポジトリの `content/` に置き、アプリに同梱する。同梱のしかたは [フロントエンドとバックエンドの役割分担](../architecture/responsibilities.md)・[データの保存場所](../architecture/data-locations.md)「アプリ同梱データ（`{app_resources}`）」 に定める。
@@ -12,6 +12,7 @@ content/
 ├── elements.json                   # 要素マスタ（spec/content-format/elements-json.md）
 ├── voice.json                      # 声の設定（spec/content-format/video/voice.md）。全レッスン共通
 ├── readings.json                   # 読みの対応表（spec/content-format/video/voice.md）。全レッスン共通
+├── terms.json                      # 訳語の表（spec/content-format/terms-json.md）。全レッスン共通
 ├── assets/                         # 全レッスン共通の画像
 └── lessons/
     └── {lesson_id}/
