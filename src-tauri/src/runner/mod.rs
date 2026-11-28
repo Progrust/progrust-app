@@ -7,6 +7,8 @@
 //!   実行・提出の `project/` の組み立てとビルドの条件は [`project`]。
 //! - 学習者のプログラムなどを新しいプロセスグループで動かし、出力・標準入力・停止・制限を扱う部品は [`process`]。
 //! - `project/` を cargo でビルドし、ビルドの出力・エラーコード・実行ファイルを得る部品は [`build`]。
+//! - C の演習の `c-project/` の組み立て（`main.c` と、メモリリークの検査のライブラリのソースを置く）は [`c_project`]、
+//!   `c-project/` を `clang` で検査なし・検査つき・メモリリークの検査のライブラリにビルドする部品は [`c_build`]。
 //! - ビルドの失敗が、初回準備のやり直しが要る失敗に当たるかの判定は [`lost_crates`]。
 //! - ビルド済みの実行ファイルを `stdout` 方式で判定する部品は [`judge`]、`test` 方式の隠しテストを組み込んで
 //!   判定し、`min_learner_tests` のある演習では学習者が書いたテストも判定する部品は [`judge_test`]。
@@ -20,6 +22,8 @@
 //!   [`lesson_judge`]（ADR 0208）。
 
 pub mod build;
+pub mod c_build;
+pub mod c_project;
 pub mod file_path;
 pub mod judge;
 pub mod judge_test;
