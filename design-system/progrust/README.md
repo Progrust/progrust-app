@@ -59,6 +59,18 @@ Progrust は、動画で学び演習で解く Rust の学習アプリ。画面�
 
 - エディタ・コード片・コンソールの色は `code-keyword`・`code-string`・`code-macro`・`code-comment`・`code-type`・`code-function`・`code-line-number`。Monaco Editor のテーマもこのトークンから作る。
 - コンソールの ANSI の色は `ansi-red`・`ansi-yellow`・`ansi-green`・`ansi-blue`・`ansi-magenta`・`ansi-cyan`。
+- C のコード（C の演習のエディタ、コード片、質疑応答の回答の C のコードブロック）の字句は、Rust のコードと同じトークンに次のように当てる。新しいトークンは作らない。
+
+| C の字句 | トークン |
+| --- | --- |
+| キーワード（`if` `else` `for` `while` `do` `switch` `case` `default` `break` `continue` `return` `goto` `struct` `union` `enum` `typedef` `sizeof` `static` `const` `extern` `volatile` `register` `inline` `restrict`） | `code-keyword` |
+| 型（`int` `char` `short` `long` `float` `double` `void` `signed` `unsigned` `_Bool` と、標準の型 `bool` `size_t` `FILE` と `_t` で終わる名前と、大文字で始まり小文字を含む名前（`typedef` で付けた名前など）） | `code-type` |
+| 文字列・文字と、`#include` のヘッダーの名前（`<stdio.h>`） | `code-string` |
+| 関数の名前（名前の後に `(` が続く。キーワードと型を除く） | `code-function` |
+| コメント（`//`・`/* */`） | `code-comment` |
+| プリプロセッサの指令（`#include` `#define` `#if` など、`#` と指令の名前）、数値、`NULL` `true` `false`、すべて大文字の名前、演算子、ほかの名前 | 色を付けない（`ink`） |
+
+  プリプロセッサの指令と数値は、アプリの Rust のコードの属性（`#[derive(Debug)]`）と数値と同じく、色を付けない。動画では、どちらも色を付ける（「Progrust Video」の README「コードの色」）。
 
 ### コントラスト
 

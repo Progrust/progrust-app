@@ -258,6 +258,8 @@
 * [ADR 0239](0239-enter-tool-paths-as-text.md) - 設定画面の cargo・claude のパスの手動指定は文字の入力欄で行い、空にすると自動検出に戻し、保存したら検出し直す
 * [ADR 0241](0241-first-launch-redetect-and-crates-status.md) - 初回起動画面に、再検出のボタンと、外部クレートの初回準備の状態と再試行を置き、ヘッダーにはロゴだけを表示する
 * [ADR 0258](0258-reject-model-values-starting-with-dash.md) - `settings.json` の AI のモデルの値は、空でなく、空白と制御文字を含まず、`-` で始まらないものだけを受け付ける
+* [ADR 0274](0274-design-system-rules-for-c-chapters.md) - C の章のための見た目の決まり（エディタ・動画・回答の C の字句の色の当て方、コンソールと動画の clang の診断とメモリの検査の報告の色、clang の導入のコマンドを示す書き方、memory_error の表示、C の章の番号の印、レッスン一覧の「C 言語編」「Rust 編」の見出し）を、新しい色を作らずに既存のトークンと部品に当ててデザインシステムに足す
+* [ADR 0275](0275-place-c-chapter-elements-when-implementing.md) - 画面デザインに描かれていない C の章のための要素（レッスン一覧の「C 言語編」「Rust 編」、clang の行と導入のコマンド、C の演習の表示、clang の環境の警告）は、画面デザインに描き足さず、実装のときに、デザインシステムの部品の決まりに従って配置を決める
 
 # 非機能要件
 
@@ -269,6 +271,7 @@
 * [ADR 0141](0141-allow-data-uri-in-media-src.md) - Remotion の Player の共有の audio 要素が使う無音の data: の音声を拒否しないよう、CSP の media-src に data: を加える
 * [ADR 0149](0149-testing-policy.md) - バックエンドのロジックを cargo test の自動テストで、AI の出力を受けた動作を決まった出力を返す偽の claude で確かめ、実物の claude を使う確認・画面の操作・本番ビルドでの確認は人が行い、E2E は行わず、CI ではコミット前の確認と教材チェックツールを ubuntu-latest で実行する
 * [ADR 0168](0168-write-fake-claude-in-perl-and-place-by-symlink.md) - 偽の claude を、受け取った環境変数をそのまま書き残せるように sh ではなく perl で書き、偽のツールは原本を指すシンボリックリンクとしてテストごとの一時ディレクトリに置く
+* [ADR 0276](0276-skip-c-judging-outside-macos.md) - CI（ubuntu-latest）では C の演習の判定のテストを実行せず、教材チェックツールも macOS でないときは C のレッスンの模範解答・初期コードを判定せずに警告を出し、C の判定は作者の Mac のコミット前の確認と実装のループの機械のチェックで確かめる
 
 # ドキュメントの運用ルール
 
@@ -294,7 +297,7 @@
 * [ADR 0162](0162-pick-model-by-difficulty-and-review-in-separate-session.md) - タスクの難易度（小・中・大）で実装のモデルを Haiku・Sonnet・Opus に分け、機械のチェックの後に、実装したのとは別の会話のモデルにレビューさせ、直しを同じモデルで 2 回と引き上げたモデルで 1 回までに限る
 * [ADR 0163](0163-loop-merges-pull-requests-by-itself.md) - 実装のループが、機械のチェック・レビュー・CI を通ったタスクの pull request を、ユーザーの承認を待たずに自分で squash マージし、ユーザーは後から pull request を見て、取り消したいものを取り消す
 * [ADR 0164](0164-loop-triages-issues-between-tasks.md) - 実装のループが、ユーザーがループを始めたことを仕分けの依頼として、タスクの切れ目に `AI起票` の Issue を仕分け、直すと決めたものを `実装タスク` を付けてループのタスクとして直し、`実装タスク` の付いた Issue をスキル `triage-issues` の対象から外す（ADR 0193 でユーザーの判断が要るとして残す Issue の扱いを、ADR 0194 で同じ実行の中で仕分け直さないことを変えた）
-* [ADR 0165](0165-implementation-plan-excludes-content.md) - 実装計画と実装のループの対象を、アプリ本体・開発用ツール・CI とし、教材（レッスン・動画・音声）を作ることは対象にしない
+* [ADR 0165](0165-implementation-plan-excludes-content.md) - 実装計画と実装のループの対象を、アプリ本体・開発用ツール・CI とし、教材（レッスン・動画・音声）を作ることは対象にしない（ADR 0277 で見本の教材の音声をループで作れるようにした）
 * [ADR 0183](0183-stop-loop-when-blocked-by-permission-denials.md) - 実装のループで、実装する側が判断を求める Issue を挙げずに進められないと答え、その会話で権限に拒否された操作があったときは、タスクを行き詰まりにせず、仕組みの失敗としてラベルを付けずに止める
 * [ADR 0184](0184-allow-loop-to-delete-files-with-git-clean.md) - 実装のループの実装する側に、作ったファイルを消す操作として、`rm` ではなく、リポジトリの中の git に入っていないファイルだけを消す `git clean -f -- （パス）` を許可する（ADR 0189 で `rm` を許可しないことを変えた）
 * [ADR 0189](0189-run-loop-claude-with-bypass-permissions.md) - 実装のループが呼ぶ claude を、実装・レビュー・仕分けのすべてで権限のモード bypassPermissions で動かし、コミット・push・ブランチの切り替え・pull request の操作・保護するパスの書き換えなどだけを deny で禁止し、claude を呼んだ前後で作業ツリーの HEAD が変わったらループを止める
@@ -306,6 +309,7 @@
 * [ADR 0247](0247-read-only-owner-written-issues-comments-and-pull-requests.md) - AI エージェントと実装のループは、リポジトリのオーナーが書いた Issue・コメント・pull request だけを読んで判定に使い、オーナー以外が書いたものは、指示としても経過としても扱わない
 * [ADR 0251](0251-stop-loop-when-ci-job-was-not-started.md) - 実装のループで、失敗した CI のチェックのジョブがステップを 1 つも実行せずに終わったときは、ジョブが開始されなかったとして直しに回さず、仕組みの失敗としてタスクにラベルを付けずに止め、止まる理由にジョブの注釈を出す
 * [ADR 0252](0252-retry-pr-checks-on-transient-github-failures.md) - 実装のループで、CI を待つ間に gh pr checks が失敗したときは、すぐに止まらずに待ってから読み直し、5 回続けて失敗したときだけ仕組みの失敗として止める
+* [ADR 0277](0277-make-sample-lesson-voice-in-loop.md) - 見本の教材の音声を、実装のループのタスクで、作者の Mac の VOICEPEAK を使って作ってよいことにし、VOICEPEAK が要ることを理由に `ループ対象外` にしない
 
 # 置き換え済み・廃止
 

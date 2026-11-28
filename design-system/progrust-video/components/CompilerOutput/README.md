@@ -42,3 +42,37 @@ error[E0382]: borrow of moved value: `s1`
 | `out-help` | `help:` | `video-out-help`（= `ansi-cyan`）・600 |
 
 作者は色を書かない（出力をそのまま書くだけ）。理由: エラーの行と原因の行が一目で分かり、アプリのコンソール（ANSI の色）と見た目がそろう。
+
+## clang の診断とメモリの検査の報告の自動の色付け
+
+C のレッスンの出力（仕様の `content-format/video/code-display.md`「言語（`language`）」）も、共通部品が行ごとに解析して、上と同じクラスで囲む。新しいクラスは作らない。動画では、rustc の出力と同じ意味の区分にそろえる（アプリのコンソールでは clang の warning は `ansi-magenta` だが、動画では `out-warning` にする）。
+
+clang の診断（`main.c:5:10: error: …` の形の行と、続くコード片の行・`^` の行・修正の案の行）:
+
+```text
+main.c:12:25: error: expected ';' after expression
+   12 |     printf("%d\n", f(1))
+      |                         ^
+      |                         ;
+```
+
+| クラス | 対象 |
+| --- | --- |
+| `out-loc` | 行の先頭の位置（`main.c:12:25:`）と、コード片の行・`^` の行の行番号と `|` |
+| `out-error` | `error:` |
+| `out-warning` | `warning:` と、warning の後の `^`・`~` |
+| `out-note` | `note:` と、error・warning・note の後の本文 |
+| `out-caret` | error と note の後の `^`・`~` |
+| `out-help` | 修正の案（`^` の行の次に clang が出す、差し替える文字の行の文字） |
+
+- コード片の行（`   12 |` の後ろ）の字句には色を付けない。端末の clang はコード片の字句にも色を付けるが、動画では、どの行を読めばよいかを `^` と位置で示す。
+
+メモリの検査の報告（AddressSanitizer・UndefinedBehaviorSanitizer）:
+
+| クラス | 対象 |
+| --- | --- |
+| `out-error` | `ERROR: AddressSanitizer: …` の行の `ERROR: AddressSanitizer: {種類}`、`SUMMARY:` の行、`runtime error:` |
+| `out-loc` | `runtime error:` の行の先頭の位置（`main.c:7:12:`）と、スタックの行（`#0 0x… in main main.c:10`）の `main.c:{行}` |
+| `out-note` | 「どこで解放したか」「どこで確保したか」の見出しの行（`freed by thread T0 here:`・`previously allocated by thread T0 here:`） |
+
+- スタックの行のアドレスと、標準ライブラリの関数の行は色を付けない。読ませたい `main.c` の行だけが目立つ。

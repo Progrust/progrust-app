@@ -273,6 +273,16 @@ Progrust Video は、Progrust のレッスンの動画（仕様書 `content-form
 
   `tk-a`・`tk-n`・`tk-l` はアプリ側にない区分で、既存の色に割り当てた。Monaco のテーマと字句の分け方をそろえるかどうかは「未決事項」。
 
+- C のコード（`code_blocks` の `language` が `c`）も、同じクラスで色分けする。字句の分け方は、アプリ側の README「コード」の C の表と同じにし、次のところだけを動画の区分に当てる。新しいクラスは作らない。
+
+| C の字句 | クラス |
+| --- | --- |
+| プリプロセッサの指令（`#include` など、`#` と指令の名前） | `tk-a` |
+| `#include` のヘッダーの名前（`<stdio.h>`）、文字列・文字 | `tk-s` |
+| 数値・`NULL`・`true` / `false` | `tk-n` |
+
+  `tk-m`（マクロ）と `tk-l`（ライフタイム）は、C のコードでは使わない。
+
 ### コードの中の強調・エラー・Diff
 
 コードでは行全体に色を付けて強調しない（仕様の `content-guidelines/video.md`「コード」）。どの字句に注目すればよいかが分からなくなるため。代わりに次の 3 つを使う。指定のしかたは仕様の `content-format/video/code-display.md`「`CodeBlock` の指定」 に従う。

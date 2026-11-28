@@ -1,7 +1,7 @@
 ---
 type: Specification
 title: "教材チェックツール"
-description: "`tools/` の教材チェックツールで検証するチェック項目（エラーとして扱うもの。C の章・C のレッスンの検査を含む）と、「模範解答」「初期コード」をアプリと同じ判定処理（バックエンドの判定のコマンドラインのプログラム。C のレッスンは C の判定処理）で判定する方法、準備中のレッスンの扱い、警告として扱う項目（動画の長さ、文の長さ、読み）を定める。"
+description: "`tools/` の教材チェックツールで検証するチェック項目（エラーとして扱うもの。C の章・C のレッスンの検査を含む）と、「模範解答」「初期コード」をアプリと同じ判定処理（バックエンドの判定のコマンドラインのプログラム。C のレッスンは C の判定処理）で判定する方法、macOS でないときに C のレッスンを判定しないこと、準備中のレッスンの扱い、警告として扱う項目（動画の長さ、文の長さ、読み、判定しなかった C のレッスン）を定める。"
 ---
 
 `tools/` に教材チェックツールを用意し、教材を追加・変更したら実行する。CI でも実行する。実行するコマンドは `npm run content:check`（[開発環境と依存の版](../architecture/development-environment.md)「開発で使うコマンド」）とする。動画のコードの型は、このツールでは検査せず、`npm run lint` の型検査で検査する（[開発環境と依存の版](../architecture/development-environment.md)「lint と整形」）。
@@ -33,6 +33,7 @@ description: "`tools/` の教材チェックツールで検証するチェック
 - プログラムの名前は `progrust-judge`（`src-tauri/src/bin/progrust-judge.rs`）とする。Cargo の feature `content-check` を付けたときだけビルドし、アプリの `.app` には入れない。
 - 教材チェックツールは、このプログラムを `cargo run --manifest-path src-tauri/Cargo.toml --locked --features content-check --bin progrust-judge -- --lesson {レッスンのディレクトリ} --files {solution か starter}` で起動し、判定結果を JSON で標準出力から受け取る。演習のあるレッスンごとに、模範解答、初期コードの順に、1 つずつ判定する。
 - C のレッスンの判定の作業領域は、Rust の判定の作業領域とは別のディレクトリにする（[C の演習の作業領域とビルド](../exercise-runner/c-project-assembly.md)）。C のレッスンの判定には、`clang` が使える macOS が要る。メモリリークの検査（[C のコードの提出（submit）](../exercise-runner/c-submit.md)「メモリリークの検査」）は、macOS でだけ行える。
+- 教材チェックツールは、macOS でないとき（CI の ubuntu-latest など。[テストの方針](../non-functional/testing.md)「CI」）は、C のレッスンの「模範解答」「初期コード」の判定を行わず、`progrust-judge` も起動しない。行わなかったレッスンは、警告の「C の判定」に出す。macOS で `clang` が見つからないときは、判定を行わずに、その検査のエラーにする。
 - 判定の作業領域は、アプリの学習者データ（`{app_data_dir}`）ではなく、`src-tauri/target/` の下の教材チェックツール専用のディレクトリ（`src-tauri/target/content-check/`）にする。ビルド先の分け方（`target/`・`target-std/`）は、アプリの作業領域（[許可クレートと作業領域](../exercise-runner/crates-and-workspace.md)「作業領域」）と同じにする。
 - 判定は、学習者の提出（[コードの提出（submit）](../exercise-runner/submit.md)）と同じ手順・制限値で行う。判定結果の `status` が `passed` なら「模範解答」は通り、「初期コード」はエラーになる。
 - C のレッスンの判定結果の JSON は、同じ形に加えて、`memory_error` のテストケースの `detail`（`kind`・`location`・`report`）を含む。「模範解答」のエラーには、`memory_error` のテストケースの `kind` と `location` を入れる。
@@ -54,3 +55,4 @@ description: "`tools/` の教材チェックツールで検証するチェック
 | 動画の長さ | 動画の長さ（[動画のタイムラインと合図](../content-format/video/timeline-and-cues.md)）が 1〜5 分の範囲にない |
 | 文の長さ | `text` が 60 字を超える文がある |
 | 読み | `say` に、読みの対応表（`content/readings.json`）の語がそのまま残っている |
+| C の判定 | macOS でないので、C のレッスンの「模範解答」「初期コード」を判定しなかった。判定しなかったレッスンの ID を出す |
