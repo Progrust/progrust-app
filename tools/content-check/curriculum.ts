@@ -1,7 +1,11 @@
 // 検査「カリキュラム」のうち、chapters.json と章とレッスンの一覧の照合。
 import { existsSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { readChapterList, type ListedChapter } from "./curriculum-list.ts";
+import {
+  languageOfChapterId,
+  readChapterList,
+  type ListedChapter,
+} from "./curriculum-list.ts";
 import type { Check, CheckOptions, Finding } from "./types.ts";
 
 const NAME = "カリキュラム";
@@ -11,6 +15,7 @@ interface JsonChapter {
   id?: unknown;
   title?: unknown;
   description?: unknown;
+  language?: unknown;
   lessons?: unknown;
 }
 
@@ -63,6 +68,32 @@ function compareChapter(
     error(
       `${where} のレッスンの並びが一覧と違う（一覧: ${listed.lessons.join("、")}、chapters.json: ${have.join("、")}）`,
     );
+  }
+}
+
+const LANGUAGE_NAMES = { c: "C", rust: "Rust" } as const;
+
+// 章の language（省略は rust）が章 ID の形から決まる言語と一致すること、
+// C の章がすべての Rust の章より前にあること。
+function checkLanguages(
+  chapters: JsonChapter[],
+  error: (message: string) => void,
+): void {
+  let firstRust: string | undefined;
+  for (const chapter of chapters) {
+    if (typeof chapter.id !== "string") continue;
+    const fromId = languageOfChapterId(chapter.id);
+    const declared = chapter.language ?? "rust";
+    if (declared !== fromId) {
+      error(
+        `章 ${chapter.id} の language が章 ID の形と合わない（章 ID から決まる言語: ${LANGUAGE_NAMES[fromId]}、chapters.json: ${JSON.stringify(chapter.language ?? null)}）`,
+      );
+    }
+    if (fromId === "rust") {
+      firstRust ??= chapter.id;
+    } else if (firstRust !== undefined) {
+      error(`C の章 ${chapter.id} が Rust の章 ${firstRust} より後にある`);
+    }
   }
 }
 
@@ -121,6 +152,7 @@ export function checkChaptersJson({
     const actual = chapters.find((c) => c.id === chapter.id);
     if (actual) compareChapter(actual, chapter, out);
   }
+  checkLanguages(chapters, error);
   return out;
 }
 
@@ -138,6 +170,7 @@ function show(value: unknown): string {
 
 // 章末復習レッスンと準備中のレッスン（ディレクトリが無いレッスン）以外の
 // lesson.json の title・kind・primary_elements を、一覧と照合する。
+// primary_elements の照合は Rust のレッスンだけ（C のレッスンは主要素を持たない）。
 export function checkLessonJsons({
   contentDir,
   curriculumDir,
@@ -195,6 +228,7 @@ export function checkLessonJsons({
         );
       }
       if (
+        chapter.language === "rust" &&
         lesson.kind === "lesson" &&
         !sameList(lesson.primary_elements, row.primaryElements)
       ) {

@@ -12,8 +12,17 @@ export interface ListedLesson {
   primaryElements: string[];
 }
 
+export type ChapterLanguage = "c" | "rust";
+
+// 章 ID の形から決まる言語（c{NN} は C、ch{NN} は Rust）。
+export function languageOfChapterId(id: string): ChapterLanguage {
+  return /^c\d+$/.test(id) ? "c" : "rust";
+}
+
 export interface ListedChapter {
   id: string;
+  // 章 ID の形から決まる言語。
+  language: ChapterLanguage;
   title: string;
   description: string;
   lessons: string[];
@@ -55,9 +64,10 @@ export function readChapterFile(dir: string, file: string): ListedChapter {
   }
   const rows: ListedLesson[] = [];
   for (const line of lines) {
-    if (!/^\|\s*ch\d+-[A-Za-z0-9]+\s*\|/.test(line)) continue;
+    if (!/^\|\s*ch?\d+-[A-Za-z0-9]+\s*\|/.test(line)) continue;
     const cells = line.split(/(?<!\\)\|/).map((c) => c.trim());
-    // 先頭と末尾の「|」の外側は空になる。
+    // 先頭と末尾の「|」の外側は空になる。C の章の表には「主要素」の列が無く、
+    // cells[4] は末尾の外側の空になる。
     const primary = cells[4] ?? "";
     rows.push({
       id: cells[1],
@@ -70,8 +80,10 @@ export function readChapterFile(dir: string, file: string): ListedChapter {
     });
   }
   const lessons = rows.map((r) => r.id);
+  const id = title.slice(0, space);
   return {
-    id: title.slice(0, space),
+    id,
+    language: languageOfChapterId(id),
     title: title.slice(space + 1).trim(),
     description,
     lessons,
@@ -84,7 +96,7 @@ export function readChapterFile(dir: string, file: string): ListedChapter {
 export function readChapterList(dir: string): ListedChapter[] {
   const index = readFileSync(join(dir, "index.md"), "utf8");
   const files: string[] = [];
-  for (const match of index.matchAll(/\]\((ch\d+-[^)\s]+\.md)\)/g)) {
+  for (const match of index.matchAll(/\]\((ch?\d+-[^)\s]+\.md)\)/g)) {
     files.push(match[1]);
   }
   return files.map((file) => readChapterFile(dir, file));
