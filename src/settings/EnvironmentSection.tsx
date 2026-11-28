@@ -11,7 +11,8 @@ import { openInstallGuide } from "../environment/installGuide";
 import type { InstallGuideTool } from "../environment/installGuide";
 import { Row, Section } from "./SettingsParts";
 
-type ToolKey = keyof Settings["tool_paths"];
+// この区分に行のあるツール。
+type ToolKey = Extract<keyof Settings["tool_paths"], "cargo" | "claude">;
 
 const ICON = { size: 14, strokeWidth: 2.4, "aria-hidden": true } as const;
 

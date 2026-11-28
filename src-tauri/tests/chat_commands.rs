@@ -228,12 +228,12 @@ impl Fixture {
             self.data.path(),
             "settings.json",
             json!({
-                "schema_version": 1,
+                "schema_version": 2,
                 "theme": "system",
                 "editor_font_size": 14,
                 "video": { "volume": 1.0, "muted": false, "playback_rate": 1.0, "captions": false },
                 "models": { "chat": chat, "background": background },
-                "tool_paths": { "cargo": null, "claude": null },
+                "tool_paths": { "cargo": null, "claude": null, "clang": null },
                 "first_launch_completed": true
             }),
         );

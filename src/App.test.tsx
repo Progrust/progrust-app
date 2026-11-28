@@ -35,12 +35,12 @@ beforeEach(() => {
     }
     if (command === "get_settings") {
       return {
-        schema_version: 1,
+        schema_version: 2,
         theme: "system",
         editor_font_size: 14,
         video: { volume: 1, muted: false, playback_rate: 1, captions: false },
         models: { chat: "sonnet", background: "opus" },
-        tool_paths: { cargo: null, claude: null },
+        tool_paths: { cargo: null, claude: null, clang: null },
         first_launch_completed: true,
       };
     }

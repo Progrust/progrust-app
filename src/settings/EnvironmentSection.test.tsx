@@ -47,12 +47,12 @@ beforeEach(() => {
   opened = [];
   environment = FOUND;
   stored = {
-    schema_version: 1,
+    schema_version: 2,
     theme: "system",
     editor_font_size: 14,
     video: { volume: 1, muted: false, playback_rate: 1, captions: false },
     models: { chat: "sonnet", background: "opus" },
-    tool_paths: { cargo: null, claude: null },
+    tool_paths: { cargo: null, claude: null, clang: null },
     first_launch_completed: true,
   };
   mockIPC(
@@ -221,7 +221,7 @@ it("パスを入力して保存すると、tool_paths を保存してから rede
   fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => {
     expect(calls).toEqual([
-      'update_settings:{"cargo":"/opt/rust/bin/cargo","claude":null}',
+      'update_settings:{"cargo":"/opt/rust/bin/cargo","claude":null,"clang":null}',
       "redetect_tools",
     ]);
   });
@@ -246,7 +246,7 @@ it("入力欄を空にして保存すると、null（自動検出）に戻す", 
   fireEvent.click(screen.getByRole("button", { name: "保存" }));
   await waitFor(() => {
     expect(calls).toEqual([
-      'update_settings:{"cargo":null,"claude":null}',
+      'update_settings:{"cargo":null,"claude":null,"clang":null}',
       "redetect_tools",
     ]);
   });
